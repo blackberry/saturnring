@@ -7,15 +7,19 @@ env.password = 'vagrant'
 env.hosts = ['192.168.61.20']
 
 def uptime():
-        run("uptime")
+    run("uptime")
 
 def pvscan():
-        run("sudo pvscan")
+    run("sudo pvscan")
+
+def lvscan():
+	run("sudo lvscan")
 
 def installScripts():
     run("mkdir -p  bashscripts")
     put("bashscripts/*.*","bashscripts")
     run("chmod 755 bashscripts/*.*")
+
 def makeLUN(lunSizeGB):
 	run(" ".join(["sudo bashscripts/createlun.sh",lunSizeGB]))
 
