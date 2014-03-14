@@ -40,7 +40,7 @@ INSTALLED_APPS = (
     'ssdfrontend',
     'south',
     'rest_framework',
-    'api',
+#    'api',
 )
 
 
