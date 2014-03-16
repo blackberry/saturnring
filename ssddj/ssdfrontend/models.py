@@ -7,25 +7,27 @@ class LV(models.Model):
     vg = models.ForeignKey('VG')
     lvname = models.CharField(max_length=50)
     lvsize = models.FloatField()
-    lvuuid = models.CharField(max_length=100,unique=True)
+    lvuuid = models.CharField(max_length=100,primary_key=True)
     lvthinmapped = models.FloatField()
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
     vgsize = models.FloatField()
-    vguuid = models.CharField(max_length=100,unique=True)
+    vguuid = models.CharField(max_length=100,primary_key=True)
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField()
 
 class StorageHost(models.Model):
-    dnsname = models.CharField(max_length=100,unique=True)
+    created = models.DateTimeField(auto_now_add=True)
+    dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField()
 
 class Target(models.Model):
     owner = models.ForeignKey(User)
+    targethost= models.ForeignKey('StorageHost')
     iqnini = models.CharField(max_length=100)
-    iqntar = models.CharField(max_length=100,unique=True)
+    iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
     dateCreated = models.DateTimeField('Date Created')
