@@ -8,16 +8,15 @@ class LV(models.Model):
     lvname = models.CharField(max_length=50)
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=100,unique=True)
-    lvthin = models.BooleanField()
-    lvthinused = models.FloatField()
+    lvthinmapped = models.FloatField()
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
     vgsize = models.FloatField()
     vguuid = models.CharField(max_length=100,unique=True)
-    vgpesize = models.IntegerField()
-    vgtotalpe = models.IntegerField()
-    vgfreepe = models.IntegerField()
+    vgpesize = models.FloatField()
+    vgtotalpe = models.FloatField()
+    vgfreepe = models.FloatField()
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,unique=True)
@@ -28,7 +27,7 @@ class Target(models.Model):
     iqnini = models.CharField(max_length=100)
     iqntar = models.CharField(max_length=100,unique=True)
     clienthost = models.CharField(max_length=100)
-    sizeinGB = models.IntegerField()
+    sizeinGB = models.FloatField()
     dateCreated = models.DateTimeField('Date Created')
 
 #class User(models.Model):
