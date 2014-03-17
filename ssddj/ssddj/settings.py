@@ -20,10 +20,10 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 SECRET_KEY = '%ir_75d1!!q7172&k7z(px3k$-ji$x$18oh0(fd8pm-t%-3k=b'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+INFO = True
 
 
-TEMPLATE_DEBUG = True
+TEMPLATE_INFO = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -41,6 +41,7 @@ INSTALLED_APPS = (
     'south',
     'rest_framework',
     'api',
+    'globalstatemanager'
 )
 
 
@@ -92,4 +93,44 @@ REST_FRAMEWORK = {
 #    'DEFAULT_PERMISSION_CLASSES': [
 #        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
 #    ]
+}
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format' : "[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s",
+            'datefmt' : "%d/%b/%Y %H:%M:%S"
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': '/home/sacagarwal/dev/ssdbox-restful/ssddj/saturn.log',
+            'formatter': 'verbose'
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers':['file'],
+            'propagate': True,
+            'level':'INFO',
+        },
+        'ssdfrontend': {
+            'handlers': ['file'],
+            'level': 'INFO',
+        },
+        'globalstatemanager': {
+            'handlers': ['file'],
+            'level': 'INFO',
+        },
+        'api': {
+            'handlers': ['file'],
+            'level': 'INFO',
+        },
+    }
 }

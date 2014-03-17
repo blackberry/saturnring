@@ -1,8 +1,8 @@
-from logmodule.thelogger import theLogger
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
+from globalstatemanager.gsm import PollServer
 
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
@@ -13,9 +13,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 import random
-
-lp = theLogger('API - View - Provisioner','config/logconfig.yml')
+import logging
+logger = logging.getLogger(__name__)
 class Provisioner(APIView):
+
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -23,21 +24,23 @@ class Provisioner(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            lp.logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
+            logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def GenerateTargetIQN(self,requestDic):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
-        lp.logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
+        logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
         vgchoices = VG.objects.filter(vgfreepe__gt=float(storageSize)*0.004)
-        lp.logger.info("VG choices are %s " %(str(vgchoices),))
+        logger.info("VG choices are %s " %(str(vgchoices),))
         chosenVG = random.choice(vgchoices)
         targetHost=str(chosenVG.vghost)
         iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
-        lp.logger.info("Provisioner - request processed: {%s %s %s}, this is the generated iSCSItarget: %s " 
-                % (clientStr, serviceName, str(storageSize), iqnTarget))
+        logger.info("Request processed: {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
+        targetIP = StorageHost.objects.get(dnsname=targetHost)
+        logger.info("Invoking Pollserver for %s" %(targetIP.ipaddress,))
+        PollServer(targetIP.ipaddress)
         #lp.logger.info("Shortlisted these VGs: "+ str(VG.objects.filter(vgpesize*vgfreepe < float(storageSize))))
 
 

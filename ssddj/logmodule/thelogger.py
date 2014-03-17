@@ -2,7 +2,7 @@ import logging
 import logging.config
 import yaml
 class theLogger:
-    def __init__(self, moduleName, configFile='logconfig.yml'):
+    def __init__(self, moduleName, configFile='config/logconfig.yml'):
         fH = open(configFile,'r')
         logging.config.dictConfig(yaml.load(fH))
         fH.close()

@@ -3,25 +3,25 @@ import os
 #from django.core.management import setup_environ
 #from ssddj import settings
 #setup_environ(settings)
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ssddj.settings")
+#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ssddj.settings")
+
 
 from django.core.management import execute_from_command_line
 
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
+import logging
 
 userName='vagrant'
 keyFile='./config/saturnserver'
 remoteinstallLoc='/home/vagrant/saturn/'
 localbashscripts='./bashscripts/'
-
+logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverIP):
         self.serverIP = serverIP
         self.InstallScripts()
-        #self.conn = sqlite3.connect('../db.sqlite3')
-        #self.cur = self.conn.cursor()
 
     def InstallScripts(self):
         srv = pysftp.Connection(self.serverIP,userName,keyFile)
@@ -32,6 +32,7 @@ class PollServer():
             srv.put(localbashscripts+localfile)
             srv.execute("chmod 777 "+remoteinstallLoc+'saturn-bashscripts/'+localfile)
         srv.close()
+        logger.info("Installed scripts")
 
     def Exec(self,command):
         srv = pysftp.Connection(self.serverIP,userName,keyFile)
@@ -73,33 +74,21 @@ class PollServer():
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size',]
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
-        print lvs
-
+        logger.info('Read LV '+lvs)
+        #TODO - insert into the DB
                 
     def GetVG(self,vgname='storevg'):
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        print vgs
-        #hostid=self.cur.execute("""SELECT id FROM ssdfrontend_storagehost WHERE ipaddress=?""",(self.serverIP,)).fetchone()[0]
         hostid=StorageHost.objects.get(ipaddress=self.serverIP)
-        #print hostid
-        #snippet = Snippet(code='foo = "bar"\n')
         myvg = VG(vghost=hostid,vgsize=vgs[0]['VG Size'],
                 vguuid=vgs[0]['VG UUID'],vgpesize=vgs[0]['PE Size'],
                 vgtotalpe=vgs[0]['Total PE'],
                 vgfreepe=vgs[0]['Free  PE / Size'])
         myvg.save()#force_update=True)
-
-        #self.cur.execute("""INSERT OR REPLACE INTO ssdfrontend_vg (
-        #vghost_id,vgsize,vguuid,vgpesize,vgtotalpe,vgfreepe) 
-        #VALUES (?,?,?,?,?,?);""",(hostid,vgs[0]['VG Size'],vgs[0]['VG UUID'],
-        #vgs[0]['PE Size'],vgs[0]['Total PE'],vgs[0]['Free  PE / Size']))
-        #self.conn.commit()
-        
-
-
+        logger.info('Read VG '+vgs)
 #Unit test
 if __name__=="__main__":
     pollserver = PollServer('192.168.61.20')

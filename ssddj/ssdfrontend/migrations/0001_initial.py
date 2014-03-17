@@ -27,8 +27,8 @@ class Migration(SchemaMigration):
             ('lvsize', self.gf('django.db.models.fields.FloatField')()),
             ('lvuuid', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
             ('lvthinmapped', self.gf('django.db.models.fields.FloatField')()),
-            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
+            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['LV'])
 
@@ -40,8 +40,8 @@ class Migration(SchemaMigration):
             ('vgpesize', self.gf('django.db.models.fields.FloatField')()),
             ('vgtotalpe', self.gf('django.db.models.fields.FloatField')()),
             ('vgfreepe', self.gf('django.db.models.fields.FloatField')()),
-            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
+            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['VG'])
 
@@ -49,8 +49,8 @@ class Migration(SchemaMigration):
         db.create_table(u'ssdfrontend_storagehost', (
             ('dnsname', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
             ('ipaddress', self.gf('django.db.models.fields.GenericIPAddressField')(max_length=39)),
-            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, blank=True)),
-            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, blank=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
+            ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['StorageHost'])
 
@@ -124,13 +124,13 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.lv': {
             'Meta': {'object_name': 'LV'},
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'lvname': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
             'lvsize': ('django.db.models.fields.FloatField', [], {}),
             'lvthinmapped': ('django.db.models.fields.FloatField', [], {}),
             'lvuuid': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.Target']"}),
-            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'}),
             'vg': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.VG']"})
         },
         u'ssdfrontend.provisioner': {
@@ -144,10 +144,10 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.storagehost': {
             'Meta': {'object_name': 'StorageHost'},
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'dnsname': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'}),
             'ipaddress': ('django.db.models.fields.GenericIPAddressField', [], {'max_length': '39'}),
-            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'})
+            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'})
         },
         u'ssdfrontend.target': {
             'Meta': {'object_name': 'Target'},
@@ -162,8 +162,8 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.vg': {
             'Meta': {'object_name': 'VG'},
-            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
-            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
+            'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'}),
             'vgfreepe': ('django.db.models.fields.FloatField', [], {}),
             'vghost': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.StorageHost']"}),
             'vgpesize': ('django.db.models.fields.FloatField', [], {}),

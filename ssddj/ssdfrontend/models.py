@@ -6,8 +6,8 @@ class Provisioner(models.Model):
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
     serviceName=models.CharField(max_length=100)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+#    created_at = models.DateTimeField(auto_now_add=True)
+#    updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.clienthost
 
@@ -19,8 +19,8 @@ class LV(models.Model):
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=100,primary_key=True)
     lvthinmapped = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+#    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+#    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
 
@@ -33,16 +33,16 @@ class VG (models.Model):
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+ #   created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+ #   updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+  #  created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+  #  updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.dnsname
 
@@ -54,8 +54,8 @@ class Target(models.Model):
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+   # created_at = models.DateTimeField(auto_now_add=True)
+   # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
