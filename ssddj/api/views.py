@@ -16,10 +16,8 @@ import random
 
 lp = theLogger('API - View - Provisioner','config/logconfig.yml')
 class Provisioner(APIView):
-
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
-        lp.logger.info(str(request.DATA))
         if serializer.is_valid():
             self.GenerateTargetIQN(request.DATA)
             serializer.save()
@@ -29,7 +27,6 @@ class Provisioner(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def GenerateTargetIQN(self,requestDic):
-        lp.logger.info(str(requestDic))
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
@@ -39,7 +36,8 @@ class Provisioner(APIView):
         chosenVG = random.choice(vgchoices)
         targetHost=str(chosenVG.vghost)
         iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
-        lp.logger.info("This is the iSCSItarget: %s " % (iqnTarget,))
+        lp.logger.info("Provisioner - request processed: {%s %s %s}, this is the generated iSCSItarget: %s " 
+                % (clientStr, serviceName, str(storageSize), iqnTarget))
         #lp.logger.info("Shortlisted these VGs: "+ str(VG.objects.filter(vgpesize*vgfreepe < float(storageSize))))
 
 
