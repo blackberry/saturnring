@@ -5,7 +5,7 @@ formatters:
 handlers:
   console:
     class: logging.StreamHandler
-    level: DEBUG
+    level: INFO
     formatter: simple
     stream: ext://sys.stdout
   file:
@@ -14,11 +14,12 @@ handlers:
     filename: thelog.log
     maxBytes: 1024
     backupCount: 3
+    level: INFO
 loggers:
   simple:
     level: INFO
     handlers: [file]
     propagate: no
 root:
-  level: DEBUG
+  level: INFO
   handlers: [console,file]

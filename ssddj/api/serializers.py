@@ -5,7 +5,7 @@ from  ssdfrontend.models import Provisioner
 class ProvisionerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Provisioner
-        fields = ('clienthost','sizeinGB')
+        fields = ('clienthost','sizeinGB','serviceName')
 class TargetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target

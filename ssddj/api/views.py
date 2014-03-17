@@ -8,19 +8,27 @@ from rest_framework import status
 from logmodule.thelogger import theLogger
 from django.views.decorators.csrf import csrf_exempt
 
-   
-
 class Provisioner(APIView):
+    def __init__(self, name=None, *args):
+        self.l = theLogger('API - View - Provisioner','config/logconfig.yml')
+
     def get(self, request ):
-        l = theLogger('API - View - Provisioner','config/logconfig.yml')
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
             serializer.save()
+            self.GenerateTargetIQN(request.DATA)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            l.logger.warn("Invalid provisioner serializer data: "+request.DATA)
+            self.l.logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    def GenerateIQN(
+
+    def GenerateTargetIQN(self,requestDic):
+        clientStr = requestDic['clienthost'][0]
+        serviceName = requestDic['serviceName'][0]
+        storageSize = requestDic['sizeinGB'][0]
+        self.l.logger.info("Provisioner - request received: "+str(requestDic))
+
+
 
 class TargetDetail(APIView):
     """

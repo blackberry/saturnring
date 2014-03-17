@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 class Provisioner(models.Model):
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
+    serviceName=models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -17,6 +18,7 @@ class LV(models.Model):
     lvthinmapped = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+#    deleted_at = models.DateTimeField()
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
