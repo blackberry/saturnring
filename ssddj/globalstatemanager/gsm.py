@@ -16,7 +16,7 @@ import logging
 userName='vagrant'
 keyFile='./config/saturnserver'
 remoteinstallLoc='/home/vagrant/saturn/'
-localbashscripts='./bashscripts/'
+localbashscripts='./globalstatemanager/bashscripts/'
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverIP):
