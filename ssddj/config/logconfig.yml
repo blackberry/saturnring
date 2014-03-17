@@ -11,8 +11,8 @@ handlers:
   file:
     class : logging.handlers.RotatingFileHandler
     formatter: simple
-    filename: thelog.log
-    maxBytes: 1024
+    filename: saturn.log
+    maxBytes: 10247680
     backupCount: 3
     level: INFO
 loggers:
@@ -22,4 +22,4 @@ loggers:
     propagate: no
 root:
   level: INFO
-  handlers: [console,file]
+  handlers: [file]

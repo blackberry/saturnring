@@ -8,6 +8,9 @@ class Provisioner(models.Model):
     serviceName=models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __unicode__(self):              # __unicode__ on Python 2
+        return self.clienthost
+
 
 class LV(models.Model):
     target = models.ForeignKey('Target')
@@ -18,6 +21,9 @@ class LV(models.Model):
     lvthinmapped = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __unicode__(self):              # __unicode__ on Python 2
+        return self.lvname
+
 #    deleted_at = models.DateTimeField()
 
 class VG (models.Model):
@@ -29,12 +35,17 @@ class VG (models.Model):
     vgfreepe = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __unicode__(self):              # __unicode__ on Python 2
+        return self.vguuid
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __unicode__(self):              # __unicode__ on Python 2
+        return self.dnsname
+
 
 class Target(models.Model):
     owner = models.ForeignKey(User)
@@ -45,6 +56,9 @@ class Target(models.Model):
     sizeinGB = models.FloatField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    def __unicode__(self):              # __unicode__ on Python 2
+        return self.iqntar
+
 
 
 

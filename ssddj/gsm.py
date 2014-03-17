@@ -90,7 +90,7 @@ class PollServer():
                 vguuid=vgs[0]['VG UUID'],vgpesize=vgs[0]['PE Size'],
                 vgtotalpe=vgs[0]['Total PE'],
                 vgfreepe=vgs[0]['Free  PE / Size'])
-        myvg.save(force_update=True)
+        myvg.save()#force_update=True)
 
         #self.cur.execute("""INSERT OR REPLACE INTO ssdfrontend_vg (
         #vghost_id,vgsize,vguuid,vgpesize,vgtotalpe,vgfreepe) 
