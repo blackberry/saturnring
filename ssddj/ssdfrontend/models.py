@@ -2,6 +2,12 @@ from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
 
+class Provisioner(models.Model):
+    clienthost = models.CharField(max_length=100)
+    sizeinGB = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
 class LV(models.Model):
     target = models.ForeignKey('Target')
     vg = models.ForeignKey('VG')
@@ -9,6 +15,8 @@ class LV(models.Model):
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=100,primary_key=True)
     lvthinmapped = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
@@ -17,11 +25,14 @@ class VG (models.Model):
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class StorageHost(models.Model):
-    created = models.DateTimeField(auto_now_add=True)
     dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 class Target(models.Model):
     owner = models.ForeignKey(User)
@@ -30,10 +41,8 @@ class Target(models.Model):
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
-    dateCreated = models.DateTimeField('Date Created')
-
-#class User(models.Model):
-#    loginname = models.CharField(max_length=100,unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
 
 

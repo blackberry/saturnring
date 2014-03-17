@@ -1,47 +1,52 @@
-from django.shortcuts import render
-from api.serializers import TargetSerializer
-from ssdfrontend.models import Target 
-from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-
 from ssdfrontend.models import Target
-from api.serializers import TargetSerializer
+from serializers import TargetSerializer
+from serializers import ProvisionerSerializer
+from django.http import Http404
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from logmodule.thelogger import theLogger
+from django.views.decorators.csrf import csrf_exempt
 
-@api_view(['GET'])
-def MakeTarget(request):
-    if request.method=='GET':
-        serializer = TargetSerializer(data=request.DATA)
+   
+
+class Provisioner(APIView):
+    def get(self, request ):
+        l = theLogger('API - View - Provisioner','config/logconfig.yml')
+        serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            print request.DATA
-            #Createtarget
-            return Response(serializer.data,status=status.HTTP_201_OK)
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         else:
-            return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+            l.logger.warn("Invalid provisioner serializer data: "+request.DATA)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def GenerateIQN(
 
+class TargetDetail(APIView):
+    """
+    Retrieve, update or delete a target instance.
+    """
+    def get_object(self, pk):
+        try:
+            return Target.objects.get(pk=pk)
+        except Target.DoesNotExist:
+            raise Http404
 
+    def get(self, request, pk, format=None):
+        target = self.get_object(pk)
+        serializer = TargetSerializer(target)
+        return Response(serializer.data)
 
-#@api_view(['GET','POST'])
-#def targetlist(request):
-#    if (request.method == 'GET'):
-#        targets = Target.objects.all()
-#        serializer = TargetSerializer(targets)
-#        return Response(serializer.data)
-#    else:
-#        if request.method =='POST':
-#            serializer = TargetSerializer(data=request.DATA)
-#            if serializer.is_valid():
-#                serializer.save()
-#                return Response(serializer.data,status=status.HTTP_201_CREATED)
-#            else:
-#                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, pk, format=None):
+        target = self.get_object(pk)
+        serializer = TargetSerializer(target, data=request.DATA)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-#@api_view(['GET'])
-#def lvlist(request):
-#    if(request.method=='GET'):
-#        lvs = lvscan()
-#        serializer = LVSerializer(lvs)
-#        return Response(serializer.data)
+    def delete(self, request, pk, format=None):
+        target = self.get_object(pk)
+        target.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
-
-# Create your views here.
