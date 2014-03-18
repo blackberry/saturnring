@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
+print str(BASE_DIR)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
@@ -82,6 +82,7 @@ USE_L10N = True
 
 USE_TZ = True
 
+DEBUG = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
@@ -93,6 +94,10 @@ REST_FRAMEWORK = {
 #    'DEFAULT_PERMISSION_CLASSES': [
 #        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
 #    ]
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    )
 }
 LOGGING = {
     'version': 1,

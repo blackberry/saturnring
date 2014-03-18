@@ -53,7 +53,7 @@ class Target(models.Model):
     iqnini = models.CharField(max_length=100)
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
-    sizeinGB = models.FloatField()
+    sizeinGB = models.CharField(max_length=100)
    # created_at = models.DateTimeField(auto_now_add=True)
    # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2

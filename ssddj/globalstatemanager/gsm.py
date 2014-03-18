@@ -89,6 +89,24 @@ class PollServer():
                 vgfreepe=vgs[0]['Free  PE / Size'])
         myvg.save()#force_update=True)
         logger.info('Read VG '+vgs)
+
+    
+    def CreateTarget(self,iqnTarget,sizeinGB):
+        logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
+        srv = pysftp.Connection(self.serverIP,userName,keyFile)
+        cmdStr = '/bin/bash -c "'+remoteinstallLoc+'saturn-bashscripts/createtarget.sh' +' '+ str(sizeinGB)+' '+ iqnTarget+ '"' 
+        exStr = srv.execute(cmdStr)
+        logger.info("Execution report for %s:  %s" %(cmdStr,exStr))
+        srv.close()
+        if "SUCCESS" in str(exStr):
+            logger.info("Returning successful createtarget run")
+            return 1
+        else:
+            logger.info("Returning failed createtarget run")
+            return 0
+
+
+
 #Unit test
 if __name__=="__main__":
     pollserver = PollServer('192.168.61.20')

@@ -9,6 +9,6 @@ class ProvisionerSerializer(serializers.ModelSerializer):
 class TargetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target
-        fields = ('iqnini','iqntar','clienthost','sizeinGB')
+        fields = ('iqnini','iqntar')
 
 

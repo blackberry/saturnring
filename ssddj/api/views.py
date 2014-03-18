@@ -20,27 +20,39 @@ class Provisioner(APIView):
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            self.GenerateTargetIQN(request.DATA)
+            iqntar = self.MakeTarget(request.DATA,request.user)
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            if iqntar <> 0:
+                tar = Target.objects.filter(iqntar=iqntar)
+                data = tar.values()
+                #data = serializers.serialize('json', list(Target.objects.get(iqntar=iqntar)), fields=('iqnini','iqntar'))a
+                return Response(data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(TargetSerializer.errors, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def GenerateTargetIQN(self,requestDic):
+    def MakeTarget(self,requestDic,owner):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
         logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
-        vgchoices = VG.objects.filter(vgfreepe__gt=float(storageSize)*0.004)
+        vgchoices = VG.objects.filter(vgtotalpe__gt=float(storageSize)*0.004)
         logger.info("VG choices are %s " %(str(vgchoices),))
         chosenVG = random.choice(vgchoices)
         targetHost=str(chosenVG.vghost)
         iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
         logger.info("Request processed: {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
         targetIP = StorageHost.objects.get(dnsname=targetHost)
-        logger.info("Invoking Pollserver for %s" %(targetIP.ipaddress,))
-        PollServer(targetIP.ipaddress)
+        p = PollServer(targetIP.ipaddress)
+        if (p.CreateTarget(iqnTarget,str(storageSize))):
+            newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
+                    iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
+            newTarget.save()
+            return iqnTarget
+        else:
+            return 0
         #lp.logger.info("Shortlisted these VGs: "+ str(VG.objects.filter(vgpesize*vgfreepe < float(storageSize))))
 
 
