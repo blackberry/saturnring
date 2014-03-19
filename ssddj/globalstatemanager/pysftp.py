@@ -99,6 +99,7 @@ class Connection(object):
     def execute(self, command):
         """Execute the given commands on a remote machine."""
         channel = self._transport.open_session()
+        channel.get_pty()
         channel.exec_command(command)
         output = channel.makefile('rb', -1).readlines()
         if output:
