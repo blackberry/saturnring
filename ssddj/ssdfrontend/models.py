@@ -3,9 +3,11 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 class Provisioner(models.Model):
+    #owner = models.ForeignKey(User)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
     serviceName=models.CharField(max_length=100)
+
 #    created_at = models.DateTimeField(auto_now_add=True)
 #    updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
