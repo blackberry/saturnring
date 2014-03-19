@@ -69,7 +69,9 @@ class PollServer():
              rtnList.append(valueDict)
         return rtnList 
 
-    def GetLV(self, vgname='storevg'):
+    #def GetTargets(self):
+
+    def GetLVs(self, vgname='storevg'):
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size',]

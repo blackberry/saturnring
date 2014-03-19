@@ -24,7 +24,7 @@ INFO = True
 
 
 TEMPLATE_INFO = True
-
+TEMPLATE_DIR =BASE_DIR+'/templates'
 ALLOWED_HOSTS = ['*']
 
 
