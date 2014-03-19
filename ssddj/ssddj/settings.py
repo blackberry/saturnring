@@ -42,7 +42,8 @@ INSTALLED_APPS = (
     'south',
     'rest_framework',
     'api',
-    'globalstatemanager'
+    'globalstatemanager',
+    'utils',
 )
 
 

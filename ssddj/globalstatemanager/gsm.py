@@ -12,6 +12,7 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 import logging
+import utils.scstconf
 
 userName='vagrant'
 keyFile='./config/saturnserver'
@@ -41,12 +42,12 @@ class PollServer():
         return rtncmd
 
     def ParseLVM(self,strList,delimitStr,paraList):
-        rtnList =[]
+        rtnDict ={}
         valueDict={}
         for aLine in strList:
             if (delimitStr in aLine):
                 if len(valueDict) == len(paraList):
-                    rtnList.append(valueDict)
+                    rtnDict[valueDict[paraList[0]]]=valueDict
                     valueDict = {}
                 continue
             else:
@@ -66,29 +67,33 @@ class PollServer():
                             continue
                         continue
         if len(valueDict) == len(paraList):
-             rtnList.append(valueDict)
-        return rtnList 
+             rtnDict[valueDict[paraList[0]]] = valueDict
+        return rtnDict 
 
-    #def GetTargets(self):
-
+    def GetTargets(self):
+        self.Exec(" ".join(['sudo', 'scstadmin','-w /etc/scst.conf']))
+        srv = pysftp.Connection(self.serverIP,userName,keyFile)
+        srv.get('/etc/scst.conf','config/'+self.serverIP+'.scst.conf')
+        
     def GetLVs(self, vgname='storevg'):
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
         delimitStr = '--- Logical volume ---'
-        paraList=['LV Name','LV UUID','LV Size','Mapped size',]
+        paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
-        logger.info('Read LV '+lvs)
+        return lvs
+#        logger.info('Read LV '+str(lvs))
         #TODO - insert into the DB
                 
-    def GetVG(self,vgname='storevg'):
+    def GetVG(self,vgname='storevg'): #Unit test this again
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         hostid=StorageHost.objects.get(ipaddress=self.serverIP)
-        myvg = VG(vghost=hostid,vgsize=vgs[0]['VG Size'],
-                vguuid=vgs[0]['VG UUID'],vgpesize=vgs[0]['PE Size'],
-                vgtotalpe=vgs[0]['Total PE'],
-                vgfreepe=vgs[0]['Free  PE / Size'])
+        myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
+                vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
+                vgtotalpe=vgs[vgname]['Total PE'],
+                vgfreepe=vgs[vgname]['Free  PE / Size'])
         myvg.save()#force_update=True)
         logger.info('Read VG '+vgs)
 

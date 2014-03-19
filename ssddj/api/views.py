@@ -15,6 +15,7 @@ from django.views.decorators.csrf import csrf_exempt
 import random
 import logging
 logger = logging.getLogger(__name__)
+from utils.scstconf import ParseSCSTConf
 class Provisioner(APIView):
 
     def get(self, request ):
@@ -47,9 +48,22 @@ class Provisioner(APIView):
         targetIP = StorageHost.objects.get(dnsname=targetHost)
         p = PollServer(targetIP.ipaddress)
         if (p.CreateTarget(iqnTarget,str(storageSize))):
-            newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
+            p.GetTargets()
+            (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
+#            logger.info(str(tarDic))
+#            logger.info(str(devDic))
+            if iqnTarget in tarDic:
+                newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
                     iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
-            newTarget.save()
+                newTarget.save()
+                lvDict=p.GetLVs()
+                if devDic[tarDic[iqnTarget][0]] in lvDict:
+                    newLV = LV(target=newTarget,vg=chosenVG,
+                            lvname=devDic[tarDic[iqnTarget][0]],
+                            lvsize=storageSize,
+                            lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
+                            lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
+                    newLV.save()
             return iqnTarget
         else:
             return 0
