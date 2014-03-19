@@ -7,6 +7,9 @@ from globalstatemanager.gsm import PollServer
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
 
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from rest_framework.permissions import IsAuthenticated
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -17,7 +20,8 @@ import logging
 logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
 class Provisioner(APIView):
-
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -44,30 +48,32 @@ class Provisioner(APIView):
         chosenVG = random.choice(vgchoices)
         targetHost=str(chosenVG.vghost)
         iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
-        logger.info("Request processed: {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
-        targetIP = StorageHost.objects.get(dnsname=targetHost)
-        p = PollServer(targetIP.ipaddress)
-        if (p.CreateTarget(iqnTarget,str(storageSize))):
-            p.GetTargets()
-            (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
-#            logger.info(str(tarDic))
-#            logger.info(str(devDic))
-            if iqnTarget in tarDic:
-                newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
-                    iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
-                newTarget.save()
-                lvDict=p.GetLVs()
-                if devDic[tarDic[iqnTarget][0]] in lvDict:
-                    newLV = LV(target=newTarget,vg=chosenVG,
-                            lvname=devDic[tarDic[iqnTarget][0]],
-                            lvsize=storageSize,
-                            lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
-                            lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
-                    newLV.save()
+        try:
+            t = Target.objects.get(iqntar=iqnTarget)
+            logger.info('Target already exists: %s' % (iqnTarget,))
             return iqnTarget
-        else:
-            return 0
-        #lp.logger.info("Shortlisted these VGs: "+ str(VG.objects.filter(vgpesize*vgfreepe < float(storageSize))))
+        except ObjectDoesNotExist:
+            logger.info("Request processed: {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
+            targetIP = StorageHost.objects.get(dnsname=targetHost)
+            p = PollServer(targetIP.ipaddress)
+            if (p.CreateTarget(iqnTarget,str(storageSize))):
+                p.GetTargets()
+                (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
+                if iqnTarget in tarDic:
+                    newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
+                        iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
+                    newTarget.save()
+                    lvDict=p.GetLVs()
+                    if devDic[tarDic[iqnTarget][0]] in lvDict:
+                        newLV = LV(target=newTarget,vg=chosenVG,
+                                lvname=devDic[tarDic[iqnTarget][0]],
+                                lvsize=storageSize,
+                                lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
+                                lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
+                        newLV.save()
+                return iqnTarget
+            else:
+                return 0
 
 
 class TargetDetail(APIView):
