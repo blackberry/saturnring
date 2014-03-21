@@ -90,10 +90,15 @@ class PollServer():
         paraList=['VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         hostid=StorageHost.objects.get(ipaddress=self.serverIP)
+        thinusedpercent = float(self.Exec('lvs --units g | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f2')[0])
+        thintotalGB = float(self.Exec('lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f1')[0])
+        maxthinavl = thintotalGB*(100-thinusedpercent)/100
         myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
                 vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                 vgtotalpe=vgs[vgname]['Total PE'],
-                vgfreepe=vgs[vgname]['Free  PE / Size'])
+                vgfreepe=vgs[vgname]['Free  PE / Size'],
+                thinusedpercent=thinusedpercent,
+                thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
         myvg.save()#force_update=True)
         logger.info('Read VG '+vgs)
 

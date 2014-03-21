@@ -3,7 +3,7 @@ from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from globalstatemanager.gsm import PollServer
-
+from utils.affinity import RandomAffinity
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
 
@@ -38,12 +38,15 @@ class Provisioner(APIView):
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
     def MakeTarget(self,requestDic,owner):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
+        #first query each host for vg capacity(?)
+        #do this in parallel using a thread per server
         logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
-        vgchoices = VG.objects.filter(vgtotalpe__gt=float(storageSize)*0.004)
+        vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
         logger.info("VG choices are %s " %(str(vgchoices),))
         chosenVG = random.choice(vgchoices)
         targetHost=str(chosenVG.vghost)
@@ -53,7 +56,7 @@ class Provisioner(APIView):
             logger.info('Target already exists: %s' % (iqnTarget,))
             return iqnTarget
         except ObjectDoesNotExist:
-            logger.info("Request processed: {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
+            logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
             targetIP = StorageHost.objects.get(dnsname=targetHost)
             p = PollServer(targetIP.ipaddress)
             if (p.CreateTarget(iqnTarget,str(storageSize))):
@@ -71,6 +74,7 @@ class Provisioner(APIView):
                                 lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
                                 lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
                         newLV.save()
+                
                 return iqnTarget
             else:
                 return 0

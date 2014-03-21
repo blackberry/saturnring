@@ -35,6 +35,9 @@ class VG (models.Model):
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField()
+    thinusedpercent = models.FloatField()
+    thintotalGB = models.FloatField()
+    maxthinavlGB = models.FloatField()
  #   created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
  #   updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
