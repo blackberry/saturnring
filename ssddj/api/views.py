@@ -79,6 +79,15 @@ class Provisioner(APIView):
             else:
                 return 0
 
+class VGScanner(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        logger.info("VG scan request received: %s " %(request.DATA,))
+        sg = StorageHost.get(dnsname=request.DATA.saturnserver)
+        p = PollServer(sg.ipaddress)
+        p.GetVG()
+        return (Response("OK"))
 
 class TargetDetail(APIView):
     """

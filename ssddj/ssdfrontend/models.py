@@ -20,7 +20,7 @@ class LV(models.Model):
     lvname = models.CharField(max_length=50)
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=100,primary_key=True)
-    lvthinmapped = models.FloatField()
+    lvthinmapped = models.FloatField(default=-1)
 #    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
 #    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -34,10 +34,10 @@ class VG (models.Model):
     vguuid = models.CharField(max_length=100,primary_key=True)
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
-    vgfreepe = models.FloatField()
-    thinusedpercent = models.FloatField()
-    thintotalGB = models.FloatField()
-    maxthinavlGB = models.FloatField()
+    vgfreepe = models.FloatField(default=-1)
+    thinusedpercent = models.FloatField(default=-1)
+    thintotalGB = models.FloatField(default=-1)
+    maxthinavlGB = models.FloatField(default=-1)
  #   created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
  #   updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -45,7 +45,7 @@ class VG (models.Model):
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,primary_key=True)
-    ipaddress = models.GenericIPAddressField()
+    ipaddress = models.GenericIPAddressField(default='127.0.0.1')
   #  created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
   #  updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
