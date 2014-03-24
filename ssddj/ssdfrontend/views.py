@@ -1,5 +1,7 @@
 
 from django.shortcuts import render
+from django.views.generic import ListView
+from ssdfrontend.models import Target
 
-def lun_form(request):
-        return render(request, 'lun_form.html')
+class TargetList(ListView):
+        model = Target
