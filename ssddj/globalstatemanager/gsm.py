@@ -95,14 +95,23 @@ class PollServer():
         thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f1')[0].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
         logger.info(vgs)
-        myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
-                vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
-                vgtotalpe=vgs[vgname]['Total PE'],
-                vgfreepe=vgs[vgname]['Free  PE / Size'],
-                thinusedpercent=thinusedpercent,
-                thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
-        myvg.save()#force_update=True)
-        return myvg.vguuid
+        existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
+        if len(existingvgs)==1:
+            existingvg = existingvgs[0]
+            existingvg.thinusedpercent=thinusedpercent
+            existingvg.thintotalGB=thintotalGB
+            existingvg.maxthinavlGB=maxthinavl
+            existingvg.vgsize = vgs[vgname]['VG Size']
+            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize'])
+        else:
+            myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
+                    vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
+                    vgtotalpe=vgs[vgname]['Total PE'],
+                    vgfreepe=vgs[vgname]['Free  PE / Size'],
+                    thinusedpercent=thinusedpercent,
+                    thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
+            myvg.save()#force_update=True)
+        return vgs[vgname]['VG UUID']
 
     
     def CreateTarget(self,iqnTarget,sizeinGB):

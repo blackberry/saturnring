@@ -28,14 +28,14 @@ class Provisioner(APIView):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
             iqntar = self.MakeTarget(request.DATA,request.user)
-            serializer.save()
+#            serializer.save()
             if iqntar <> 0:
                 tar = Target.objects.filter(iqntar=iqntar)
                 data = tar.values()
                 #data = serializers.serialize('json', list(Target.objects.get(iqntar=iqntar)), fields=('iqnini','iqntar'))a
                 return Response(data, status=status.HTTP_201_CREATED)
             else:
-                return Response(TargetSerializer.errors, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -63,7 +63,7 @@ class Provisioner(APIView):
         vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'))
 
         if len(vgchoices) > 0:
-            vgindex = 0
+            numDel=0
             for eachvg in vgchoices:
                 p = PollServer(eachvg.vghost) # Check this
                 self.UpdateLVs(eachvg)
@@ -71,14 +71,18 @@ class Provisioner(APIView):
                 lvalloc=0.0
                 for eachlv in lvs:
                    lvalloc=lvalloc+eachlv.lvsize
-                if (lvalloc + float(storageSize)) > eachvg.thintotalGB:
-                    del vgchoices[vgindex]
+                if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
+                   logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
+                   numDel=numDel+1 
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
-                vgindex = vgindex+1
-            chosenVG = random.choice(vgchoices)
-            logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
-            return chosenVG
+            if len(vgchoices)>numDel:
+                chosenVG = random.choice(vgchoices)
+                logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
+                return chosenVG
+            else:
+                logger.info("No VG that satisfies the overprovisioning contraint (opf) was found")
+                return -1
         else:
             logger.warn('No vghost/VG enabled')
             return -1
@@ -127,7 +131,7 @@ class Provisioner(APIView):
                     return 0
         else:
             logger.warn('VG filtering did not return a choice')
-            return 0
+            return  "No suitable Saturn server was found to accomadate your request"
 
 class VGScanner(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
