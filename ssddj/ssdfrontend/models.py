@@ -25,7 +25,10 @@ class LV(models.Model):
 #    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
-
+    def lvsize(self):
+        return self.lvsize
+    def lvname(self):
+        return self.lvname
 #    deleted_at = models.DateTimeField()
 
 class VG (models.Model):
@@ -38,14 +41,21 @@ class VG (models.Model):
     thinusedpercent = models.FloatField(default=-1)
     thintotalGB = models.FloatField(default=-1)
     maxthinavlGB = models.FloatField(default=-1)
+    opf = models.FloatField(default=0.7)
+    thinusedmaxpercent = models.FloatField(default=70)
+    enabled = models.BooleanField(default=True)
+
  #   created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
  #   updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
+    def opf(self):
+        return self.opf
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField(default='127.0.0.1')
+    enabled - models.BooleanField(default=True)
   #  created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
   #  updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2

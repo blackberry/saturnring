@@ -12,7 +12,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
-from rest_framework.views import APIView
+from rest_framework.views import aPIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
@@ -39,6 +39,44 @@ class Provisioner(APIView):
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def UpdateLVs(self,vg):
+        p = PollServer(vg.vghost)
+        lvdict = p.GetLVs(vg.name)
+        lvs = LV.objects.all()
+        for eachLV in lvs:
+            eachLV.lvsize=lvdict[eachLV.lvname()]['LV Size']
+            eachLV.lvthinmapped=lvdict[eachLV.lvname()]['Mapped size']
+            eachLV.save(update_fields=['lvsize','lvthinmapped'])
+
+    def VGFilter(self,storageSize):
+        # Check if StorageHost is enabled
+        # Check if VG is enabled
+        # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
+        # Further filter on whether thinusedpercent < thinusedmaxpercent
+        # Return a random choice from these
+        storagehosts = StorageHost.objects.filter(enabled=True)
+        for eachhost in storagehosts:
+            p = PollServer(host.ipaddress)
+            p.GetVG()
+        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'))
+
+        if len(vgchoices) > 0:
+            vgindex = 0
+            for eachvg in vgchoices:
+                p = PollServer(eachvg.vghost) # Check this
+                self.UpdateLVs(eachvg)
+                lvs = LV.objects.filter(vg=eachvg)
+                lvalloc=0.0
+                for eachlv in lvs:
+                   lvalloc=lvalloc+eachlv.lvsize()
+                if lvalloc + storageSize > eachvg.thintotalGB():
+                    del vgchoices[vgindex]
+                vgindex = vgindex+1
+            chosenVG = random.choice(vgchoices)
+            return chosenVG
+        else:
+            logger.warn('No vghost/VG enabled')
+            return -1
 
     def MakeTarget(self,requestDic,owner):
         clientStr = requestDic['clienthost']
@@ -47,38 +85,44 @@ class Provisioner(APIView):
         #first query each host for vg capacity(?)
         #do this in parallel using a thread per server
         logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
-        vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
-        logger.info("VG choices are %s " %(str(vgchoices),))
-        chosenVG = random.choice(vgchoices)
-        targetHost=str(chosenVG.vghost)
-        iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
-        try:
-            t = Target.objects.get(iqntar=iqnTarget)
-            logger.info('Target already exists: %s' % (iqnTarget,))
-            return iqnTarget
-        except ObjectDoesNotExist:
-            logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
-            targetIP = StorageHost.objects.get(dnsname=targetHost)
-            p = PollServer(targetIP.ipaddress)
-            if (p.CreateTarget(iqnTarget,str(storageSize))):
-                p.GetTargets()
-                (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
-                if iqnTarget in tarDic:
-                    newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
-                        iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
-                    newTarget.save()
-                    lvDict=p.GetLVs()
-                    if devDic[tarDic[iqnTarget][0]] in lvDict:
-                        newLV = LV(target=newTarget,vg=chosenVG,
-                                lvname=devDic[tarDic[iqnTarget][0]],
-                                lvsize=storageSize,
-                                lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
-                                lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
-                        newLV.save()
-                
+        #vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
+        #logger.info("VG choices are %s " %(str(vgchoices),))
+        #chosenVG = random.choice(vgchoices)
+        chosenVG = VGFilter(storageSize)
+        if chosenVG <> -1:
+            targetHost=str(chosenVG.vghost)
+            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
+            try:
+                t = Target.objects.get(iqntar=iqnTarget)
+                logger.info('Target already exists: %s' % (iqnTarget,))
                 return iqnTarget
-            else:
-                return 0
+            except ObjectDoesNotExist:
+                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
+                targetIP = StorageHost.objects.get(dnsname=targetHost)
+                p = PollServer(targetIP.ipaddress)
+                if (p.CreateTarget(iqnTarget,str(storageSize))):
+                    p.GetTargets()
+                    (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
+                    if iqnTarget in tarDic:
+                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
+                            iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
+                        newTarget.save()
+                        lvDict=p.GetLVs()
+                        if devDic[tarDic[iqnTarget][0]] in lvDict:
+                            newLV = LV(target=newTarget,vg=chosenVG,
+                                    lvname=devDic[tarDic[iqnTarget][0]],
+                                    lvsize=storageSize,
+                                    lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
+                                    lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
+                            newLV.save()
+                    
+                    return iqnTarget
+                else:
+                    logger.warn('CreateTarget did not work')
+                    return 0
+        else:
+            logger.warn('VG filtering did not return a choice')
+            return 0
 
 class VGScanner(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
