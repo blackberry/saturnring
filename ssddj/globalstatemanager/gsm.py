@@ -87,12 +87,13 @@ class PollServer():
     def GetVG(self,vgname='storevg'): #Unit test this again
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
         delimitStr = '--- Volume group ---'
-        paraList=['VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
+        paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         hostid=StorageHost.objects.get(ipaddress=self.serverIP)
-        thinusedpercent = float(self.Exec('lvs --units g | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f2')[0])
-        thintotalGB = float(self.Exec('lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f1')[0])
+        thinusedpercent = float(self.Exec('sudo lvs --units g | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f2')[0].rstrip())
+        thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f1')[0].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
+        logger.info(vgs)
         myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
                 vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                 vgtotalpe=vgs[vgname]['Total PE'],
@@ -100,7 +101,7 @@ class PollServer():
                 thinusedpercent=thinusedpercent,
                 thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
         myvg.save()#force_update=True)
-        logger.info('Read VG '+vgs)
+        return myvg.vguuid
 
     
     def CreateTarget(self,iqnTarget,sizeinGB):
@@ -112,6 +113,7 @@ class PollServer():
         srv.close()
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
+            self.GetVG() #Rescan VG to update
             return 1
         else:
             logger.info("Returning failed createtarget run")

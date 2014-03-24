@@ -6,7 +6,8 @@ from globalstatemanager.gsm import PollServer
 from utils.affinity import RandomAffinity
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
-
+from serializers import VGSerializer
+from django.db.models import Q
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
@@ -84,10 +85,15 @@ class VGScanner(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self, request):
         logger.info("VG scan request received: %s " %(request.DATA,))
-        sg = StorageHost.get(dnsname=request.DATA.saturnserver)
-        p = PollServer(sg.ipaddress)
-        p.GetVG()
-        return (Response("OK"))
+        saturnserver=request.DATA[u'saturnserver']
+        if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):
+            p = PollServer(saturnserver)
+            savedvguuid = p.GetVG()
+            readVG=VG.objects.filter(vguuid=savedvguuid).values()
+            return Response(readVG)
+        else:
+            logger.warn("Unknown saturn server "+str(request.DATA))
+            return Response("Unregistered or uknown Saturn server "+str(request.DATA), status=status.HTTP_400_BAD_REQUEST)
 
 class TargetDetail(APIView):
     """
