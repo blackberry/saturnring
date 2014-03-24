@@ -64,7 +64,7 @@ class LVAdmin(StatsAdmin):
     def queryset(self, request):
         if request.user.is_superuser:
             return LV.objects.all()
-        return LV.objects.filter(owner=request.user)
+        return LV.objects.filter(target__owner=request.user)
 
     def save_model(self, request, obj, form, change):
         if not change:
