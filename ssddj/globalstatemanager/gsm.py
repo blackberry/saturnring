@@ -21,7 +21,8 @@ localbashscripts='./globalstatemanager/bashscripts/'
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverIP):
-        self.serverIP = serverIP
+        logger.info("PollServer trying server IP %s" %(serverIP,))
+        self.serverIP = str(serverIP)
         self.InstallScripts()
 
     def InstallScripts(self):

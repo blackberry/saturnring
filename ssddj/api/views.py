@@ -8,11 +8,12 @@ from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
 from serializers import VGSerializer
 from django.db.models import Q
+from django.db.models import F
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
-from rest_framework.views import aPIView
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
@@ -41,11 +42,11 @@ class Provisioner(APIView):
 
     def UpdateLVs(self,vg):
         p = PollServer(vg.vghost)
-        lvdict = p.GetLVs(vg.name)
+        lvdict = p.GetLVs("storevg")
         lvs = LV.objects.all()
         for eachLV in lvs:
-            eachLV.lvsize=lvdict[eachLV.lvname()]['LV Size']
-            eachLV.lvthinmapped=lvdict[eachLV.lvname()]['Mapped size']
+            eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
+            eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             eachLV.save(update_fields=['lvsize','lvthinmapped'])
 
     def VGFilter(self,storageSize):
@@ -55,8 +56,9 @@ class Provisioner(APIView):
         # Further filter on whether thinusedpercent < thinusedmaxpercent
         # Return a random choice from these
         storagehosts = StorageHost.objects.filter(enabled=True)
+        logger.info("Found %d storagehosts" %(len(storagehosts),))
         for eachhost in storagehosts:
-            p = PollServer(host.ipaddress)
+            p = PollServer(eachhost.ipaddress)
             p.GetVG()
         vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'))
 
@@ -68,11 +70,14 @@ class Provisioner(APIView):
                 lvs = LV.objects.filter(vg=eachvg)
                 lvalloc=0.0
                 for eachlv in lvs:
-                   lvalloc=lvalloc+eachlv.lvsize()
-                if lvalloc + storageSize > eachvg.thintotalGB():
+                   lvalloc=lvalloc+eachlv.lvsize
+                if (lvalloc + float(storageSize)) > eachvg.thintotalGB:
                     del vgchoices[vgindex]
+                else:
+                    logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
                 vgindex = vgindex+1
             chosenVG = random.choice(vgchoices)
+            logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
             return chosenVG
         else:
             logger.warn('No vghost/VG enabled')
@@ -88,7 +93,7 @@ class Provisioner(APIView):
         #vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
         #logger.info("VG choices are %s " %(str(vgchoices),))
         #chosenVG = random.choice(vgchoices)
-        chosenVG = VGFilter(storageSize)
+        chosenVG = self.VGFilter(storageSize)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
             iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
