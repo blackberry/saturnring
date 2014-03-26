@@ -118,7 +118,7 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': '/home/sacagarwal/dev/ssdbox-restful/ssddj/saturn.log',
+            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
             'formatter': 'verbose'
         },
     },

@@ -14,9 +14,9 @@ from ssdfrontend.models import LV
 import logging
 import utils.scstconf
 
-userName='vagrant'
+userName='local'
 keyFile='./config/saturnserver'
-remoteinstallLoc='/home/vagrant/saturn/'
+remoteinstallLoc='/home/local/saturn/'
 localbashscripts='./globalstatemanager/bashscripts/'
 logger = logging.getLogger(__name__)
 class PollServer():
@@ -91,8 +91,8 @@ class PollServer():
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         hostid=StorageHost.objects.get(ipaddress=self.serverIP)
-        thinusedpercent = float(self.Exec('sudo lvs --units g | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f2')[0].rstrip())
-        thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f8- | tr -d " " | cut -d"g" -f1')[0].rstrip())
+        thinusedpercent = float(self.Exec('sudo lvs --units g | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f2')[0].rstrip())
+        thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f1')[0].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
         logger.info(vgs)
         existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])

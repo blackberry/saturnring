@@ -2,6 +2,7 @@ from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
+from ssdfrontend.models import Provisioner
 from globalstatemanager.gsm import PollServer
 from utils.affinity import RandomAffinity
 from serializers import TargetSerializer
@@ -19,23 +20,29 @@ from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 import random
 import logging
+from django.core import serializers
 logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
-class Provisioner(APIView):
+class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            iqntar = self.MakeTarget(request.DATA,request.user)
-#            serializer.save()
-            if iqntar <> 0:
-                tar = Target.objects.filter(iqntar=iqntar)
-                data = tar.values()
-                #data = serializers.serialize('json', list(Target.objects.get(iqntar=iqntar)), fields=('iqnini','iqntar'))a
-                return Response(data, status=status.HTTP_201_CREATED)
+	    provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
+	    logger.info(str(provfilter))
+	    if len(provfilter):
+		return Response("Duplicate request, ignored")
             else:
-                return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+		    iqntar = self.MakeTarget(request.DATA,request.user)
+		    serializer.save()
+		    if iqntar <> 0:
+			tar = Target.objects.filter(iqntar=iqntar)
+			data = tar.values()
+			#data = serializers.serialize('json', list(Target.objects.get(iqntar=iqntar)), fields=('iqnini','iqntar'))a
+			return Response(data, status=status.HTTP_201_CREATED)
+		    else:
+			return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -45,9 +52,10 @@ class Provisioner(APIView):
         lvdict = p.GetLVs("storevg")
         lvs = LV.objects.all()
         for eachLV in lvs:
-            eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
-            eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
-            eachLV.save(update_fields=['lvsize','lvthinmapped'])
+	    if eachLV.lvname in lvdict:
+            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
+            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
+            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
 
     def VGFilter(self,storageSize):
         # Check if StorageHost is enabled
