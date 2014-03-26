@@ -20,13 +20,13 @@ remoteinstallLoc='/home/local/saturn/'
 localbashscripts='./globalstatemanager/bashscripts/'
 logger = logging.getLogger(__name__)
 class PollServer():
-    def __init__(self,serverIP):
-        logger.info("PollServer trying server IP %s" %(serverIP,))
-        self.serverIP = str(serverIP)
-        self.InstallScripts()
+    def __init__(self,serverDNS):
+        logger.info("PollServer trying server %s" %(serverDNS,))
+	self.serverDNS = str(serverDNS)
+        #self.InstallScripts()
 
     def InstallScripts(self):
-        srv = pysftp.Connection(self.serverIP,userName,keyFile)
+        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         srv.execute ('mkdir -p '+remoteinstallLoc+'saturn-bashscripts/')
         srv.chdir(remoteinstallLoc+'saturn-bashscripts/')
         locallist=os.listdir(localbashscripts)
@@ -37,7 +37,7 @@ class PollServer():
         logger.info("Installed scripts")
 
     def Exec(self,command):
-        srv = pysftp.Connection(self.serverIP,userName,keyFile)
+        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         rtncmd=srv.execute(command)
         srv.close()
         return rtncmd
@@ -73,8 +73,8 @@ class PollServer():
 
     def GetTargets(self):
         self.Exec(" ".join(['sudo', 'scstadmin','-w /etc/scst.conf']))
-        srv = pysftp.Connection(self.serverIP,userName,keyFile)
-        srv.get('/etc/scst.conf','config/'+self.serverIP+'.scst.conf')
+        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
+        srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
         
     def GetLVs(self, vgname='storevg'):
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
@@ -90,7 +90,7 @@ class PollServer():
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        hostid=StorageHost.objects.get(ipaddress=self.serverIP)
+        hostid=StorageHost.objects.get(ipaddress=self.serverDNS)
         thinusedpercent = float(self.Exec('sudo lvs --units g | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f2')[0].rstrip())
         thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f1')[0].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
@@ -116,7 +116,7 @@ class PollServer():
     
     def CreateTarget(self,iqnTarget,sizeinGB):
         logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
-        srv = pysftp.Connection(self.serverIP,userName,keyFile)
+        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         cmdStr = 'sudo /bin/bash '+remoteinstallLoc+'saturn-bashscripts/createtarget.sh' +' '+ str(sizeinGB)+' '+ iqnTarget
         exStr = srv.execute(cmdStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,exStr))

@@ -1,18 +1,19 @@
 from django.contrib import admin
-
+from django import forms
 from ssdfrontend.models import Target 
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV 
 from ssdfrontend.models import VG 
 from ssdfrontend.models import Provisioner
 
-admin.site.register(StorageHost)
+from globalstatemanager.gsm import PollServer
+#admin.site.register(StorageHost)
 # Register your models here.
 #from django.contrib import admin
 from admin_stats.admin import StatsAdmin, Avg, Sum
 
-
-
+import logging
+logger = logging.getLogger(__name__)
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
     list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf']
@@ -76,3 +77,33 @@ class LVAdmin(StatsAdmin):
 admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
+
+
+class StorageHostForm(forms.ModelForm):
+    class Meta:
+        model = StorageHost
+	
+    def clean_dnsname(self):
+#        featuredCount = Country.objects.filter(featured=True).count()
+ 
+ #       if featuredCount >= 5 and self.cleaned_data['featured'] is True:
+ #           raise forms.ValidationError("5 Countries can be featured at most!")
+ #       return self.cleaned_data['featured']a
+	saturnserver = self.cleaned_data['dnsname']
+        try:
+            p = PollServer(saturnserver)
+            p.InstallScripts()
+        except:
+            raise forms.ValidationError("Error with Saturn Server "+saturnserver)
+            logger.warn("Error with Saturn server specified on the form "+saturnserver)
+	return self.cleaned_data['dnsname']
+             
+ 
+class StorageHostAdmin(admin.ModelAdmin):
+    form = StorageHostForm
+ 
+admin.site.register(StorageHost, StorageHostAdmin)
+
+
+
+
