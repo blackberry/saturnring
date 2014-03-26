@@ -7,15 +7,18 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 
 admin.site.register(StorageHost)
-admin.site.register(VG)
 # Register your models here.
 #from django.contrib import admin
 from admin_stats.admin import StatsAdmin, Avg, Sum
 
-from ssdfrontend.models import Target
 
 
+class VGAdmin(StatsAdmin):	
+    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
+    list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf']
+    exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
 
+admin.site.register(VG,VGAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner',)

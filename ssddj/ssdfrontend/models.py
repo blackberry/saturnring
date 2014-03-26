@@ -44,6 +44,7 @@ class VG (models.Model):
     opf = models.FloatField(default=0.7)
     thinusedmaxpercent = models.FloatField(default=70)
     enabled = models.BooleanField(default=True)
+    CurrentAllocGB = models.FloatField(default=-100.0)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 

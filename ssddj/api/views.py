@@ -57,6 +57,16 @@ class Provision(APIView):
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
 
+    def LVAllocSumVG(self,vg):        
+	lvalloc=0.0
+        p = PollServer(vg.vghost) # Check this
+        self.UpdateLVs(vg)
+        lvs = LV.objects.filter(vg=vg)
+        lvalloc=0.0
+        for eachlv in lvs:
+           lvalloc=lvalloc+eachlv.lvsize
+	return lvalloc
+
     def VGFilter(self,storageSize):
         # Check if StorageHost is enabled
         # Check if VG is enabled
@@ -73,12 +83,15 @@ class Provision(APIView):
         if len(vgchoices) > 0:
             numDel=0
             for eachvg in vgchoices:
-                p = PollServer(eachvg.vghost) # Check this
-                self.UpdateLVs(eachvg)
-                lvs = LV.objects.filter(vg=eachvg)
-                lvalloc=0.0
-                for eachlv in lvs:
-                   lvalloc=lvalloc+eachlv.lvsize
+                #p = PollServer(eachvg.vghost) # Check this
+                #self.UpdateLVs(eachvg)
+                #lvs = LV.objects.filter(vg=eachvg)
+                #lvalloc=0.0
+                #for eachlv in lvs:
+                #lvalloc=lvalloc+eachlv.lvsize
+		lvalloc = self.LVAllocSumVG(eachvg)
+		eachvg.CurrentAllocGB=lvalloc
+		eachvg.save()
                 if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
                    logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
                    numDel=numDel+1 
@@ -101,7 +114,7 @@ class Provision(APIView):
         storageSize = requestDic['sizeinGB']
         #first query each host for vg capacity(?)
         #do this in parallel using a thread per server
-        logger.info("Provisioner - request received: %s %s %s" %(clientStr, serviceName, str(storageSize)))
+        logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB): %s" %(clientStr, serviceName, str(storageSize)))
         #vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
         #logger.info("VG choices are %s " %(str(vgchoices),))
         #chosenVG = random.choice(vgchoices)
@@ -132,6 +145,8 @@ class Provision(APIView):
                                     lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
                                     lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
                             newLV.save()
+                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
+                            chosenVG.save()
                     
                     return iqnTarget
                 else:
