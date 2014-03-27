@@ -51,6 +51,8 @@ class VG (models.Model):
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=100,primary_key=True)
     ipaddress = models.GenericIPAddressField(default='127.0.0.1')
+    storageip1 = models.GenericIPAddressField(default='127.0.0.1')
+    storageip2 = models.GenericIPAddressField(default='127.0.0.1')
     enabled = models.BooleanField(default=True)
   #  created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
   #  updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)

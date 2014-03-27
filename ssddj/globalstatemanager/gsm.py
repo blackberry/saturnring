@@ -114,12 +114,13 @@ class PollServer():
         return vgs[vgname]['VG UUID']
 
     
-    def CreateTarget(self,iqnTarget,sizeinGB):
+    def CreateTarget(self,iqnTarget,sizeinGB,storageip1,storageip2):
         logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
         srv = pysftp.Connection(self.serverDNS,userName,keyFile)
-        cmdStr = 'sudo /bin/bash '+remoteinstallLoc+'saturn-bashscripts/createtarget.sh' +' '+ str(sizeinGB)+' '+ iqnTarget
+        cmdStr = " ".join(['sudo','/bin/bash',remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2])
+#        cmdStr = 'sudo /bin/bash '+remoteinstallLoc+'saturn-bashscripts/createtarget.sh' +' '+ str(sizeinGB)+' '+ iqnTarget 
         exStr = srv.execute(cmdStr)
-        logger.info("Execution report for %s:  %s" %(cmdStr,exStr))
+        logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")

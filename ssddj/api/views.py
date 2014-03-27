@@ -130,7 +130,7 @@ class Provision(APIView):
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
                 p = PollServer(targetIP.ipaddress)
-                if (p.CreateTarget(iqnTarget,str(storageSize))):
+                if (p.CreateTarget(iqnTarget,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     p.GetTargets()
                     (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
                     if iqnTarget in tarDic:
