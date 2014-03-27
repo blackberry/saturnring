@@ -21,7 +21,7 @@ localbashscripts='./globalstatemanager/bashscripts/'
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverDNS):
-        logger.info("PollServer trying server %s" %(serverDNS,))
+        logger.info(" Scanning server %s" %(serverDNS,))
 	self.serverDNS = str(serverDNS)
         #self.InstallScripts()
 
@@ -72,9 +72,10 @@ class PollServer():
         return rtnDict 
 
     def GetTargets(self):
-        self.Exec(" ".join(['sudo', 'scstadmin','-w /etc/scst.conf']))
-        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
-        srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
+        #self.Exec(" ".join(['sudo', 'scstadmin','-w /etc/scst.conf']))
+        #srv = pysftp.Connection(self.serverDNS,userName,keyFile)
+        #srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
+        return 0
         
     def GetLVs(self, vgname='storevg'):
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
@@ -91,8 +92,9 @@ class PollServer():
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         hostid=StorageHost.objects.get(ipaddress=self.serverDNS)
-        thinusedpercent = float(self.Exec('sudo lvs --units g | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f2')[0].rstrip())
-        thintotalGB = float(self.Exec('sudo lvs --units g  | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f1')[0].rstrip())
+        cmdStr = self.Exec(" ".join(['sudo','/bin/bash',remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
+        thinusedpercent = float(cmdStr[0].rstrip())
+        thintotalGB = float(cmdStr[1].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
         logger.info(vgs)
         existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
@@ -114,12 +116,12 @@ class PollServer():
         return vgs[vgname]['VG UUID']
 
     
-    def CreateTarget(self,iqnTarget,sizeinGB,storageip1,storageip2):
         logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
+    def CreateTarget(self,iqnTarget,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         cmdStr = " ".join(['sudo','/bin/bash',remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2])
-#        cmdStr = 'sudo /bin/bash '+remoteinstallLoc+'saturn-bashscripts/createtarget.sh' +' '+ str(sizeinGB)+' '+ iqnTarget 
         exStr = srv.execute(cmdStr)
+        srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
@@ -134,9 +136,10 @@ class PollServer():
 
 #Unit test
 if __name__=="__main__":
-    pollserver = PollServer('192.168.61.20')
-    pollserver.GetVG()
-    pollserver.GetLV()
+    pollserver = PollServer('saturnserver0.store.altus.bblabs')
+    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
+    print cmdStr
+#    pollserver.GetLV()
     #for aLine in pollserver.GetLV():
     #    print aLine
     #for aline in pollserver.Exec("".join(['sudo',' ',remoteinstallLoc,'saturn-bashscripts/','createlun.sh',' ','0.05'])):

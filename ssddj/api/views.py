@@ -57,8 +57,7 @@ class Provision(APIView):
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
 
-    def LVAllocSumVG(self,vg):        
-	lvalloc=0.0
+    def LVAllocSumVG(self,vg):
         p = PollServer(vg.vghost) # Check this
         self.UpdateLVs(vg)
         lvs = LV.objects.filter(vg=vg)
@@ -78,10 +77,10 @@ class Provision(APIView):
         for eachhost in storagehosts:
             p = PollServer(eachhost.ipaddress)
             p.GetVG()
-        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'))
-
+        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
+            chosenVG = None
             for eachvg in vgchoices:
                 #p = PollServer(eachvg.vghost) # Check this
                 #self.UpdateLVs(eachvg)
@@ -89,16 +88,17 @@ class Provision(APIView):
                 #lvalloc=0.0
                 #for eachlv in lvs:
                 #lvalloc=lvalloc+eachlv.lvsize
-		lvalloc = self.LVAllocSumVG(eachvg)
-		eachvg.CurrentAllocGB=lvalloc
-		eachvg.save()
+                lvalloc = self.LVAllocSumVG(eachvg)
+                eachvg.CurrentAllocGB=lvalloc
+                eachvg.save()
                 if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
                    logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
                    numDel=numDel+1 
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
+                    chosenVG = eachvg
+                    break
             if len(vgchoices)>numDel:
-                chosenVG = random.choice(vgchoices)
                 logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
                 return chosenVG
             else:
@@ -131,7 +131,7 @@ class Provision(APIView):
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
                 p = PollServer(targetIP.ipaddress)
                 if (p.CreateTarget(iqnTarget,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
-                    p.GetTargets()
+                    #p.GetTargets()
                     (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
                     if iqnTarget in tarDic:
                         newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
