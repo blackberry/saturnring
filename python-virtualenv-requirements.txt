@@ -3,7 +3,6 @@ Markdown==2.4
 PyYAML==3.10
 South==0.8.4
 argparse==1.2.1
-django-admin-changelist-stats==0.2
 django-filter==0.7
 djangorestframework==2.3.13
 ecdsa==0.11
