@@ -9,3 +9,6 @@ urlpatterns = patterns(
     url(r'^admin/', include(admin.site.urls)),
     url(r'^portal/',include('ssdfrontend.urls')),
 )
+urlpatterns += patterns('',
+    (r'^django-rq/', include('django_rq.urls')),
+)

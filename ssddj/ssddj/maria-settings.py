@@ -45,7 +45,6 @@ INSTALLED_APPS = (
     'globalstatemanager',
     'utils',
     'admin_stats',
-    'django_rq',
 )
 
 
@@ -82,17 +81,6 @@ DATABASES = {
 #	'PASSWORD': 'password',
     }
 }
-
-RQ_QUEUES = {
-    'default': {
-        'HOST': 'localhost',
-        'PORT': 6379,
-        'DB': 0,
-    },
-}
-
-
-
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 

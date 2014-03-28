@@ -4,6 +4,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from globalstatemanager.gsm import PollServer
+from globalstatemanager.gsm import  UpdateState 
 from utils.affinity import RandomAffinity
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
@@ -23,6 +24,8 @@ import logging
 from django.core import serializers
 logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
+import django_rq
+
 class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
@@ -47,19 +50,9 @@ class Provision(APIView):
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def UpdateLVs(self,vg):
-        p = PollServer(vg.vghost)
-        lvdict = p.GetLVs("storevg")
-        lvs = LV.objects.all()
-        for eachLV in lvs:
-	    if eachLV.lvname in lvdict:
-            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
-            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
-            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
-
     def LVAllocSumVG(self,vg):
         p = PollServer(vg.vghost) # Check this
-        self.UpdateLVs(vg)
+        p.UpdateLVs(vg)
         lvs = LV.objects.filter(vg=vg)
         lvalloc=0.0
         for eachlv in lvs:
@@ -82,12 +75,6 @@ class Provision(APIView):
             numDel=0
             chosenVG = None
             for eachvg in vgchoices:
-                #p = PollServer(eachvg.vghost) # Check this
-                #self.UpdateLVs(eachvg)
-                #lvs = LV.objects.filter(vg=eachvg)
-                #lvalloc=0.0
-                #for eachlv in lvs:
-                #lvalloc=lvalloc+eachlv.lvsize
                 lvalloc = self.LVAllocSumVG(eachvg)
                 eachvg.CurrentAllocGB=lvalloc
                 eachvg.save()
@@ -145,9 +132,10 @@ class Provision(APIView):
                                     lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
                                     lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
                             newLV.save()
-                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
-                            chosenVG.save()
-                    
+                            #chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
+                            #chosenVG.save()
+                            queue = django_rq.get_queue('default')
+                            queue.enqueue(UpdateState)
                     return iqnTarget
                 else:
                     logger.warn('CreateTarget did not work')

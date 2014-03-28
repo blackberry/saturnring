@@ -12,32 +12,36 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 import logging
+from redisq import SchedulerQ
 import utils.scstconf
-
-userName='local'
-keyFile='./config/saturnserver'
-remoteinstallLoc='/home/local/saturn/'
-localbashscripts='./globalstatemanager/bashscripts/'
+import django_rq
+from datetime import datetime
 logger = logging.getLogger(__name__)
+
 class PollServer():
     def __init__(self,serverDNS):
         logger.info(" Scanning server %s" %(serverDNS,))
-	self.serverDNS = str(serverDNS)
+        self.userName='local'
+        self.keyFile='./config/saturnserver'
+        self.remoteinstallLoc='/home/local/saturn/'
+        self.localbashscripts='./globalstatemanager/bashscripts/'
+
+        self.serverDNS = str(serverDNS)
         #self.InstallScripts()
 
     def InstallScripts(self):
-        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
-        srv.execute ('mkdir -p '+remoteinstallLoc+'saturn-bashscripts/')
-        srv.chdir(remoteinstallLoc+'saturn-bashscripts/')
-        locallist=os.listdir(localbashscripts)
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
+        srv.execute ('mkdir -p '+self.remoteinstallLoc+'saturn-bashscripts/')
+        srv.chdir(self.remoteinstallLoc+'saturn-bashscripts/')
+        locallist=os.listdir(self.localbashscripts)
         for localfile in locallist:
-            srv.put(localbashscripts+localfile)
-            srv.execute("chmod 777 "+remoteinstallLoc+'saturn-bashscripts/'+localfile)
+            srv.put(self.localbashscripts+localfile)
+            srv.execute("chmod 777 "+self.remoteinstallLoc+'saturn-bashscripts/'+localfile)
         srv.close()
         logger.info("Installed scripts")
 
     def Exec(self,command):
-        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
         rtncmd=srv.execute(command)
         srv.close()
         return rtncmd
@@ -76,7 +80,18 @@ class PollServer():
         #srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         #srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
         return 0
-        
+
+
+    def UpdateLVs(self,vg):
+        p = PollServer(vg.vghost)
+        lvdict = p.GetLVs("storevg")
+        lvs = LV.objects.all()
+        for eachLV in lvs:
+	    if eachLV.lvname in lvdict:
+            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
+            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
+            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
+    
     def GetLVs(self, vgname='storevg'):
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
         delimitStr = '--- Logical volume ---'
@@ -91,8 +106,8 @@ class PollServer():
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        hostid=StorageHost.objects.get(ipaddress=self.serverDNS)
-        cmdStr = self.Exec(" ".join(['sudo','/bin/bash',remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
+        #hostid=StorageHost.objects.get(ipaddress=self.serverDNS)
+        cmdStr = self.Exec(" ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
         thinusedpercent = float(cmdStr[0].rstrip())
         thintotalGB = float(cmdStr[1].rstrip())
         maxthinavl = thintotalGB*(100-thinusedpercent)/100
@@ -106,7 +121,7 @@ class PollServer():
             existingvg.vgsize = vgs[vgname]['VG Size']
             existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize'])
         else:
-            myvg = VG(vghost=hostid,vgsize=vgs[vgname]['VG Size'],
+            myvg = VG(vghost=self.serverDNS,vgsize=vgs[vgname]['VG Size'],
                     vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                     vgtotalpe=vgs[vgname]['Total PE'],
                     vgfreepe=vgs[vgname]['Free  PE / Size'],
@@ -116,23 +131,34 @@ class PollServer():
         return vgs[vgname]['VG UUID']
 
     
-        logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
+   #     logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
     def CreateTarget(self,iqnTarget,sizeinGB,storageip1,storageip2):
-        srv = pysftp.Connection(self.serverDNS,userName,keyFile)
-        cmdStr = " ".join(['sudo','/bin/bash',remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2])
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
+        cmdStr = " ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2])
         exStr = srv.execute(cmdStr)
         srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
-            self.GetVG() #Rescan VG to update
+
+#            self.GetVG() #Rescan VG to update
             return 1
         else:
             logger.info("Returning failed createtarget run")
             return 0
 
+#class StateUpdater:
+#    def __init__(self):
+#        logger.info("Updating state")
 
+def UpdateState():
+    logger.info("Updating global state of Saturn cluster")
+    allvgs=VG.objects.all()
+    for eachvg in allvgs:
+        p = PollServer(eachvg.vghost)
+        p.GetVG()
+        p.UpdateLVs(eachvg)
 
 #Unit test
 if __name__=="__main__":
@@ -142,7 +168,7 @@ if __name__=="__main__":
 #    pollserver.GetLV()
     #for aLine in pollserver.GetLV():
     #    print aLine
-    #for aline in pollserver.Exec("".join(['sudo',' ',remoteinstallLoc,'saturn-bashscripts/','createlun.sh',' ','0.05'])):
+    #for aline in pollserver.Exec("".join(['sudo',' ',self.remoteinstallLoc,'saturn-bashscripts/','createlun.sh',' ','0.05'])):
     #    print aline
 
 
