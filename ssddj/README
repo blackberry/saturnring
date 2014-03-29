@@ -1,0 +1,23 @@
+To run
+
+Use screen, set the python environment as specified in the requirements file using pip and virtualenv
+
+Screen 1
+python manage.py runserver 0.0.0.0:8000
+
+Screen 2
+python manage.py rqworker default
+
+Screen 3
+crontab -e and then insert
+* * * * * curl -X GET http://saturnring.store.altus.bblabs:8000/api/stateupdate/
+Later you may do a tail -f saturn.log to see the log
+
+On the browser:
+http://<satunring.store.altus.bblabs>:8000/admin
+
+On the iSCSI client (for example):
+curl -X GET http://saturnring.store.altus.bblabs:8000/api/provisioner/ -d "clienthost=bbmserver62&sizeinGB=1.0&serviceName=b8mworkers" -u bbmserviceowner:password
+
+
+

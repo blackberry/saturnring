@@ -4,8 +4,6 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from globalstatemanager.gsm import PollServer
-from globalstatemanager.gsm import  UpdateState 
-from utils.affinity import RandomAffinity
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
 from serializers import VGSerializer
@@ -24,7 +22,17 @@ import logging
 from django.core import serializers
 logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
+from utils.periodic import UpdateState
 import django_rq
+
+class UpdateStateData(APIView):
+#    authentication_classes = (SessionAuthentication, BasicAuthentication)
+#    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        queue = django_rq.get_queue('default')
+        queue.enqueue(UpdateState)
+        logger.info("Updating cluster global state")
+        return Response("Ok, enqueued state update request")
 
 class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
@@ -51,13 +59,13 @@ class Provision(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def LVAllocSumVG(self,vg):
-        p = PollServer(vg.vghost) # Check this
-        p.UpdateLVs(vg)
+#        p = PollServer(vg.vghost) # Check this
+ #       p.UpdateLVs(vg)
         lvs = LV.objects.filter(vg=vg)
         lvalloc=0.0
         for eachlv in lvs:
            lvalloc=lvalloc+eachlv.lvsize
-	return lvalloc
+    	return lvalloc
 
     def VGFilter(self,storageSize):
         # Check if StorageHost is enabled
@@ -67,9 +75,9 @@ class Provision(APIView):
         # Return a random choice from these
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
-        for eachhost in storagehosts:
-            p = PollServer(eachhost.ipaddress)
-            p.GetVG()
+#        for eachhost in storagehosts:
+#            p = PollServer(eachhost.ipaddress)
+#            p.GetVG()
         vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
@@ -132,10 +140,8 @@ class Provision(APIView):
                                     lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
                                     lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
                             newLV.save()
-                            #chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
-                            #chosenVG.save()
-                            queue = django_rq.get_queue('default')
-                            queue.enqueue(UpdateState)
+                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
+                            chosenVG.save()
                     return iqnTarget
                 else:
                     logger.warn('CreateTarget did not work')

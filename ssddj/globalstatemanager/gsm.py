@@ -14,8 +14,6 @@ from ssdfrontend.models import LV
 import logging
 from redisq import SchedulerQ
 import utils.scstconf
-import django_rq
-from datetime import datetime
 logger = logging.getLogger(__name__)
 
 class PollServer():
@@ -147,19 +145,6 @@ class PollServer():
         else:
             logger.info("Returning failed createtarget run")
             return 0
-
-#class StateUpdater:
-#    def __init__(self):
-#        logger.info("Updating state")
-
-def UpdateState():
-    logger.info("Updating global state of Saturn cluster")
-    allvgs=VG.objects.all()
-    for eachvg in allvgs:
-        p = PollServer(eachvg.vghost)
-        p.GetVG()
-        p.UpdateLVs(eachvg)
-
 #Unit test
 if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
