@@ -5,7 +5,7 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 #from ssdfrontend.models import HostGroup
-
+from operator import itemgetter
 from globalstatemanager.gsm import PollServer
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
@@ -69,6 +69,7 @@ class Provision(APIView):
         for eachlv in lvs:
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
+    
 
     def VGFilter(self,storageSize, aagroup):
         # Check if StorageHost is enabled
@@ -76,6 +77,7 @@ class Provision(APIView):
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
         # Further filter on whether thinusedpercent < thinusedmaxpercent
         # Return a random choice from these
+        # Or do AAG logic
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
@@ -96,13 +98,17 @@ class Provision(APIView):
                         chosenVG = eachvg
                         break
                     else:
-                        qualvgs.append(eachVG)
+                        qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
 
+            if len(qualvgs) > 0:
+                chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
+                logger.info('Anti-affinity chose Saturn server %s with an overlap of %d.' %(chosenVG.vghost,overlap))
+                return chosenVG
             if len(vgchoices)>numDel:
-                logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
+                logger.info("Randomly chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
                 return chosenVG
             else:
-                logger.info("No VG that satisfies the overprovisioning contraint (opf) was found")
+                logger.warn("No VG that satisfies the overprovisioning contraint (opf) was found")
                 return -1
         else:
             logger.warn('No vghost/VG enabled')
@@ -112,8 +118,10 @@ class Provision(APIView):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
-        aagroup = "random"
-
+        if 'aagroup' not in requestDic:
+            aagroup = "random"
+        else:
+            aagroup = requestDic['aagroup']
         logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientStr, serviceName, str(storageSize), aagroup))
         chosenVG = self.VGFilter(storageSize,aagroup)
         if chosenVG <> -1:
