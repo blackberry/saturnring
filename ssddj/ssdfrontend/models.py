@@ -72,7 +72,21 @@ class Target(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
+class AAGroup(models.Model):
+    name = models.CharField(max_length=100)
+    #hosts = models.ManyToManyField(StorageHost,through='HostGroup')
+    hosts = models.ManyToManyField(StorageHost)
 
+    def __unicode__(self):
+        return self.name 
+
+#class HostGroup(models.Model):
+#    host = models.ForeignKey('StorageHost')
+#    group = models.ForeignKey('AAGroup')
+#    count = models.IntegerField(default=0)
+
+
+    
 
 
 

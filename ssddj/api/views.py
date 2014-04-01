@@ -3,6 +3,9 @@ from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
+from ssdfrontend.models import AAGroup
+#from ssdfrontend.models import HostGroup
+
 from globalstatemanager.gsm import PollServer
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
@@ -67,7 +70,7 @@ class Provision(APIView):
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
 
-    def VGFilter(self,storageSize):
+    def VGFilter(self,storageSize, aagroup):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -75,9 +78,7 @@ class Provision(APIView):
         # Return a random choice from these
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
-#        for eachhost in storagehosts:
-#            p = PollServer(eachhost.ipaddress)
-#            p.GetVG()
+        qualvgs = []
         vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
@@ -91,8 +92,12 @@ class Provision(APIView):
                    numDel=numDel+1 
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
-                    chosenVG = eachvg
-                    break
+                    if aagroup=="random":
+                        chosenVG = eachvg
+                        break
+                    else:
+                        qualvgs.append(eachVG)
+
             if len(vgchoices)>numDel:
                 logger.info("Chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
                 return chosenVG
@@ -107,13 +112,10 @@ class Provision(APIView):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
-        #first query each host for vg capacity(?)
-        #do this in parallel using a thread per server
-        logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB): %s" %(clientStr, serviceName, str(storageSize)))
-        #vgchoices = VG.objects.filter(maxthinavlGB__gt=float(storageSize))
-        #logger.info("VG choices are %s " %(str(vgchoices),))
-        #chosenVG = random.choice(vgchoices)
-        chosenVG = self.VGFilter(storageSize)
+        aagroup = "random"
+
+        logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientStr, serviceName, str(storageSize), aagroup))
+        chosenVG = self.VGFilter(storageSize,aagroup)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
             iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
@@ -142,6 +144,13 @@ class Provision(APIView):
                             newLV.save()
                             chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
                             chosenVG.save()
+
+                    if 'aagroup' in requestDic:
+                        aagroup = requestDic['aagroup']
+                        aa = AAGroup(name=requestDic['aagroup'])
+                        aa.save()
+                        aa.hosts.add(chosenVG.vghost)
+
                     return iqnTarget
                 else:
                     logger.warn('CreateTarget did not work')

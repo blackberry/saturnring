@@ -5,6 +5,8 @@ from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV 
 from ssdfrontend.models import VG 
 from ssdfrontend.models import Provisioner
+from ssdfrontend.models import AAGroup
+#from ssdfrontend.models import HostGroup
 
 from globalstatemanager.gsm import PollServer
 #admin.site.register(StorageHost)
@@ -77,7 +79,8 @@ class LVAdmin(StatsAdmin):
 admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-
+admin.site.register(AAGroup)
+#admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
     class Meta:
