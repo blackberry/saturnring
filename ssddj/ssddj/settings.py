@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'ssddj.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'saturndb',
+        'NAME': 'demodb',
 	'HOST': '10.236.48.61',
 	'USER': 'saturnadmin',
 #	'PASSWORD': 'ArKa$2014',

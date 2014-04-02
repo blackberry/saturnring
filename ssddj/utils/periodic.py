@@ -13,8 +13,9 @@ from globalstatemanager.gsm import PollServer
 
 
 def UpdateState():
-    allhosts=StorageHost.objects.all()
+    allhosts=StorageHost.objects.filter(enabled=True)
     for eachhost in allhosts:
         p = PollServer(eachhost)
         vguuid = p.GetVG()
-        p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+        if vguuid <> -1:
+            p.UpdateLVs(VG.objects.get(vguuid=vguuid))

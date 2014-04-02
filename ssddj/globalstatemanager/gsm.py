@@ -104,11 +104,16 @@ class PollServer():
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        #hostid=StorageHost.objects.get(ipaddress=self.serverDNS)
-        cmdStr = self.Exec(" ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
-        thinusedpercent = float(cmdStr[0].rstrip())
-        thintotalGB = float(cmdStr[1].rstrip())
-        maxthinavl = thintotalGB*(100-thinusedpercent)/100
+        try:
+            cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
+            
+            logger.info(self.serverDNS+": "+" ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh'])+': LVS returned '+str(cmdStr))
+            thinusedpercent = float(cmdStr[0].rstrip())
+            thintotalGB = float(cmdStr[1].rstrip())
+            maxthinavl = thintotalGB*(100-thinusedpercent)/100
+        except:
+            logger.warn("Unable to run LVScan on "+self.serverDNS)
+            return -1
         logger.info(vgs)
         existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
         if len(existingvgs)==1:
@@ -119,7 +124,7 @@ class PollServer():
             existingvg.vgsize = vgs[vgname]['VG Size']
             existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize'])
         else:
-            myvg = VG(vghost=self.serverDNS,vgsize=vgs[vgname]['VG Size'],
+            myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[vgname]['VG Size'],
                     vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                     vgtotalpe=vgs[vgname]['Total PE'],
                     vgfreepe=vgs[vgname]['Free  PE / Size'],
