@@ -67,6 +67,7 @@ class Target(models.Model):
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.CharField(max_length=100)
+    aagroup = models.ForeignKeyfield(AAGroup, null=True, blank=True)
    # created_at = models.DateTimeField(auto_now_add=True)
    # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2

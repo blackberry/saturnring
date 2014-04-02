@@ -43,20 +43,18 @@ class Provision(APIView):
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-	    provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
-	    logger.info(str(provfilter))
-	    if len(provfilter):
-		return Response("Duplicate request, ignored")
+            provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
+            if len(provfilter):
+                return Response("\nERROR: Duplicate request, ignored\n")
             else:
-		    iqntar = self.MakeTarget(request.DATA,request.user)
-		    serializer.save()
-		    if iqntar <> 0:
-			tar = Target.objects.filter(iqntar=iqntar)
-			data = tar.values()
-			#data = serializers.serialize('json', list(Target.objects.get(iqntar=iqntar)), fields=('iqnini','iqntar'))a
-			return Response(data, status=status.HTTP_201_CREATED)
-		    else:
-			return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                iqntar = self.MakeTarget(request.DATA,request.user)
+                serializer.save()
+                if iqntar <> 0:
+                    tar = Target.objects.filter(iqntar=iqntar)
+                    data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup')
+                    return Response(data[0], status=status.HTTP_201_CREATED)
+                else:
+                    return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -158,6 +156,7 @@ class Provision(APIView):
                         aa = AAGroup(name=requestDic['aagroup'])
                         aa.save()
                         aa.hosts.add(chosenVG.vghost)
+                        aa.save()
 
                     return iqnTarget
                 else:
