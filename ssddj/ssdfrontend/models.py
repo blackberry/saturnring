@@ -60,6 +60,16 @@ class StorageHost(models.Model):
         return self.dnsname
 
 
+
+class AAGroup(models.Model):
+    name = models.CharField(max_length=100)
+    hosts = models.ManyToManyField(StorageHost)
+
+    def __unicode__(self):
+        return self.name 
+
+
+
 class Target(models.Model):
     owner = models.ForeignKey(User)
     targethost= models.ForeignKey('StorageHost')
@@ -67,27 +77,9 @@ class Target(models.Model):
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.CharField(max_length=100)
-    aagroup = models.ForeignKeyfield(AAGroup, null=True, blank=True)
+    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
    # created_at = models.DateTimeField(auto_now_add=True)
    # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
-
-class AAGroup(models.Model):
-    name = models.CharField(max_length=100)
-    #hosts = models.ManyToManyField(StorageHost,through='HostGroup')
-    hosts = models.ManyToManyField(StorageHost)
-
-    def __unicode__(self):
-        return self.name 
-
-#class HostGroup(models.Model):
-#    host = models.ForeignKey('StorageHost')
-#    group = models.ForeignKey('AAGroup')
-#    count = models.IntegerField(default=0)
-
-
-    
-
-
 

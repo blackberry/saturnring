@@ -25,7 +25,7 @@ admin.site.register(VG,VGAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner',)
-    list_display = ['iqntar', 'iqnini','sizeinGB']
+    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False
@@ -79,7 +79,7 @@ class LVAdmin(StatsAdmin):
 admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-admin.site.register(AAGroup)
+#admin.site.register(AAGroup)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):

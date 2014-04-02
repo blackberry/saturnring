@@ -51,7 +51,7 @@ class Provision(APIView):
                 serializer.save()
                 if iqntar <> 0:
                     tar = Target.objects.filter(iqntar=iqntar)
-                    data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup')
+                    data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
                     return Response(data[0], status=status.HTTP_201_CREATED)
                 else:
                     return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -157,6 +157,8 @@ class Provision(APIView):
                         aa.save()
                         aa.hosts.add(chosenVG.vghost)
                         aa.save()
+                        newTarget.aagroup=aa
+                        newTarget.save()
 
                     return iqnTarget
                 else:
