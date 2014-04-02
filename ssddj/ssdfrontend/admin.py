@@ -25,7 +25,7 @@ admin.site.register(VG,VGAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner',)
-    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup']
+    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup','iscsi_storeip1','iscsi_storeip2']
     stats = (Sum('sizeinGB'),)
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False
@@ -36,6 +36,11 @@ class TargetAdmin(StatsAdmin):
         if obj is not None and not request.user.is_superuser and request.user.id != obj.owner.id:
             return False
         return True
+    def iscsi_storeip1(self, obj):
+        return obj.targethost.storageip1
+
+    def iscsi_storeip2(self, obj):
+        return obj.targethost.storageip2
 
     def queryset(self, request):
         if request.user.is_superuser:

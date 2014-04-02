@@ -79,7 +79,7 @@ DATABASES = {
         'NAME': 'saturndb',
 	'HOST': '10.236.48.61',
 	'USER': 'saturnadmin',
-#	'PASSWORD': 'password',
+#	'PASSWORD': 'ArKa$2014',
     }
 }
 

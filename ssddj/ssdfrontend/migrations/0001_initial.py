@@ -42,6 +42,7 @@ class Migration(SchemaMigration):
             ('opf', self.gf('django.db.models.fields.FloatField')(default=0.7)),
             ('thinusedmaxpercent', self.gf('django.db.models.fields.FloatField')(default=70)),
             ('enabled', self.gf('django.db.models.fields.BooleanField')(default=True)),
+            ('CurrentAllocGB', self.gf('django.db.models.fields.FloatField')(default=-100.0)),
         ))
         db.send_create_signal(u'ssdfrontend', ['VG'])
 
@@ -49,9 +50,27 @@ class Migration(SchemaMigration):
         db.create_table(u'ssdfrontend_storagehost', (
             ('dnsname', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
             ('ipaddress', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
+            ('storageip1', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
+            ('storageip2', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
             ('enabled', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['StorageHost'])
+
+        # Adding model 'AAGroup'
+        db.create_table(u'ssdfrontend_aagroup', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+        ))
+        db.send_create_signal(u'ssdfrontend', ['AAGroup'])
+
+        # Adding M2M table for field hosts on 'AAGroup'
+        m2m_table_name = db.shorten_name(u'ssdfrontend_aagroup_hosts')
+        db.create_table(m2m_table_name, (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('aagroup', models.ForeignKey(orm[u'ssdfrontend.aagroup'], null=False)),
+            ('storagehost', models.ForeignKey(orm[u'ssdfrontend.storagehost'], null=False))
+        ))
+        db.create_unique(m2m_table_name, ['aagroup_id', 'storagehost_id'])
 
         # Adding model 'Target'
         db.create_table(u'ssdfrontend_target', (
@@ -61,6 +80,7 @@ class Migration(SchemaMigration):
             ('iqntar', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
             ('clienthost', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('sizeinGB', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('aagroup', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ssdfrontend.AAGroup'], null=True, blank=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['Target'])
 
@@ -77,6 +97,12 @@ class Migration(SchemaMigration):
 
         # Deleting model 'StorageHost'
         db.delete_table(u'ssdfrontend_storagehost')
+
+        # Deleting model 'AAGroup'
+        db.delete_table(u'ssdfrontend_aagroup')
+
+        # Removing M2M table for field hosts on 'AAGroup'
+        db.delete_table(db.shorten_name(u'ssdfrontend_aagroup_hosts'))
 
         # Deleting model 'Target'
         db.delete_table(u'ssdfrontend_target')
@@ -119,6 +145,12 @@ class Migration(SchemaMigration):
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
+        u'ssdfrontend.aagroup': {
+            'Meta': {'object_name': 'AAGroup'},
+            'hosts': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['ssdfrontend.StorageHost']", 'symmetrical': 'False'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+        },
         u'ssdfrontend.lv': {
             'Meta': {'object_name': 'LV'},
             'lvname': ('django.db.models.fields.CharField', [], {'default': "'Not found'", 'max_length': '50'}),
@@ -139,10 +171,13 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'StorageHost'},
             'dnsname': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
-            'ipaddress': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'})
+            'ipaddress': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'}),
+            'storageip1': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'}),
+            'storageip2': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'})
         },
         u'ssdfrontend.target': {
             'Meta': {'object_name': 'Target'},
+            'aagroup': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.AAGroup']", 'null': 'True', 'blank': 'True'}),
             'clienthost': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'iqnini': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'iqntar': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'}),
@@ -151,6 +186,7 @@ class Migration(SchemaMigration):
             'targethost': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.StorageHost']"})
         },
         u'ssdfrontend.vg': {
+            'CurrentAllocGB': ('django.db.models.fields.FloatField', [], {'default': '-100.0'}),
             'Meta': {'object_name': 'VG'},
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'maxthinavlGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
