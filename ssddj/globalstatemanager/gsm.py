@@ -98,7 +98,8 @@ class PollServer():
         return lvs
 #        logger.info('Read LV '+str(lvs))
         #TODO - insert into the DB
-                
+
+    
     def GetVG(self,vgname='storevg'): #Unit test this again
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
         delimitStr = '--- Volume group ---'
@@ -151,6 +152,8 @@ class PollServer():
             logger.info("Returning failed createtarget run")
             return 0
 #Unit test
+    def GetTargetsState(self,vg):
+
 if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
     cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")

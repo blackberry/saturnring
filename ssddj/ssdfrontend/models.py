@@ -68,8 +68,6 @@ class AAGroup(models.Model):
     def __unicode__(self):
         return self.name 
 
-
-
 class Target(models.Model):
     owner = models.ForeignKey(User)
     targethost= models.ForeignKey('StorageHost')
@@ -78,6 +76,7 @@ class Target(models.Model):
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.CharField(max_length=100)
     aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
+    sessionup = models.BooleanField(default=False)
    # created_at = models.DateTimeField(auto_now_add=True)
    # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
