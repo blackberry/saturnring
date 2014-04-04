@@ -6,8 +6,8 @@ class Provisioner(models.Model):
     #owner = models.ForeignKey(User)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
-    serviceName=models.CharField(max_length=100)
-
+    serviceName = models.CharField(max_length=100)
+    #target = models.ForeignKey('Target')
 #    created_at = models.DateTimeField(auto_now_add=True)
 #    updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -61,12 +61,6 @@ class StorageHost(models.Model):
 
 
 
-class AAGroup(models.Model):
-    name = models.CharField(max_length=100)
-    hosts = models.ManyToManyField(StorageHost)
-
-    def __unicode__(self):
-        return self.name 
 
 class Target(models.Model):
     owner = models.ForeignKey(User)
@@ -75,7 +69,7 @@ class Target(models.Model):
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
     sizeinGB = models.CharField(max_length=100)
-    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
+#    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
     sessionup = models.BooleanField(default=False)
     rkb = models.BigIntegerField(default=0)
     rkbpm = models.BigIntegerField(default=0)
@@ -86,3 +80,12 @@ class Target(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
+
+
+class AAGroup(models.Model):
+    name = models.CharField(max_length=100)
+    hosts = models.ManyToManyField(StorageHost)
+    target = models.ForeignKey(Target,null=True, blank=True)
+
+    def __unicode__(self):
+        return self.name 

@@ -153,7 +153,8 @@ class Provision(APIView):
 
                     if 'aagroup' in requestDic:
                         aagroup = requestDic['aagroup']
-                        aa = AAGroup(name=requestDic['aagroup'])
+                        tar = Target.objects.get(iqntar=iqnTarget)
+                        aa = AAGroup(name=requestDic['aagroup'],target=tar)
                         aa.save()
                         aa.hosts.add(chosenVG.vghost)
                         aa.save()

@@ -23,12 +23,25 @@ class VGAdmin(StatsAdmin):
 
 admin.site.register(VG,VGAdmin)
 
+
+def delete_model(StatsAdmin,request,queryset):
+    for obj in queryset:
+        p = PollServer(obj.targethost)
+        if p.DeleteTarget(obj.iqntar)==1:
+            p.GetTargetsState()
+            obj.delete()
+
+
+
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
-    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar', 'sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    actions = [delete_model]
+
     stats = (Sum('sizeinGB'),)
-    def has_delete_permission(self, request, obj=None): # note the obj=None
-                return False
+#    def has_delete_permission(self, request, obj=None): # note the obj=None
+#                return False
+
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
         if not has_class_permission:
@@ -36,6 +49,14 @@ class TargetAdmin(StatsAdmin):
         if obj is not None and not request.user.is_superuser and request.user.id != obj.owner.id:
             return False
         return True
+    
+    def aagroup(self,obj):
+        try:
+            name = AAGroup.objects.get(target=obj).name
+            return name
+        except:
+            return "No AAGroup"
+        
     def iscsi_storeip1(self, obj):
         return obj.targethost.storageip1
 
@@ -51,6 +72,8 @@ class TargetAdmin(StatsAdmin):
         if not change:
             obj.owner = request.user
         obj.save()
+
+
 
 
 class LVAdmin(StatsAdmin):
@@ -84,7 +107,7 @@ class LVAdmin(StatsAdmin):
 admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-#admin.site.register(AAGroup)
+admin.site.register(AAGroup)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):

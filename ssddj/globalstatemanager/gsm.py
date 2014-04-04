@@ -182,6 +182,37 @@ class PollServer():
                     tar.wkbpm = wpm
                     tar.wkb=wkb
                 tar.save()
+
+    def DeleteTarget(self,iqntar):
+        self.GetTargetsState()
+        try:
+            tar = Target.objects.get(iqntar=iqntar)
+        except:
+            logger.warn("Could not find deletion target in DB, exiting. "+iqntar)
+            return -1
+        if not tar.sessionup:
+            cmdStr = " ".join(["sudo", self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar])
+            exStr = self.Exec(cmdStr)
+            success1 = False
+            success2 = False
+            for eachLine in exStr:
+                logger.info(eachLine)
+                if "Removing virtual target '"+iqntar+"' from driver 'iscsi': done" in eachLine:
+                    success1=True
+                if "successfully removed" in eachLine:
+                    success2=True
+            if success1==True and success2==True:
+                logger.debug("successfully removed target: "+iqntar)
+                return 1
+            else:
+                return -1
+        return -1
+
+
+
+        
+
+
 if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
     cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
