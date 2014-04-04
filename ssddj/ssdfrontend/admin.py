@@ -26,7 +26,7 @@ class VGAdmin(StatsAdmin):
 admin.site.register(VG,VGAdmin)
 
 
-def delete_model(StatsAdmin,request,queryset):
+def delete_iscsi_target(StatsAdmin,request,queryset):
     for obj in queryset:
         p = PollServer(obj.targethost)
         if p.DeleteTarget(obj.iqntar)==1:
@@ -38,7 +38,7 @@ def delete_model(StatsAdmin,request,queryset):
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
     list_display = ['iqntar', 'sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-    actions = [delete_model]
+    actions = [delete_iscsi_target]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
