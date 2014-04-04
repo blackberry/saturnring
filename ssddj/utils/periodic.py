@@ -21,3 +21,10 @@ def UpdateState():
             p.UpdateLVs(VG.objects.get(vguuid=vguuid))
         p.GetTargetsState()
 
+def UpdateOneState(host):
+    p = PollServer(host)
+    vguuid = p.GetVG()
+    if vguuid <> -1:
+        p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+    p.GetTargetsState()
+
