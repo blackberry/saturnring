@@ -24,8 +24,8 @@ class VGAdmin(StatsAdmin):
 admin.site.register(VG,VGAdmin)
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner',)
-    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup','iscsi_storeip1','iscsi_storeip2']
+    readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
+    list_display = ['iqntar', 'iqnini','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     stats = (Sum('sizeinGB'),)
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False

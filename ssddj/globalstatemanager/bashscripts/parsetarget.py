@@ -5,8 +5,6 @@ import re
 bashCommand = "sudo scstadmin -list_sessions"
 process = subprocess.Popen(bashCommand.split(), stdout=subprocess.PIPE)
 output = process.communicate()[0]
-#print output
-
 outlines = output.split('\n')
 wkb=0
 rkb=0
@@ -18,8 +16,8 @@ for aLine in outlines:
     if "write_io_count_kb" in aLine:
         wkb = re.findall('\d+',aLine)[0]
         print target,
-	print rkb,
-	print wkb
+        print rkb,
+        print wkb
     if "read_io_count_kb" in aLine:
         rkb = re.findall('\d+',aLine)[0]
 

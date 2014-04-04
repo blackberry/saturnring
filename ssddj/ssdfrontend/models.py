@@ -77,6 +77,10 @@ class Target(models.Model):
     sizeinGB = models.CharField(max_length=100)
     aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
     sessionup = models.BooleanField(default=False)
+    rkb = models.BigIntegerField(default=0)
+    rkbpm = models.BigIntegerField(default=0)
+    wkb = models.BigIntegerField(default=0)
+    wkbpm = models.BigIntegerField(default=0)
    # created_at = models.DateTimeField(auto_now_add=True)
    # updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
