@@ -16,11 +16,13 @@ from admin_stats.admin import StatsAdmin, Avg, Sum
 
 import logging
 logger = logging.getLogger(__name__)
+admin.site.disable_action('delete_selected')
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
     list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
-
+    def has_add_permission(self, request):
+        return False
 admin.site.register(VG,VGAdmin)
 
 
@@ -39,6 +41,8 @@ class TargetAdmin(StatsAdmin):
     actions = [delete_model]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
+    def has_add_permission(self, request):
+        return False
 #    def has_delete_permission(self, request, obj=None): # note the obj=None
 #                return False
 
@@ -104,10 +108,14 @@ class LVAdmin(StatsAdmin):
         if not change:
             obj.owner = request.user
         obj.save()
-admin.site.register(Provisioner)
+
+    def has_add_permission(self, request):
+        return False
+
+#admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-admin.site.register(AAGroup)
+#admin.site.register(AAGroup)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
