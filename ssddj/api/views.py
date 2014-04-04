@@ -43,18 +43,20 @@ class Provision(APIView):
     def get(self, request ):
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
-            if len(provfilter):
-                return Response("\nERROR: Duplicate request, ignored\n")
+            #provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
+            #if len(provfilter):
+            #    return Response("ERROR: Duplicate request, ignored")
+            #else:
+            iqntar = self.MakeTarget(request.DATA,request.user)
+            if "DUPLICATE TARGET: " in iqntar:
+                return Response(iqntar)
+            #serializer.save()
+            if iqntar <> 0:
+                tar = Target.objects.filter(iqntar=iqntar)
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
+                return Response(data[0], status=status.HTTP_201_CREATED)
             else:
-                iqntar = self.MakeTarget(request.DATA,request.user)
-                serializer.save()
-                if iqntar <> 0:
-                    tar = Target.objects.filter(iqntar=iqntar)
-                    data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
-                    return Response(data[0], status=status.HTTP_201_CREATED)
-                else:
-                    return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -126,9 +128,9 @@ class Provision(APIView):
             targetHost=str(chosenVG.vghost)
             iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
             try:
-                t = Target.objects.get(iqntar=iqnTarget)
+                t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientStr]))
                 logger.info('Target already exists: %s' % (iqnTarget,))
-                return iqnTarget
+                return "DUPLICATE TARGET: "+iqnTarget
             except ObjectDoesNotExist:
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
