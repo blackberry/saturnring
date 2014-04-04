@@ -37,7 +37,7 @@ class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
     list_display = ['iqntar', 'sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_model]
-
+    search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
 #    def has_delete_permission(self, request, obj=None): # note the obj=None
 #                return False
