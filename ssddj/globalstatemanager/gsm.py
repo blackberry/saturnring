@@ -11,6 +11,7 @@ from django.core.management import execute_from_command_line
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
+from ssdfrontend.models import Target
 import logging
 from redisq import SchedulerQ
 import utils.scstconf
@@ -98,7 +99,8 @@ class PollServer():
         return lvs
 #        logger.info('Read LV '+str(lvs))
         #TODO - insert into the DB
-                
+
+    
     def GetVG(self,vgname='storevg'): #Unit test this again
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
         delimitStr = '--- Volume group ---'
@@ -151,6 +153,35 @@ class PollServer():
             logger.info("Returning failed createtarget run")
             return 0
 #Unit test
+    def GetTargetsState(self):
+        cmdStr = " ".join(["sudo", "/usr/bin/python",self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
+        exStr = self.Exec(cmdStr)
+        alltars = Target.objects.all()
+        for eachLine in exStr:
+            logger.info(eachLine)
+            iqntar=eachLine.split()[0]
+            tar = alltars.filter(iqntar=iqntar)
+            if len(tar):
+                tar = tar[0]
+                if "no session" in eachLine:
+                    tar.sessionup=False
+                    tar.rkbpm = 0
+                    tar.wkbpm = 0
+                else:
+                    tar.sessionup=True
+                    rkb = long(eachLine.split()[1])
+                    logger.info("parsed rkb ="+str(rkb))
+                    logger.info("tar.rkb = "+str(tar.rkb))
+                    tar.rkbpm = long(rkb-tar.rkb)
+                    tar.rkb=rkb
+                    wkb = long(eachLine.split()[2])
+                    logger.info("parsed wkb ="+str(wkb))
+                    logger.info("tar.wkb = "+str(tar.wkb))
+                    wpm = long(wkb-tar.wkb)
+                    logger.info("computed wpm = "+str(wpm))
+                    tar.wkbpm = wpm
+                    tar.wkb=wkb
+                tar.save()
 if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
     cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
