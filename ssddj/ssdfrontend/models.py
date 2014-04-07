@@ -68,7 +68,7 @@ class Target(models.Model):
     iqnini = models.CharField(max_length=100)
     iqntar = models.CharField(max_length=100,primary_key=True)
     clienthost = models.CharField(max_length=100)
-    sizeinGB = models.CharField(max_length=100)
+    sizeinGB = models.FloatField(max_length=100)
 #    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
     sessionup = models.BooleanField(default=False)
     rkb = models.BigIntegerField(default=0)
@@ -89,3 +89,20 @@ class AAGroup(models.Model):
 
     def __unicode__(self):
         return self.name 
+
+from django.contrib.auth.models import User
+
+#http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
+class Profile(models.Model):
+    user = models.OneToOneField(User,unique=True)
+    max_target_sizeGB = models.FloatField(default=100.0)
+    max_alloc_sizeGB = models.FloatField(default=400.0)
+
+
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+from django.db.models import signals
+signals.post_save.connect(create_user_profile, sender=User)
+

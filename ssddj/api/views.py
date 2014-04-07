@@ -4,6 +4,9 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
+
+from django.db.models import Sum
+from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
 from operator import itemgetter
 from globalstatemanager.gsm import PollServer
@@ -49,16 +52,16 @@ class Provision(APIView):
             #if len(provfilter):
             #    return Response("ERROR: Duplicate request, ignored")
             #else:
-            iqntar = self.MakeTarget(request.DATA,request.user)
-            if "DUPLICATE TARGET: " in iqntar:
-                return Response(iqntar)
+            (flag,statusStr) = self.MakeTarget(request.DATA,request.user)
+            if flag==-1:
+                return Response(statusStr)
             #serializer.save()
-            if iqntar <> 0:
-                tar = Target.objects.filter(iqntar=iqntar)
+            if flag==0:
+                tar = Target.objects.filter(iqntar=statusStr)
                 data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
                 return Response(data[0], status=status.HTTP_201_CREATED)
             else:
-                return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                return Response("Problem provisioning, contact admin", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -116,6 +119,19 @@ class Provision(APIView):
             logger.warn('No vghost/VG enabled')
             return -1
 
+    def CheckUserQuotas(self,storageSize,owner):
+        user = User.objects.get(username=owner)
+        if (storageSize > user.profile.max_target_sizeGB):
+            rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
+            return(-1,rtnStr)
+        totalAlloc = Target.objects.filter(owner=owner).aggregate(Sum('sizeinGB'))
+        if not totalAlloc['sizeinGB__sum']:
+            totalAlloc['sizeinGB__sum'] = 0.0
+        if (totalAlloc['sizeinGB__sum']+storageSize > user.profile.max_alloc_sizeGB):
+            rtnStr = "User quota exceeded %dGb > %dGb" %(totalAlloc['sizeinGB__sum']+storageSize,user.profile.max_alloc_sizeGB)
+            return (-1,rtnStr)
+        return (1, "Quota checks ok, proceeding")
+
     def MakeTarget(self,requestDic,owner):
         clientStr = requestDic['clienthost']
         serviceName = requestDic['serviceName']
@@ -125,6 +141,13 @@ class Provision(APIView):
         else:
             aagroup = requestDic['aagroup']
         logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientStr, serviceName, str(storageSize), aagroup))
+        (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
+        if quotaFlag == -1:
+            logger.debug(quotaReason)
+            return (-1,quotaReason)
+        else:
+            logger.info(quotaReason)
+        
         chosenVG = self.VGFilter(storageSize,aagroup)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
@@ -132,7 +155,7 @@ class Provision(APIView):
             try:
                 t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientStr]))
                 logger.info('Target already exists: %s' % (iqnTarget,))
-                return "DUPLICATE TARGET: "+iqnTarget
+                return (-1,"DUPLICATE TARGET: "+iqnTarget)
             except ObjectDoesNotExist:
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
@@ -165,13 +188,13 @@ class Provision(APIView):
                         newTarget.aagroup=aa
                         newTarget.save()
 
-                    return iqnTarget
+                    return (0,iqnTarget)
                 else:
                     logger.warn('CreateTarget did not work')
-                    return 0
+                    return (-1,"CreateTarget returned error, contact admin")
         else:
             logger.warn('VG filtering did not return a choice')
-            return  "No suitable Saturn server was found to accomadate your request"
+            return (-1, "Are Saturnservers online and adequate, contact admin")
 
 class VGScanner(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
