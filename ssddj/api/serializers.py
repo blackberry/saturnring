@@ -6,7 +6,7 @@ from ssdfrontend.models import VG
 class ProvisionerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Provisioner
-        fields = ('clienthost','sizeinGB','serviceName')
+        fields = ('clientiqn','sizeinGB','serviceName')
 class TargetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target

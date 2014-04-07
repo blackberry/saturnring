@@ -36,7 +36,7 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
 
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','clienthost','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
+    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
     list_display = ['iqntar', 'sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar']

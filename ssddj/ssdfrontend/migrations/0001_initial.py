@@ -11,7 +11,7 @@ class Migration(SchemaMigration):
         # Adding model 'Provisioner'
         db.create_table(u'ssdfrontend_provisioner', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('clienthost', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('clientiqn', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('sizeinGB', self.gf('django.db.models.fields.FloatField')()),
             ('serviceName', self.gf('django.db.models.fields.CharField')(max_length=100)),
         ))
@@ -62,7 +62,6 @@ class Migration(SchemaMigration):
             ('targethost', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ssdfrontend.StorageHost'])),
             ('iqnini', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('iqntar', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
-            ('clienthost', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('sizeinGB', self.gf('django.db.models.fields.FloatField')(max_length=100)),
             ('sessionup', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('rkb', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
@@ -187,7 +186,7 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.provisioner': {
             'Meta': {'object_name': 'Provisioner'},
-            'clienthost': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'clientiqn': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'serviceName': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'sizeinGB': ('django.db.models.fields.FloatField', [], {})
@@ -202,7 +201,6 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.target': {
             'Meta': {'object_name': 'Target'},
-            'clienthost': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'iqnini': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'iqntar': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'}),
             'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),

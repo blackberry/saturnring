@@ -23,6 +23,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
+from django.forms.models import model_to_dict
 import random
 import logging
 from django.core import serializers
@@ -31,6 +32,10 @@ from utils.scstconf import ParseSCSTConf
 from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
 import django_rq
+import hashlib
+
+def ValuesQuerySetToDict(vqs):
+    return [item for item in vqs]
 
 class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
@@ -56,10 +61,18 @@ class Provision(APIView):
             if flag==-1:
                 return Response(statusStr)
             #serializer.save()
-            if flag==0:
+            if (flag==0 or flag==1):
+                #tar = Target.objects.get(iqntar=statusStr)
+                #rtnDict = model_to_dict(tar)
+                #rtnDict['pre-existing']=flag
+                #rtnDict.pop('owner',None)
+                #return Response(rtnDict,status=status.HTTP_201_CREATED)
+
                 tar = Target.objects.filter(iqntar=statusStr)
                 data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
-                return Response(data[0], status=status.HTTP_201_CREATED)
+                rtnDict = ValuesQuerySetToDict(data)[0]
+                rtnDict['already_existed']=flag
+                return Response(rtnDict, status=status.HTTP_201_CREATED)
             else:
                 return Response("Problem provisioning, contact admin", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
@@ -133,14 +146,14 @@ class Provision(APIView):
         return (1, "Quota checks ok, proceeding")
 
     def MakeTarget(self,requestDic,owner):
-        clientStr = requestDic['clienthost']
+        clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: Client: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientStr, serviceName, str(storageSize), aagroup))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientiqn, serviceName, str(storageSize), aagroup))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
@@ -151,21 +164,22 @@ class Provision(APIView):
         chosenVG = self.VGFilter(storageSize,aagroup)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
-            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientStr])
+            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()
+            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
             try:
-                t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientStr]))
+                t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientiqnHash]))
                 logger.info('Target already exists: %s' % (iqnTarget,))
-                return (-1,"DUPLICATE TARGET: "+iqnTarget)
+                return (1,iqnTarget)
             except ObjectDoesNotExist:
-                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientStr, serviceName, str(storageSize), iqnTarget))
+                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
                 p = PollServer(targetIP.ipaddress)
                 if (p.CreateTarget(iqnTarget,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     #p.GetTargets()
                     (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
                     if iqnTarget in tarDic:
-                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=iqnTarget+":ini",
-                            iqntar=iqnTarget,clienthost=clientStr,sizeinGB=float(storageSize))
+                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
+                            iqntar=iqnTarget,sizeinGB=float(storageSize))
                         newTarget.save()
                         lvDict=p.GetLVs()
                         if devDic[tarDic[iqnTarget][0]] in lvDict:

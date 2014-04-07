@@ -4,14 +4,14 @@ from django.contrib.auth.models import User
 
 class Provisioner(models.Model):
     #owner = models.ForeignKey(User)
-    clienthost = models.CharField(max_length=100)
+    clientiqn = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
     serviceName = models.CharField(max_length=100)
     #target = models.ForeignKey('Target')
 #    created_at = models.DateTimeField(auto_now_add=True)
 #    updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
-        return self.clienthost
+        return self.clientiqn
 
 
 class LV(models.Model):
@@ -67,7 +67,7 @@ class Target(models.Model):
     targethost= models.ForeignKey('StorageHost')
     iqnini = models.CharField(max_length=100)
     iqntar = models.CharField(max_length=100,primary_key=True)
-    clienthost = models.CharField(max_length=100)
+  #  clienthost = models.CharField(max_length=100)
     sizeinGB = models.FloatField(max_length=100)
 #    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
     sessionup = models.BooleanField(default=False)
