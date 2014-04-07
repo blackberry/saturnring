@@ -59,7 +59,10 @@ class Provision(APIView):
             #else:
             (flag,statusStr) = self.MakeTarget(request.DATA,request.user)
             if flag==-1:
-                return Response(statusStr)
+                rtnDict = {}
+                rtnDict['error']=1
+                rtnDict['detail']=statusStr
+                return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
             #serializer.save()
             if (flag==0 or flag==1):
                 #tar = Target.objects.get(iqntar=statusStr)
@@ -72,12 +75,19 @@ class Provision(APIView):
                 data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['already_existed']=flag
+                rtnDict['error']=0
                 return Response(rtnDict, status=status.HTTP_201_CREATED)
             else:
-                return Response("Problem provisioning, contact admin", status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                rtnDict['error']=1
+                rtnDict['detail'] = 'Problem provisioning, contact admin'
+                return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            #rtnDict = ValuesQuerySetToDict(serializer.errors)
+            rtnDict={}
+            rtnDict['error']=1
+            rtnDict['detail']=serializer.errors
+            return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
 
     def LVAllocSumVG(self,vg):
 #        p = PollServer(vg.vghost) # Check this

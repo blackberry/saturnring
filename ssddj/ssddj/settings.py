@@ -73,13 +73,19 @@ WSGI_APPLICATION = 'ssddj.wsgi.application'
 #    }
 #}
 
+#Recreating this database
+#drop old db
+#GRANT ALL on demodb.* TO saturnadmin@'saturnring.store.altus.bblabs'
+#syncdb
+#schema migration 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'demodb',
 	'HOST': '10.236.48.61',
 	'USER': 'saturnadmin',
-	'PASSWORD': 'ArKa$2014',
+#	'PASSWORD': 'ArKa$2014',
     }
 }
 
