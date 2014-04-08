@@ -20,6 +20,8 @@ for aLine in outlines:
         print wkb
     if "read_io_count_kb" in aLine:
         rkb = re.findall('\d+',aLine)[0]
-
+    if "(no sessions)" in aLine:
+        print target,
+        print "no sessions"
 
 
