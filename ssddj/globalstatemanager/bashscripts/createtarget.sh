@@ -24,7 +24,8 @@
 
 CSTR=`lvcreate -V$1G -T storevg/thinpool`
 lvolName=$(echo "$CSTR" | grep -o '\".*\"' | sed -e 's/\"//g')
-scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename=/dev/storevg/"$lvolName",nv_cache=1
+scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename=/dev/storevg/"$lvolName",nv_cache=1,thin_provisioned=1,zero_copy=1
+                
 
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
