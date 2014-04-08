@@ -51,6 +51,7 @@ class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
+        logger.info("Raw request data is "+str(request.DATA))
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
             #provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
@@ -72,7 +73,7 @@ class Provision(APIView):
                 #return Response(rtnDict,status=status.HTTP_201_CREATED)
 
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['already_existed']=flag
                 rtnDict['error']=0
@@ -174,7 +175,7 @@ class Provision(APIView):
         chosenVG = self.VGFilter(storageSize,aagroup)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()
+            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
             iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
             try:
                 t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientiqnHash]))
@@ -184,7 +185,7 @@ class Provision(APIView):
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
                 p = PollServer(targetIP.ipaddress)
-                if (p.CreateTarget(iqnTarget,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
+                if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     #p.GetTargets()
                     (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
                     if iqnTarget in tarDic:

@@ -31,7 +31,7 @@ echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/i
 echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "create allowed_ini" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/mgmt
 echo "add disk-$lvolName 0" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/luns/mgmt
-echo "add $2:ini" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
+echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
 echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf
