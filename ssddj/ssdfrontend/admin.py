@@ -140,7 +140,7 @@ class StorageHostForm(forms.ModelForm):
  
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
- 
+    list_display=['dnsname','ipaddress','storageip1','storageip2']
 admin.site.register(StorageHost, StorageHostAdmin)
 
 

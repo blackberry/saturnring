@@ -12,7 +12,7 @@ SIZEINGB=1.0
 SERVICENAME="cassandra-for-store7"
 SATURNRINGUSERNAME="serviceowner17"
 SATURNRINGPASSWORD="password"
-ANTI_AFFINITY_GROUP=${USERNAME}"unique-string"
+ANTI_AFFINITY_GROUP=${SATURNRINGUSERNAME}"unique-string"
 SATURNRINGURL="http://saturnring.store.altus.bblabs:8000/api/provisioner/"
 IQNINI=`cat /etc/iscsi/initiatorname.iscsi | grep ^InitiatorName=  | cut -d= -f2`
 RTNSTR=$( unset http_proxy && curl -s -X GET "${SATURNRINGURL}" --user "${SATURNRINGUSERNAME}":"${SATURNRINGPASSWORD}" --data clientiqn="${IQNINI}"'&'sizeinGB="${SIZEINGB}"'&'serviceName="${SERVICENAME}"'&'aagroup="${ANTI_AFFINITY_GROUP}" )

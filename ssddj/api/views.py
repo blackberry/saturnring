@@ -179,8 +179,8 @@ class Provision(APIView):
             iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
             try:
                 t = Target.objects.get(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-                logger.info('Target already exists: %s' % (iqnTarget,))
-                return (1,iqnTarget)
+                logger.info('Target already exists: %s' % (t.iqntar,))
+                return (1,t.iqntar)
             except ObjectDoesNotExist:
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
