@@ -30,7 +30,7 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
     for obj in queryset:
         p = PollServer(obj.targethost)
         if p.DeleteTarget(obj.iqntar)==1:
-            p.GetTargetsState()
+            #p.GetTargetsState()
             obj.delete()
 
 
