@@ -209,10 +209,6 @@ class PollServer():
         return -1
 
 
-
-        
-
-
 if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
     cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")

@@ -2,6 +2,6 @@
 LVOL=`scstadmin -list_target $1  -driver iscsi | grep disk-lvol | cut -d"-" -f2`
 yes | scstadmin -rem_target $1 -driver iscsi
 scstadmin -write_config /etc/scst.conf
-lvremove -f /dev/storevg/$LVOL
+yes | lvremove -f /dev/storevg/$LVOL
 
 

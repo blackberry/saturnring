@@ -104,5 +104,5 @@ def create_user_profile(sender, instance, created, **kwargs):
         Profile.objects.create(user=instance)
 
 from django.db.models import signals
-signals.post_save.connect(create_user_profile, sender=User)
+signals.post_save.connect(create_user_profile, sender=User,dispatch_uid='autocreate_nuser')
 
