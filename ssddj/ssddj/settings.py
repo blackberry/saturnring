@@ -145,7 +145,8 @@ LOGGING = {
         'file': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
+#            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
+            'filename': '/nfsmount/saturnringlog/saturn.log',
             'formatter': 'verbose'
         },
     },

@@ -21,9 +21,9 @@ class PollServer():
     def __init__(self,serverDNS):
         logger.info(" Scanning server %s" %(serverDNS,))
         self.userName='local'
-        self.keyFile='./config/saturnserver'
+        self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
         self.remoteinstallLoc='/home/local/saturn/'
-        self.localbashscripts='./globalstatemanager/bashscripts/'
+        self.localbashscripts='/home/local/ssddj/saturnring/ssddj/globalstatemanager/bashscripts/'
 
         self.serverDNS = str(serverDNS)
         #self.InstallScripts()
