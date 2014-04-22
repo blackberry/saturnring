@@ -1,0 +1,20 @@
+<VirtualHost *:80>
+  LogLevel warn
+  CustomLog ${APACHE_LOG_DIR}/access.log combined
+  ErrorLog ${APACHE_LOG_DIR}/error.log
+        ServerAdmin saturnadmin@blackberry.com
+        ServerName saturnring
+        ServerAlias www.saturnring.store.altus.bblabs
+        WSGIScriptAlias /saturnring /var/www/saturnring/index.wsgi
+        WSGIDaemonProcess local  user=local
+        WSGIProcessGroup local
+        Alias /static/ /var/www/saturnring/static/
+        <Location "/static/">
+            Options -Indexes
+        </Location>
+    <Directory /ivar/www/saturnring>
+      Order allow,deny
+      Allow from all
+    </Directory>
+</VirtualHost>
+

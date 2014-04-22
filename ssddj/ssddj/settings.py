@@ -60,7 +60,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'ssddj.urls'
 
-WSGI_APPLICATION = 'ssddj.wsgi.application'
+#WSGI_APPLICATION = 'ssddj.wsgi.application'
 
 
 # Database
@@ -116,7 +116,7 @@ DEBUG = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
-
+STATIC_ROOT = '/var/www/saturnring/static/'
 STATIC_URL = '/static/'
 REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
