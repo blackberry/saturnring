@@ -1,7 +1,7 @@
 <VirtualHost *:80>
   LogLevel warn
-  CustomLog ${APACHE_LOG_DIR}/access.log combined
-  ErrorLog ${APACHE_LOG_DIR}/error.log
+  CustomLog /nfsmount/saturnringlog/access.log combined
+  ErrorLog /nfsmount/saturnringlog/error.log
         ServerAdmin saturnadmin@blackberry.com
         ServerName saturnring
         ServerAlias www.saturnring.store.altus.bblabs

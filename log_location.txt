@@ -1,0 +1,4 @@
+for logs (Apache, Saturnring, RQworkers) look here
+
+/nfsmount/saturnringlog/
+
