@@ -184,10 +184,10 @@ class Provision(APIView):
             except ObjectDoesNotExist:
                 logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
                 targetIP = StorageHost.objects.get(dnsname=targetHost)
-                p = PollServer(targetIP.ipaddress)
+                p = PollServer(targetHost)
                 if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     #p.GetTargets()
-                    (devDic,tarDic)=ParseSCSTConf('config/'+targetIP.ipaddress+'.scst.conf')
+                    (devDic,tarDic)=ParseSCSTConf('/home/local/ssddj/saturnring/ssddj/config/'+targetHost+'.scst.conf')
                     if iqnTarget in tarDic:
                         newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
                             iqntar=iqnTarget,sizeinGB=float(storageSize))

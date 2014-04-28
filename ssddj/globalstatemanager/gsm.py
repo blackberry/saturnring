@@ -141,7 +141,7 @@ class PollServer():
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit])
         exStr = srv.execute(cmdStr)
-        srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
+        srv.get('/etc/scst.conf','/home/local/ssddj/saturnring/ssddj/config/'+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
