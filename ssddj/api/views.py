@@ -222,8 +222,8 @@ class Provision(APIView):
             return (-1, "Are Saturnservers online and adequate, contact admin")
 
 class VGScanner(APIView):
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-    permission_classes = (IsAuthenticated,)
+#    authentication_classes = (SessionAuthentication, BasicAuthentication)
+#    permission_classes = (IsAuthenticated,)
     def get(self, request):
         logger.info("VG scan request received: %s " %(request.DATA,))
         saturnserver=request.DATA[u'saturnserver']

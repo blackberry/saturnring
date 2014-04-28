@@ -19,5 +19,10 @@ http://<satunring.store.altus.bblabs>:8000/admin
 On the iSCSI client (for example):
 curl -X GET http://saturnring.store.altus.bblabs:8000/api/provisioner/ -d "clienthost=bbmserver62&sizeinGB=1.0&serviceName=b8mworkers" -u bbmserviceowner:password
 
-
+Provisioning a new saturn server
+Copy the SSH key
+ssh-copy-id -i ./config/saturnserver.pub local@newhost.bb.com
+Add the host to via the admin interface of Saturnring
+Then kick the vgscanner
+curl -X GET http://saturnring.store.altus.bblabs/saturnring/api/vgscan/ -d 'saturnserver=newhost.bb.com'
 

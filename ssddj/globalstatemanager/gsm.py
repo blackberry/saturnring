@@ -102,7 +102,7 @@ class PollServer():
 
     
     def GetVG(self,vgname='storevg'): #Unit test this again
-        vgStrList = self.Exec(" ".join(['sudo','vgdisplay',vgname]))
+        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',vgname]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
