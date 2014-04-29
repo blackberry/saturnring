@@ -24,7 +24,7 @@
 
 CSTR=`lvcreate -V$1G -T storevg/thinpool`
 lvolName=$(echo "$CSTR" | grep -o '\".*\"' | sed -e 's/\"//g')
-#scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename=/dev/storevg/"$lvolName",nv_cache=1,thin_provisioned=1
+scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename=/dev/storevg/"$lvolName",nv_cache=1,thin_provisioned=1,rotational=0,write_through=1
 
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
@@ -32,6 +32,7 @@ echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/i
 echo "add_target_attribute $2 nv_cache 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 thin_provisioned 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 rotational 0" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
+echo "add_target_attribute $2 write_through 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "create allowed_ini" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/mgmt
 echo "add disk-$lvolName 0" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/luns/mgmt
 echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
