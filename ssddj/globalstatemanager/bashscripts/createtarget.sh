@@ -28,7 +28,8 @@ scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
-echo "add_target_attribute $2 nv_cache 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
+#echo "add_target_attribute $2 nv_cache 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
+echo "add_target_attribute $2 blocksize 4096" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 thin_provisioned 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 rotational 0" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 write_through 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
