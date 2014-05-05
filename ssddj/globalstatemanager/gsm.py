@@ -5,7 +5,7 @@ import os
 #setup_environ(settings)
 #os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ssddj.settings")
 
-
+import ConfigParser
 from django.core.management import execute_from_command_line
 
 from ssdfrontend.models import VG
@@ -15,16 +15,24 @@ from ssdfrontend.models import Target
 import logging
 from redisq import SchedulerQ
 import utils.scstconf
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverDNS):
         logger.info(" Scanning server %s" %(serverDNS,))
-        self.userName='local'
-        self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
-        self.remoteinstallLoc='/home/local/saturn/'
-        self.localbashscripts='/home/local/ssddj/saturnring/ssddj/globalstatemanager/bashscripts/'
+        config = ConfigParser.RawConfigParser()
+        config.read('saturn.ini')
+        self.userName=config.get('saturnnode','user')
+        self.keyFile=config.get('saturnring','privatekeyfile')
+        self.rembashpath=config.get('saturnnode','bashpath')
+        self.rempypath=config.get('saturnnode','pythonpath')
+        self.vg=config.get('saturnnode','volgroup')
 
+        #self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
+        self.remoteinstallLoc=config.get('saturnnode','install_location')
+        #self.remoteinstallLoc='/home/local/saturn/'
+        self.localbashscripts=config.get('saturnring','bascripts')
+        #self.localbashscripts='/home/local/ssddj/saturnring/ssddj/globalstatemanager/bashscripts/'
         self.serverDNS = str(serverDNS)
         #self.InstallScripts()
 
@@ -81,9 +89,9 @@ class PollServer():
         return 0
 
 
-    def UpdateLVs(self,vg):
-        p = PollServer(vg.vghost)
-        lvdict = p.GetLVs("storevg")
+    def UpdateLVs(self,vgObject):
+        p = PollServer(vgObject.vghost)
+        lvdict = p.GetLVs(vgObject.vguuid)
         lvs = LV.objects.all()
         for eachLV in lvs:
 	    if eachLV.lvname in lvdict:
@@ -91,8 +99,8 @@ class PollServer():
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
     
-    def GetLVs(self, vgname='storevg'):
-        lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
+    def GetLVs(self,vguuid):
+        lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vguuid]))
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
@@ -100,16 +108,14 @@ class PollServer():
 #        logger.info('Read LV '+str(lvs))
         #TODO - insert into the DB
 
-    
-    def GetVG(self,vgname='storevg'): #Unit test this again
-        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',vgname]))
+    def GetVG(self): #Unit test this again
+        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',self.vg]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
-        vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
+        vgs = self.ParseLVM(vgStrListdelimitStr,paraList)
         try:
             cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
-            
-            logger.info(self.serverDNS+": "+" ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh'])+': LVS returned '+str(cmdStr))
+            logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh'])+': LVS returned '+str(cmdStr))
             thinusedpercent = float(cmdStr[0].rstrip())
             thintotalGB = float(cmdStr[1].rstrip())
             maxthinavl = thintotalGB*(100-thinusedpercent)/100
@@ -117,31 +123,30 @@ class PollServer():
             logger.warn("Unable to run LVScan on "+self.serverDNS)
             return -1
         logger.info(vgs)
-        existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
+        existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
         if len(existingvgs)==1:
             existingvg = existingvgs[0]
             existingvg.thinusedpercent=thinusedpercent
             existingvg.thintotalGB=thintotalGB
             existingvg.maxthinavlGB=maxthinavl
-            existingvg.vgsize = vgs[vgname]['VG Size']
+            existingvg.vgsize = vgs[self.vg]['VG Size']
             existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize'])
         else:
-            myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[vgname]['VG Size'],
-                    vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
-                    vgtotalpe=vgs[vgname]['Total PE'],
-                    vgfreepe=vgs[vgname]['Free  PE / Size'],
+            myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
+                    vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],
+                    vgtotalpe=vgs[self.vg]['Total PE'],
+                    vgfreepe=vgs[self.vg]['Free  PE / Size'],
                     thinusedpercent=thinusedpercent,
                     thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
             myvg.save()#force_update=True)
-        return vgs[vgname]['VG UUID']
+        return vgs[self.vg]['VG UUID']
 
-    
    #     logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
-        cmdStr = " ".join(['sudo','/bin/bash',self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit])
+        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit])
         exStr = srv.execute(cmdStr)
-        srv.get('/etc/scst.conf','/home/local/ssddj/saturnring/ssddj/config/'+self.serverDNS+'.scst.conf')
+        srv.get('/etc/scst.conf',self.config.get('saturnring','iscsiconfigdir')+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
@@ -154,7 +159,7 @@ class PollServer():
             return 0
 #Unit test
     def GetTargetsState(self):
-        cmdStr = " ".join(["sudo", "/usr/bin/python",self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
+        cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
         exStr = self.Exec(cmdStr)
         alltars = Target.objects.all()
         for eachLine in exStr:
@@ -191,7 +196,7 @@ class PollServer():
             logger.warn("Could not find deletion target in DB, exiting. "+iqntar)
             return -1
         if not tar.sessionup:
-            cmdStr = " ".join(["sudo", self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar])
+            cmdStr = " ".join(["sudo",self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar])
             exStr = self.Exec(cmdStr)
             success1 = False
             success2 = False
