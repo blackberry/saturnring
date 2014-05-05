@@ -21,13 +21,13 @@ class PollServer():
     def __init__(self,serverDNS):
         logger.info(" Scanning server %s" %(serverDNS,))
         config = ConfigParser.RawConfigParser()
-        config.read('saturn.ini')
+        config.read('/home/local/ssddj/saturnring/ssddj/saturn.ini')
         self.userName=config.get('saturnnode','user')
         self.keyFile=config.get('saturnring','privatekeyfile')
         self.rembashpath=config.get('saturnnode','bashpath')
         self.rempypath=config.get('saturnnode','pythonpath')
         self.vg=config.get('saturnnode','volgroup')
-
+        self.iscsiconfdir=config.get('saturnring','iscsiconfigdir')
         #self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
         self.remoteinstallLoc=config.get('saturnnode','install_location')
         #self.remoteinstallLoc='/home/local/saturn/'
@@ -99,7 +99,9 @@ class PollServer():
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
     
-    def GetLVs(self,vguuid):
+    def GetLVs(self,vguuid=None):
+        if vguuid is None: 
+            vguuid=self.vg  #kind of hack on the default arg - this is a vg uuid not a name in reality
         lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vguuid]))
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
@@ -112,7 +114,7 @@ class PollServer():
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',self.vg]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
-        vgs = self.ParseLVM(vgStrListdelimitStr,paraList)
+        vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         try:
             cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
             logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh'])+': LVS returned '+str(cmdStr))
@@ -146,7 +148,7 @@ class PollServer():
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
         exStr = srv.execute(cmdStr)
-        srv.get('/etc/scst.conf',self.config.get('saturnring','iscsiconfigdir')+self.serverDNS+'.scst.conf')
+        srv.get('/etc/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):

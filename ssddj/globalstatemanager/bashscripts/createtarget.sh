@@ -29,7 +29,9 @@ vgu=`vgdisplay $6 | grep "VG UUID" | sed  's/VG UUID\s\{0,\}//g' | tr -d '-' | t
 dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
 echo $dmp
 
-scstadmin -open_dev disk-"$lvu" -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
+#Please use the below line, the other one is a place holder for older saturn server testing on VMs
+#scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
+scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
@@ -39,9 +41,10 @@ echo "add_target_attribute $2 thin_provisioned 1" >/sys/kernel/scst_tgt/targets/
 echo "add_target_attribute $2 rotational 0" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 write_through 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "create allowed_ini" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/mgmt
-echo "add disk-$lvolName 0" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/luns/mgmt
+echo "add disk-${lvu:0:8} 0" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/luns/mgmt
 echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
 echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf
 echo "SUCCESS"
+
