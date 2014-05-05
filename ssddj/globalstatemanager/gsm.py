@@ -31,7 +31,7 @@ class PollServer():
         #self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
         self.remoteinstallLoc=config.get('saturnnode','install_location')
         #self.remoteinstallLoc='/home/local/saturn/'
-        self.localbashscripts=config.get('saturnring','bascripts')
+        self.localbashscripts=config.get('saturnring','bashscripts')
         #self.localbashscripts='/home/local/ssddj/saturnring/ssddj/globalstatemanager/bashscripts/'
         self.serverDNS = str(serverDNS)
         #self.InstallScripts()
