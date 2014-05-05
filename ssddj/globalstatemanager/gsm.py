@@ -144,7 +144,7 @@ class PollServer():
    #     logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
-        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit])
+        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
         exStr = srv.execute(cmdStr)
         srv.get('/etc/scst.conf',self.config.get('saturnring','iscsiconfigdir')+self.serverDNS+'.scst.conf')
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))

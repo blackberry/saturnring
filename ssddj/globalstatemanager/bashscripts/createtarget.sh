@@ -22,9 +22,14 @@
 #    exit 1
 #fi
 
-CSTR=`lvcreate -V$1G -T storevg/thinpool`
+CSTR=`lvcreate -V$1G -T $6/thinpool`
 lvolName=$(echo "$CSTR" | grep -o '\".*\"' | sed -e 's/\"//g')
-scstadmin -open_dev disk-"$lvolName" -handler vdisk_blockio -attributes filename=/dev/storevg/"$lvolName",thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
+lvu=`lvdisplay $6/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
+vgu=`vgdisplay $6 | grep "VG UUID" | sed  's/VG UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
+dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
+echo $dmp
+
+scstadmin -open_dev disk-"$lvu" -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
