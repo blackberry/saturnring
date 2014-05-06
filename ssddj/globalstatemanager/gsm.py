@@ -1,13 +1,7 @@
 import pysftp #remember to use at least 0.2.2 - the pip install doesnt give you that version.
 import os
-#from django.core.management import setup_environ
-#from ssddj import settings
-#setup_environ(settings)
-#os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ssddj.settings")
-
 import ConfigParser
 from django.core.management import execute_from_command_line
-
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -19,7 +13,8 @@ import utils.scstconf
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverDNS):
-        logger.info(" Scanning server %s" %(serverDNS,))
+        self.serverDNS = str(serverDNS)
+        # Read configuration
         config = ConfigParser.RawConfigParser()
         config.read('/home/local/ssddj/saturnring/ssddj/saturn.ini')
         self.userName=config.get('saturnnode','user')
@@ -28,14 +23,10 @@ class PollServer():
         self.rempypath=config.get('saturnnode','pythonpath')
         self.vg=config.get('saturnnode','volgroup')
         self.iscsiconfdir=config.get('saturnring','iscsiconfigdir')
-        #self.keyFile='/home/local/ssddj/saturnring/ssddj/config/saturnserver'
         self.remoteinstallLoc=config.get('saturnnode','install_location')
-        #self.remoteinstallLoc='/home/local/saturn/'
         self.localbashscripts=config.get('saturnring','bashscripts')
-        #self.localbashscripts='/home/local/ssddj/saturnring/ssddj/globalstatemanager/bashscripts/'
-        self.serverDNS = str(serverDNS)
-        #self.InstallScripts()
 
+    # Copy over scripts from the saturnring server to the iscsi server
     def InstallScripts(self):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
         srv.execute ('mkdir -p '+self.remoteinstallLoc+'saturn-bashscripts/')
@@ -47,12 +38,14 @@ class PollServer():
         srv.close()
         logger.info("Installed scripts")
 
+    # Helper function for executing a remote command over an SSH tunnel
     def Exec(self,command):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
         rtncmd=srv.execute(command)
         srv.close()
         return rtncmd
 
+    # Parse lvdisplay and vgdisplay strings and populate dictionaries with relevant information
     def ParseLVM(self,strList,delimitStr,paraList):
         rtnDict ={}
         valueDict={}
@@ -82,13 +75,14 @@ class PollServer():
              rtnDict[valueDict[paraList[0]]] = valueDict
         return rtnDict 
 
-    def GetTargets(self):
+    #
+   # def GetTargets(self):
         #self.Exec(" ".join(['sudo', 'scstadmin','-w /etc/scst.conf']))
         #srv = pysftp.Connection(self.serverDNS,userName,keyFile)
         #srv.get('/etc/scst.conf','config/'+self.serverDNS+'.scst.conf')
-        return 0
+   #     return 0
 
-
+    # Update LV information, called to monitor and update capacity.
     def UpdateLVs(self,vgObject):
         p = PollServer(vgObject.vghost)
         lvdict = p.GetLVs(vgObject.vguuid)
@@ -99,6 +93,7 @@ class PollServer():
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
     
+    # Wrapper for parselvm (for LVs), actually populating the DB is done by the UpdateLV function
     def GetLVs(self,vguuid=None):
         if vguuid is None: 
             vguuid=self.vg  #kind of hack on the default arg - this is a vg uuid not a name in reality
@@ -107,9 +102,8 @@ class PollServer():
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
         return lvs
-#        logger.info('Read LV '+str(lvs))
-        #TODO - insert into the DB
 
+    # Wrapper for parseLVM (for VGs)+populating the DB
     def GetVG(self): #Unit test this again
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',self.vg]))
         delimitStr = '--- Volume group ---'
@@ -143,7 +137,7 @@ class PollServer():
             myvg.save()#force_update=True)
         return vgs[self.vg]['VG UUID']
 
-   #     logger.info("Trying to create target %s of capacity %s GB" %(iqnTarget,str(sizeinGB)))
+    # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
@@ -153,22 +147,21 @@ class PollServer():
         srv.close()
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
-
-#            self.GetVG() #Rescan VG to update
             return 1
         else:
             logger.info("Returning failed createtarget run")
             return 0
-#Unit test
+
+    # Read targets to determine their latest state via the parsetarget script
     def GetTargetsState(self):
         cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
         exStr = self.Exec(cmdStr)
-        alltars = Target.objects.all()
         for eachLine in exStr:
-            logger.info(eachLine)
             iqntar=eachLine.split()[0]
-            tar = alltars.filter(iqntar=iqntar)
-            if len(tar):
+            tar = Target.objects.filter(iqntar=iqntar)
+            logger.info("Matching targets for %s are: %s" % (iqntar,tar))
+            if len(tar)==1:
+                logger.info("Found target %s on %s" %( iqntar,self.serverDNS) )
                 tar = tar[0]
                 if "no session" in eachLine:
                     tar.sessionup=False
@@ -189,7 +182,10 @@ class PollServer():
                     tar.wkbpm = wpm
                     tar.wkb=wkb
                 tar.save()
+            else:
+                logger.warn("Found target %s on %s that does not exist in the DB" % (iqntar,self.serverDNS) )
 
+    # Delete target
     def DeleteTarget(self,iqntar):
         self.GetTargetsState()
         try:
@@ -220,10 +216,5 @@ if __name__=="__main__":
     pollserver = PollServer('saturnserver0.store.altus.bblabs')
     cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
     print cmdStr
-#    pollserver.GetLV()
-    #for aLine in pollserver.GetLV():
-    #    print aLine
-    #for aline in pollserver.Exec("".join(['sudo',' ',self.remoteinstallLoc,'saturn-bashscripts/','createlun.sh',' ','0.05'])):
-    #    print aline
 
 
