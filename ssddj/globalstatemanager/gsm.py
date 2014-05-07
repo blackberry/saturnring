@@ -194,7 +194,7 @@ class PollServer():
             logger.warn("Could not find deletion target in DB, exiting. "+iqntar)
             return -1
         if not tar.sessionup:
-            cmdStr = " ".join(["sudo",self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar])
+            cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,self.vg])
             exStr = self.Exec(cmdStr)
             success1 = False
             success2 = False
