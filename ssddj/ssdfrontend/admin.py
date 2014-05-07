@@ -37,7 +37,7 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
-    list_display = ['iqntar', 'sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
@@ -81,7 +81,7 @@ class TargetAdmin(StatsAdmin):
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','lvthinmapped',)
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','lvthinmapped','created_at')
     list_display = ['target', 'owner_name', 'lvsize','lvthinmapped']
     stats = (Sum('lvsize'),Sum('lvthinmapped'),)
     search_fields = ['target__iqntar','target__owner__username']
@@ -140,7 +140,7 @@ class StorageHostForm(forms.ModelForm):
  
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
-    list_display=['dnsname','ipaddress','storageip1','storageip2']
+    list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at']
 admin.site.register(StorageHost, StorageHostAdmin)
 
 
