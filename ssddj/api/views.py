@@ -2,7 +2,7 @@ from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
-from ssdfrontend.models import Provisioner
+#from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 
 from django.db.models import Sum

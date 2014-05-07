@@ -3,13 +3,9 @@ from django.contrib.auth.models import User
 # Create your models here.
 
 class Provisioner(models.Model):
-    #owner = models.ForeignKey(User)
     clientiqn = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
     serviceName = models.CharField(max_length=100)
-    #target = models.ForeignKey('Target')
-#    created_at = models.DateTimeField(auto_now_add=True)
-#    updated_at = models.DateTimeField(auto_now=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.clientiqn
 
@@ -17,24 +13,19 @@ class Provisioner(models.Model):
 class LV(models.Model):
     target = models.ForeignKey('Target')
     vg = models.ForeignKey('VG')
-    lvname = models.CharField(max_length=50,default='Not found')
+    lvname = models.CharField(max_length=200,default='Not found')
     lvsize = models.FloatField()
-    lvuuid = models.CharField(max_length=100,primary_key=True)
+    lvuuid = models.CharField(max_length=200,primary_key=True)
     lvthinmapped = models.FloatField(default=-1)
-#    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-#    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
-#    def lvsize(self):
-#        return self.lvsize
-#    def lvname(self):
-#        return self.lvname
-#    deleted_at = models.DateTimeField()
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
     vgsize = models.FloatField()
-    vguuid = models.CharField(max_length=100,primary_key=True)
+    vguuid = models.CharField(max_length=200,primary_key=True)
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField(default=-1)
@@ -45,17 +36,19 @@ class VG (models.Model):
     thinusedmaxpercent = models.FloatField(default=70)
     enabled = models.BooleanField(default=True)
     CurrentAllocGB = models.FloatField(default=-100.0)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 
 class StorageHost(models.Model):
-    dnsname = models.CharField(max_length=100,primary_key=True)
+    dnsname = models.CharField(max_length=200,primary_key=True)
     ipaddress = models.GenericIPAddressField(default='127.0.0.1')
     storageip1 = models.GenericIPAddressField(default='127.0.0.1')
     storageip2 = models.GenericIPAddressField(default='127.0.0.1')
     enabled = models.BooleanField(default=True)
-  #  created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
-  #  updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.dnsname
 
@@ -65,25 +58,23 @@ class StorageHost(models.Model):
 class Target(models.Model):
     owner = models.ForeignKey(User)
     targethost= models.ForeignKey('StorageHost')
-    iqnini = models.CharField(max_length=100)
-    iqntar = models.CharField(max_length=100,primary_key=True)
-  #  clienthost = models.CharField(max_length=100)
-    sizeinGB = models.FloatField(max_length=100)
-#    aagroup = models.ForeignKey(AAGroup, null=True, blank=True)
+    iqnini = models.CharField(max_length=200)
+    iqntar = models.CharField(max_length=200,primary_key=True)
+    sizeinGB = models.FloatField(max_length=200)
     sessionup = models.BooleanField(default=False)
     rkb = models.BigIntegerField(default=0)
     rkbpm = models.BigIntegerField(default=0)
     wkb = models.BigIntegerField(default=0)
     wkbpm = models.BigIntegerField(default=0)
-   # created_at = models.DateTimeField(auto_now_add=True)
-   # updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
 
 
 class AAGroup(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     hosts = models.ManyToManyField(StorageHost)
     target = models.ForeignKey(Target,null=True, blank=True)
 
