@@ -159,9 +159,9 @@ class PollServer():
         for eachLine in exStr:
             iqntar=eachLine.split()[0]
             tar = Target.objects.filter(iqntar=iqntar)
-            logger.info("Matching targets for %s are: %s" % (iqntar,tar))
+            #logger.info("Matching targets for %s are: %s" % (iqntar,tar))
             if len(tar)==1:
-                logger.info("Found target %s on %s" %( iqntar,self.serverDNS) )
+                #logger.info("Found target %s on %s" %( iqntar,self.serverDNS) )
                 tar = tar[0]
                 if "no session" in eachLine:
                     tar.sessionup=False
