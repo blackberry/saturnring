@@ -1,22 +1,28 @@
 Introduction
 
-Saturn is SAN storage from a cloud perspective. It enables users to share block storage among their cloud VM instances. For example, a VM with a solid state device or QoS-guaranteed block storage like AWS provisioned IOPs can share out all or part of its storage to other VMs. The iSCSI SAN protocol is used to share storage; experts broadly agree that iSCSI is an efficient and fast network storage protocol. 
+Saturn is SAN storage for the cloud. Expensive high performance block storage can be shared among cloud VM instances. For example, a solid state device or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs.
 
-Saturn relies on recent versions of Linux LVM (Logical volume manager) to divide up block device(s) into logical volumes, which are then exported via an iSCSI target (currently, SCST) as iSCSI targets. Clients of this storage - iSCSI initiators - can log into these targets and use the corresponding LVs as block storage devices. Saturn provides mechanisms for orchestrating multiple iSCSI targets. Thi sis useful for example, when the user has multiple VMs with SSDs, and she would like to use this block storage on several other "client VMs". Saturn  can also provision targets that belong to anti-affinity groups, mean that targets belonging to the same AAG will be placed on different target hosts if possible. This feature is useful in controlling failure domains for applications like Cassandra or active-active replication storage back-ends for relational databases. Some design patterns for Saturn storage are discussed later.
+Saturn relies on recent versions of Linux LVM (Logical volume manager) to divide up block device(s) into logical volumes, which are then exported via an iSCSI server (currently, SCST) as iSCSI targets.Clients of this storage - iSCSI initiators use the corresponding LVs as block storage devices. Saturn provides mechanisms for orchestrating multiple multiple block devices. This is useful for example, when the user has multiple VMs with SSDs, and she would like to export this block storage to several other "client VMs". Saturn can also provision targets that belong to anti-affinity groups, meaning that targets belonging to the same AAG will be placed on different target block devices if possible. This is useful in controlling failure domains for applications like Cassandra or active-active replicated storage back-ends for relational databases.
 
-Saturn lets users lower high-performance block storage costs on the cloud by providing a method of sharing this storage with all their VMs. Unlike clustered data storage systems (e.g. GPFS, Gluster, CEPH etc.) Saturn makes no effort of replicating data on the back-end. There are no multiple copies being created on write. Instead Saturn defers high-availability and data protection to the application (e.g. NoSQL database replication or even software RAID 1 running on the initiator). Saturn's focus is on preserving low latency, high IOPs and high throughput properties of SSDs or other "fast" storage over the cloud network. For this it relies on the well vetted Linux SCST iSCSI implementation (other iSCSI implmentations can be substituted with moderate effort). SAturn's value add is manageability and RESTFul storage provisioning amenable to cloud applications. Think of it as the 'SAN array portal' in the cloud, built for the cloud.
-
-Offcourse, all this doesn't mean Saturn is not suited for bare-metal setups. It has been tested succesfully on bare-metal iSCSI servers too.
+Unlike clustered data storage systems (e.g. GPFS, Gluster, CEPH etc.) Saturn makes no effort of replicating data on the back-end. There are no multiple copies being created on write. Instead Saturn defers high-availability and data protection to the application (e.g. NoSQL database replication or software RAID 1 across 2 target LVs on the initiator). Saturn's focus is on preserving low latency, highIOPs and high throughput properties of SSDs or other "fast" storage over the cloud network. For this it relies on the well vetted Linux iSCSI implementation SCST (other iSCSI implmentations can be substituted with moderate effort). Saturn's value add is manageability and RESTFul block storage sharing and provisioning amenable to cloud applications. Think of it as the 'SAN array portal' in the cloud,built for the cloud. Saturn has been tested succesfully on bare-metal servers too.
 
 Architecture
 
-Here is what you get from Saturn
-1. A Python Django web portal and API which 
+Saturn provides the following components:
+
+1. A web portal and API which 
 a)allows the storage administrator to manage users and their iSCSI targets
-b) The same Django application which exposes a RESTful-API to provision iSCSI targets
-c) Facilities like quotas, ingesting multiple iSCSI target servers into a Saturn cluster, basic monitoring support
+b) A HTTP RESTful-API call to provision iSCSI targets
+c) Facilities like user quotas, ingesting multiple iSCSI target servers into a Saturn cluster, deleting storage, thin provisioning, and basic monitoring support etc.
 2. A tested iSCSI server image based off a SCST-optimized patched kernal Ubuntu Linux 14.04 installation; this image integrates nicely with the Saturn web portal and API
-3. A Vagrant environment where all of the above is setup; this example should give enough guidance to move to AWS or other suitable public or private cloud provider if needed.
+3. A Vagrant environment where all of the above is setup; this example should give enough guidance to move to AWS or other suitable public or private cloud provider.
+
+Fig 1. shows the concepts in action. clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overal storage in the Saturn cluster. It also provides user views to track Saturn storage for individual users.
+
+Running the Vagrant Setup
+
+Vagrant, along with the underlying virtualbox hypervisor, is used to demonstrate and develop Saturn here. There are two categories of VMs. The first is the SaturnRing portal. The second is the Saturn server. A third category, the iSCSI client, is also included for completeness. Each of the VMs is derived from the stock Ubuntu 14.04 distribution; scripts are provided for each step.
+
 
 
 
