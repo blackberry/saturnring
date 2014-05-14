@@ -85,15 +85,14 @@ class PollServer():
 
     # Update LV information, called to monitor and update capacity.
     def UpdateLVs(self,vgObject):
-        p = PollServer(vgObject.vghost)
-        lvdict = p.GetLVs(vgObject.vguuid)
-        lvs = LV.objects.filter(vg=self.vg)
+        lvdict = self.GetLVs()
+        lvs = LV.objects.filter(vg=vgObject)
 #        for eachLV in lvs:
 #    	    if eachLV.lvname in lvdict:
 #            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
 #            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
 #            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
-        for lvName,lvinfo in lvdict:
+        for lvName,lvinfo in lvdict.iteritems():
             if len(lvs.filter(lvname=lvName)):
                 preexistLV=lvs.filter(lvname=lvName)[0]
             	preexistLV.lvsize=lvinfo['LV Size']
