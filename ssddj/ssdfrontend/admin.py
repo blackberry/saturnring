@@ -154,6 +154,7 @@ from ssdfrontend.models import Profile
 class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
+    list_display=[]
     verbose_name_plural = 'Profile'
 
 class UserAdmin(UserAdmin):
