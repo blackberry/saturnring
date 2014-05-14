@@ -9,6 +9,7 @@ from ssdfrontend.models import Target
 import logging
 from redisq import SchedulerQ
 import utils.scstconf
+from django.db.models import Sum
 
 logger = logging.getLogger(__name__)
 class PollServer():
@@ -88,7 +89,7 @@ class PollServer():
         lvdict = p.GetLVs(vgObject.vguuid)
         lvs = LV.objects.all()
         for eachLV in lvs:
-	    if eachLV.lvname in lvdict:
+    	    if eachLV.lvname in lvdict:
             	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
             	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
             	eachLV.save(update_fields=['lvsize','lvthinmapped'])
@@ -122,11 +123,12 @@ class PollServer():
         existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
         if len(existingvgs)==1:
             existingvg = existingvgs[0]
+            existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
             existingvg.thinusedpercent=thinusedpercent
             existingvg.thintotalGB=thintotalGB
             existingvg.maxthinavlGB=maxthinavl
             existingvg.vgsize = vgs[self.vg]['VG Size']
-            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize'])
+            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB'])
         else:
             myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
                     vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],
