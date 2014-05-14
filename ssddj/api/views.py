@@ -195,17 +195,25 @@ class Provision(APIView):
                 if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     #p.GetTargets()
                     (devDic,tarDic)=ParseSCSTConf('/home/local/ssddj/saturnring/ssddj/config/'+targetHost+'.scst.conf')
+                    logger.info("Got devDic via parsescst:")
+                    logger.info(devDic)
+                    logger.info("Got tarDic via parsescst:")
+                    logger.info(tarDic)
                     if iqnTarget in tarDic:
                         newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
                             iqntar=iqnTarget,sizeinGB=float(storageSize))
                         newTarget.save()
                         lvDict=p.GetLVs()
-                        if devDic[tarDic[iqnTarget][0]] in lvDict:
+                        logger.info("Got LVDICT on 203/api/views.py:")
+                        logger.info(lvDict)
+                        lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
+                        logger.info("lvol name should be: %s" %(lvName,))
+                        if lvName in lvDict:
                             newLV = LV(target=newTarget,vg=chosenVG,
-                                    lvname=devDic[tarDic[iqnTarget][0]],
+                                    lvname=lvName,
                                     lvsize=storageSize,
-                                    lvthinmapped=lvDict[devDic[tarDic[iqnTarget][0]]]['Mapped size'],
-                                    lvuuid=lvDict[devDic[tarDic[iqnTarget][0]]]['LV UUID'])
+                                    lvthinmapped=lvDict[lvName]['Mapped size'],
+                                    lvuuid=lvDict[lvName]['LV UUID'])
                             newLV.save()
                             chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
                             chosenVG.save()

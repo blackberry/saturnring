@@ -87,13 +87,21 @@ class PollServer():
     def UpdateLVs(self,vgObject):
         p = PollServer(vgObject.vghost)
         lvdict = p.GetLVs(vgObject.vguuid)
-        lvs = LV.objects.all()
-        for eachLV in lvs:
-    	    if eachLV.lvname in lvdict:
-            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
-            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
-            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
-    
+        lvs = LV.objects.filter(vg=self.vg)
+#        for eachLV in lvs:
+#    	    if eachLV.lvname in lvdict:
+#            	eachLV.lvsize=lvdict[eachLV.lvname]['LV Size']
+#            	eachLV.lvthinmapped=lvdict[eachLV.lvname]['Mapped size']
+#            	eachLV.save(update_fields=['lvsize','lvthinmapped'])
+        for lvName,lvinfo in lvdict:
+            if len(lvs.filter(lvname=lvName)):
+                preexistLV=lvs.filter(lvname=lvName)[0]
+            	preexistLV.lvsize=lvinfo['LV Size']
+            	preexistLV.lvthinmapped=lvinfo['Mapped size']
+            	preexistLV.save(update_fields=['lvsize','lvthinmapped'])
+            else:
+                logger.warn("Found orphan LV %s in VG %s on host %s" %(lvName,self.vg,self.serverDNS))
+
     # Wrapper for parselvm (for LVs), actually populating the DB is done by the UpdateLV function
     def GetLVs(self,vguuid=None):
         if vguuid is None: 

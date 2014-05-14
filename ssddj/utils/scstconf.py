@@ -1,3 +1,4 @@
+import sys
 def ParseSCSTConf(fileName):
     fH = open(fileName,"r")
     diskDic = {}
@@ -23,7 +24,10 @@ def ParseSCSTConf(fileName):
     return (diskDic,targetDic)
 
 if __name__=="__main__":
-    (diskDic,targetDic) = ParseSCSTConf("testscst.conf")
+    if len(sys.argv) == 2:
+        (diskDic,targetDic) = ParseSCSTConf(sys.argv[1])
+    else:
+        (diskDic,targetDic) = ParseSCSTConf("testscst.conf")
     import pprint
     pprint.pprint(diskDic)
     pprint.pprint(targetDic)
