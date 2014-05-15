@@ -10,7 +10,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # please see the online documentation at vagrantup.com.
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = "precise64"
+  config.vm.box = "ubuntu1404"
 
   # The url from where the 'config.vm.box' box will be fetched if it
   # doesn't already exist on the user's system.
@@ -60,6 +60,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # You will need to create the manifests directory and a manifest in
   # the file precise64.pp in the manifests_path directory.
   #
+  #
   # An example Puppet manifest to provision the message of the day:
   #
   # # group { "puppet":
@@ -73,18 +74,53 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # #               Managed by Puppet.\n"
   # # }
   #
+<<<<<<< HEAD
+ config.vm.provider :virtualbox do |vb|
+    unless File.exist?(file_to_disk)
+      iscsiserver1.vm.customize ['createhd', '--filename', file_to_disk, '--size', 5 * 1024]
+    end
+    iscsiserver1.vm.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', file_to_disk]
+ end
+=======
+>>>>>>> 2146ebad4716f54d7568e3acfade13d7b306f123
 
-  config.vm.define "iscsiserver" do |iscsiserver|
-	  iscsiserver.vm.hostname = 'iscsiserver.bb'
-	  iscsiserver.vm.network "public_network"
-	  iscsiserver.vm.network "private_network", ip: "192.168.61.20"
+  config.vm.define "saturnring" do |saturnring|
+    saturnring.vm.hostname= "saturnring"
+    saturnring.vm.network  "public_network"
+    saturnring.vm.network  "private_network", ip:'192.168.61.20'
+<<<<<<< HEAD
+=======
+    saturnring.vm.provision "shell", path: "saturnring_postbootup.sh"
+>>>>>>> 2146ebad4716f54d7568e3acfade13d7b306f123
+  end
+  config.vm.define "iscsiserver1" do |iscsiserver1|
+	  iscsiserver1.vm.hostname = 'iscsiserver1'
+	  iscsiserver1.vm.network "public_network"
+	  iscsiserver1.vm.network "private_network", ip:"192.168.61.21"
+<<<<<<< HEAD
+    file_to_disk = './tmp/data_disk1.vdi'
+=======
+>>>>>>> 2146ebad4716f54d7568e3acfade13d7b306f123
   end
 
-  config.vm.define "iscsiclient" do |iscsiclient|
-        	iscsiclient.vm.hostname = 'iscsiclient.bb'
-		iscsiclient.vm.network "public_network"
-     	  iscsiclient.vm.network "private_network", ip: "192.168.61.21"
+  config.vm.define "iscsiserver2" do |iscsiserver2|
+	  iscsiserver2.vm.hostname = 'iscsiserver1'
+	  iscsiserver2.vm.network "public_network"
+	  iscsiserver2.vm.network "private_network", ip:"192.168.61.22"
+<<<<<<< HEAD
+    file_to_disk2 = './tmp/data_disk1.vdi'
+    unless File.exist?(file_to_disk2)
+      iscsiserver2.vm.customize ['createhd', '--filename', file_to_disk2, '--size', 5 * 1024]
+    end
+    iscsiserver2.vm.customize ['storageattach', :id, '--storagectl', 'SATA Controller', '--port', 1, '--device', 0, '--type', 'hdd', '--medium', file_to_disk2]
+=======
+>>>>>>> 2146ebad4716f54d7568e3acfade13d7b306f123
   end
+# config.vm.define "iscsiclient" do |iscsiclient|
+#   iscsiclient.vm.hostname = 'iscsiclient'
+#		iscsiclient.vm.network "public_network"
+#    iscsiclient.vm.network "private_network", ip: "192.168.61.21"
+#  end
 
 
   # Enable provisioning with chef solo, specifying a cookbooks path, roles
