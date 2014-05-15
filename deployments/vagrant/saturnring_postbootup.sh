@@ -1,5 +1,5 @@
 sudo apt-get update
-sudo apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev
+sudo apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi
 cd /home/vagrant
 git clone -b external http://gitlab.rim.net/ssd/saturnring.git
 cd /home/vagrant/saturnring
@@ -15,4 +15,88 @@ python manage.py convert_to_south ssdfrontend
 python manage.py schemamigration ssdfrontend --auto
 python manage.py migrate
 python manage.py runserver 0.0.0.0:8000
+cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
+
+[program:django-rqworker-1]
+command=/home/vagrant/saturnring/redisqconf/rqworker.sh
+user=local
+stdout_logfile=/nfsmount/saturnringlog/rqworker-1.log
+redirect_stderr=true
+
+
+[program:django-rqworker-2]
+command=/home/vagrant/saturnring/redisqconf/rqworker.sh
+user=local
+stdout_logfile=/nfsmount/saturnringlog/rqworker-2.log
+redirect_stderr=true
+
+
+[program:django-rqworker-3]
+command=/home/vagrant/saturnring/redisqconf/rqworker.sh
+user=local
+stdout_logfile=/nfsmount/saturnringlog/rqworker-3.log
+redirect_stderr=true
+
+
+[program:django-rqworker-4]
+command=/home/vagrant/saturnring/redisqconf/rqworker.sh
+user=local
+stdout_logfile=/nfsmount/saturnringlog/rqworker-4.log
+redirect_stderr=true
+
+EOF
+service supervisor stop
+service supervisor start
+
+cat <<EOF > /etc/apache2/sites-available/saturnring
+<VirtualHost *:80>
+  LogLevel warn
+  CustomLog /nfsmount/saturnringlog/access.log combined
+  ErrorLog /nfsmount/saturnringlog/error.log
+        ServerAdmin saturnadmin@yourdomain.com
+        ServerName saturnring
+        ServerAlias www.saturnring.labs
+        WSGIScriptAlias / /var/www/saturnring/index.wsgi
+        WSGIDaemonProcess vagrant  user=vagrant
+        WSGIProcessGroup vagrant
+        WSGIPassAuthorization On
+        Alias /static/ /var/www/saturnring/static/
+        <Location "/static/">
+            Options -Indexes
+        </Location>
+    <Directory /var/www/saturnring>
+      Order allow,deny
+      Allow from all
+    </Directory>
+</VirtualHost>
+EOF
+
+ln -s /etc/apache2/sites-enabled/000-default /etc/apache2/sites-available/saturnring
+
+cat <<EOF > /var/www/saturnring/index.wsgi
+import os
+import sys
+import site
+
+# Add the site-packages of the chosen virtualenv to work with
+site.addsitedir('/home/vagrant/saturnring/godjango/local/lib/python2.7/site-packages')
+
+# Add the app's directory to the PYTHONPATH
+sys.path.append('/home/vagrant/saturnring/ssddj')
+sys.path.append('/home/vagrant/saturnring/ssddj/ssddj')
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'ssddj.settings'
+
+# Activate your virtual env
+activate_env=os.path.expanduser("/home/vagrant/saturnring/saturnenv/bin/activate_this.py")
+execfile(activate_env, dict(__file__=activate_env))
+
+import django.core.handlers.wsgi
+application = django.core.handlers.wsgi.WSGIHandler()
+
+EOF
+
+
+service apache2 restart
+
 
