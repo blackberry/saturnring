@@ -5,7 +5,7 @@ mkdir -p /nfsmount/saturnringlog
 chown vagrant:vagrant /nfsmount/saturnringlog
 
 
-sudo -u vagrant -H bash -c "cd /vagrant; ./postbootup_as_vagrant.sh" 
+sudo -u vagrant -H bash -c "cd /vagrant; ./saturnring_postbootup_as_vagrant_user.sh"
 
 cd /home/vagrant/saturnring/ssddj
 cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
