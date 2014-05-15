@@ -1,7 +1,7 @@
 sudo apt-get update
 sudo apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl
 cd /home/vagrant
-git clone -b external http://gitlab.rim.net/ssd/saturnring.git
+git clone http://gitlab.rim.net/ssd/saturnring.git
 cd /home/vagrant/saturnring
 virtualenv saturnenv
 source ./saturnenv/bin/activate
@@ -14,6 +14,14 @@ python manage.py syncdb
 python manage.py convert_to_south ssdfrontend
 python manage.py schemamigration ssdfrontend --auto
 python manage.py migrate
+
+cat <<EOF > /home/vagrant/saturnring/redisqconf/rqworker.sh
+#!/bin/bash
+source /home/vagrant/saturnring/godjango/bin/activate
+python /home/vagrant/saturnring/ssddj/manage.py rqworker default
+
+EOF
+
 
 cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-1]
