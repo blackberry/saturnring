@@ -5,6 +5,10 @@ mkdir -p /nfsmount/saturnringlog
 chown vagrant:vagrant /nfsmount/saturnringlog
 
 
+mkdir -p /var/www/saturnring
+chown -R vagrant:vagrant /var/www
+
+
 sudo -u vagrant -H bash -c "cd /vagrant; ./saturnring_postbootup_as_vagrant_user.sh"
 
 cd /home/vagrant/saturnring/ssddj
@@ -38,10 +42,6 @@ stdout_logfile=/nfsmount/saturnringlog/rqworker-4.log
 redirect_stderr=true
 
 EOF
-
-mkdir -p /var/www/saturnring
-chown -R vagrant:vagrant /var/www
-
 cat <<EOF > /etc/apache2/sites-available/saturnring
 <VirtualHost *:80>
   LogLevel warn
@@ -49,6 +49,7 @@ cat <<EOF > /etc/apache2/sites-available/saturnring
   ErrorLog /nfsmount/saturnringlog/error.log
         ServerAdmin saturnadmin@yourdomain.com
         ServerName saturnring
+        x
         ServerAlias www.saturnring.labs
         WSGIScriptAlias / /var/www/saturnring/index.wsgi
         WSGIDaemonProcess vagrant  user=vagrant
