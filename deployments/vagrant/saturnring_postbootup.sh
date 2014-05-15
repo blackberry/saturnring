@@ -1,5 +1,5 @@
 sudo apt-get update
-sudo apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi
+sudo apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl
 cd /home/vagrant
 git clone -b external http://gitlab.rim.net/ssd/saturnring.git
 cd /home/vagrant/saturnring
@@ -14,39 +14,40 @@ python manage.py syncdb
 python manage.py convert_to_south ssdfrontend
 python manage.py schemamigration ssdfrontend --auto
 python manage.py migrate
-python manage.py runserver 0.0.0.0:8000
-cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
 
+cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-1]
 command=/home/vagrant/saturnring/redisqconf/rqworker.sh
-user=local
+user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-1.log
 redirect_stderr=true
 
 
 [program:django-rqworker-2]
 command=/home/vagrant/saturnring/redisqconf/rqworker.sh
-user=local
+user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-2.log
 redirect_stderr=true
 
 
 [program:django-rqworker-3]
 command=/home/vagrant/saturnring/redisqconf/rqworker.sh
-user=local
+user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-3.log
 redirect_stderr=true
 
 
+
 [program:django-rqworker-4]
 command=/home/vagrant/saturnring/redisqconf/rqworker.sh
-user=local
+user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-4.log
 redirect_stderr=true
 
 EOF
-service supervisor stop
-service supervisor start
+
+mkdir -p /var/www/saturnring
+chown -R vagrant:vagrant /var/www
 
 cat <<EOF > /etc/apache2/sites-available/saturnring
 <VirtualHost *:80>
@@ -71,7 +72,7 @@ cat <<EOF > /etc/apache2/sites-available/saturnring
 </VirtualHost>
 EOF
 
-ln -s /etc/apache2/sites-enabled/000-default /etc/apache2/sites-available/saturnring
+ln -s /etc/apache2/sites-available/saturnring /etc/apache2/sites-enabled/000-default 
 
 cat <<EOF > /var/www/saturnring/index.wsgi
 import os
@@ -79,7 +80,7 @@ import sys
 import site
 
 # Add the site-packages of the chosen virtualenv to work with
-site.addsitedir('/home/vagrant/saturnring/godjango/local/lib/python2.7/site-packages')
+site.addsitedir('/home/vagrant/saturnring/godjango/vagrant/lib/python2.7/site-packages')
 
 # Add the app's directory to the PYTHONPATH
 sys.path.append('/home/vagrant/saturnring/ssddj')
@@ -95,8 +96,19 @@ import django.core.handlers.wsgi
 application = django.core.handlers.wsgi.WSGIHandler()
 
 EOF
-
+python manage.py collectstatic
 
 service apache2 restart
 
+service supervisor stop
+service supervisor start
+
+#This little bit uses cron to keep updating stats within the application
+if [ ! -f mycron ];then
+        crontab -l > mycron
+        #echo new cron into cron file
+        echo "* * * * *  curl -X GET http://localhost/api/stateupdate/" >> mycron
+        #install new cron file
+        crontab mycron
+fi
 
