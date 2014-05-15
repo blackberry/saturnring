@@ -1,3 +1,3 @@
 #!/bin/bash
-source /home/local/ssddj/saturnring/godjango/bin/activate
-python /home/local/ssddj/saturnring/ssddj/manage.py rqworker default
+source /home/vagrant/saturnring/godjango/bin/activate
+python /home/vagrant/saturnring/ssddj/manage.py rqworker default

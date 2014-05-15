@@ -80,7 +80,7 @@ import sys
 import site
 
 # Add the site-packages of the chosen virtualenv to work with
-site.addsitedir('/home/vagrant/saturnring/godjango/vagrant/lib/python2.7/site-packages')
+site.addsitedir('/home/vagrant/saturnring/saturnenv/local/lib/python2.7/site-packages')
 
 # Add the app's directory to the PYTHONPATH
 sys.path.append('/home/vagrant/saturnring/ssddj')
