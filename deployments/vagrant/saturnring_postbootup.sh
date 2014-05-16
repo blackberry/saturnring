@@ -42,15 +42,13 @@ stdout_logfile=/nfsmount/saturnringlog/rqworker-4.log
 redirect_stderr=true
 
 EOF
-cat <<EOF > /etc/apache2/sites-available/saturnring
+cat <<EOF > /etc/apache2/sites-available/saturnring.conf
 <VirtualHost *:80>
   LogLevel warn
   CustomLog /nfsmount/saturnringlog/access.log combined
   ErrorLog /nfsmount/saturnringlog/error.log
         ServerAdmin saturnadmin@yourdomain.com
-        ServerName saturnring
-        x
-        ServerAlias www.saturnring.labs
+        ServerName 192.168.61.20
         WSGIScriptAlias / /var/www/saturnring/index.wsgi
         WSGIDaemonProcess vagrant  user=vagrant
         WSGIProcessGroup vagrant
@@ -64,9 +62,10 @@ cat <<EOF > /etc/apache2/sites-available/saturnring
       Allow from all
     </Directory>
 </VirtualHost>
+
 EOF
 
-ln -s /etc/apache2/sites-available/saturnring /etc/apache2/sites-enabled/000-default 
+ln -s /etc/apache2/sites-available/saturnring /etc/apache2/sites-enabled/saturnring.conf
 
 service apache2 restart
 
