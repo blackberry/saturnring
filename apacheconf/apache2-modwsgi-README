@@ -1,6 +1,0 @@
-Create the index.wsgi file as in the var folder
-Make the virtual host
-Create static files using collectstatic manage.py command
-
-
-
