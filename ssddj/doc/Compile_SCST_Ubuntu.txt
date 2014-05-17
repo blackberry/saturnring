@@ -1,7 +1,0 @@
-SCST for Ubuntu
-
-sudo apt-get update
-sudo apt-get install kernel-package subversion
-sudo apt-get build-dep --no-install-recommends linux-image-$(uname -r)
-sudo apt-get upgrade
-sudo shutdown now
