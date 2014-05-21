@@ -17,7 +17,7 @@ class PollServer():
         self.serverDNS = str(serverDNS)
         # Read configuration
         config = ConfigParser.RawConfigParser()
-        config.read('/home/local/ssddj/saturnring/ssddj/saturn.ini')
+        config.read('/home/vagrant/saturnring/ssddj/saturn.ini')
         self.userName=config.get('saturnnode','user')
         self.keyFile=config.get('saturnring','privatekeyfile')
         self.rembashpath=config.get('saturnnode','bashpath')
