@@ -65,7 +65,7 @@ cat <<EOF > /etc/apache2/sites-available/saturnring.conf
 
 EOF
 
-ln -s /etc/apache2/sites-available/saturnring /etc/apache2/sites-enabled/saturnring.conf
+ln -s /etc/apache2/sites-available/saturnring.conf /etc/apache2/sites-enabled/saturnring.conf
 
 service apache2 restart
 
