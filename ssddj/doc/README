@@ -18,6 +18,9 @@ c) Facilities like user quotas, ingesting multiple iSCSI target servers into a S
 
 Fig 1. shows the concepts in action. clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overal storage in the Saturnring cluster. It also provides user views to track Saturn storage for individual users.
 
+The web portal is a modified Django admin interface. It provides user management, saturn server management and information about targets, logical volumes and volume groups. By hacking the default Django interface rather than creating custom views the core functioanlity  (managing iSCSI block devices) has been the key development focus. A single pr
+
+
 Running the Vagrant Setup
 
 Vagrant, along with the underlying virtualbox hypervisor, is used to demonstrate and develop Saturnring here. There are two categories of VMs. The first is the Saturnring portal. The second is the Saturn server. A third category, the iSCSI client, is also included for completeness. Each of the VMs is derived from the stock Ubuntu 14.04 distribution; scripts are provided for each step in order to make saturnring images for any cloud provider.

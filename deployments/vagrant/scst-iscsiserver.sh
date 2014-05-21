@@ -9,9 +9,9 @@ svn checkout svn://svn.code.sf.net/p/scst/svn/trunk scst-svn
 #tar -xvzf scst.tar.gz
 cd scst-svn
 make 2perf
-make scst scst_install
-make iscsi iscsi_install
-make scstadm scstadm_install
+make scst scst_install iscsi iscsi_install scstadm scstadm_install
+#Twice - seems to fix the iscsi module missing problem
+make scst scst_install iscsi iscsi_install scstadm scstadm_install
 if [ -n "" ]; then chr="chroot "; else chr=""; fi; if type systemctl >/dev/null 2>&1; then echo $chr systemctl enable "scst.service"; elif type chkconfig >/dev/null 2>&1; then echo $chr chkconfig --add "scst"; elif type update-rc.d >/dev/null 2>&1; then echo $chr update-rc.d "scst" defaults; elif type rc-update >/dev/null 2>&1; then echo $chr rc-update add "scst" default; elif type /usr/lib/lsb/install_initd >/dev/null 2>&1; then echo $chr /usr/lib/lsb/install_initd "scst"; fi
 update-rc.d scst defaults
 echo
