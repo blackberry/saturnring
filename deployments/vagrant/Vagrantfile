@@ -97,7 +97,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     iscsiclient.vm.hostname = 'iscsiclient'
 		iscsiclient.vm.network "public_network"
     iscsiclient.vm.network "private_network", ip: "192.168.61.23"
-    iscsiclient.vm.provision "shell", path: "scst-client.sh"
+    iscsiclient.vm.provision "shell", path: "iscsi-client.sh"
  end
 
 

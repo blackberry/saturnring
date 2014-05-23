@@ -10,14 +10,18 @@ https://docs.djangoproject.com/en/1.6/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import ConfigParser
+config = ConfigParser.RawConfigParser()
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 print str(BASE_DIR)
+config.read(os.path.join(BASE_DIR,'saturn.ini'))
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '%ir_75d1!!q7172&k7z(px3k$-ji$x$18oh0(fd8pm-t%-3k=b'
+SECRET_KEY = config.get('saturnring','django_secret_key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 INFO = True
@@ -138,7 +142,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.FileHandler',
 #            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
-            'filename': '/nfsmount/saturnringlog/saturn.log',
+            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath')),
             'formatter': 'verbose'
         },
     },
