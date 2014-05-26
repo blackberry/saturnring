@@ -57,6 +57,7 @@ if [ ! -f mycron ];then
 fi
 
 # Create new keys
+mkdir -p /home/vagrant/saturnring/ssddj/config
 cd /home/vagrant/saturnring/ssddj/config
 ssh-keygen -q -f saturnkey -N ''
 ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
