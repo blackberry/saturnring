@@ -50,7 +50,7 @@ python manage.py collectstatic --noinput
 if [ ! -f mycron ];then
         crontab -l > mycron
         #echo new cron into cron file
-        echo "* * * * *  curl -X GET http://localhost/api/stateupdate/" >> mycron
+        echo "* * * * *  curl -X GET http://192.168.61.20/api/stateupdate/" >> mycron
         #install new cron file
         crontab mycron
 fi
