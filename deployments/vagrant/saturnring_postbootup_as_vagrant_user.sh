@@ -46,6 +46,7 @@ application = django.core.handlers.wsgi.WSGIHandler()
 EOF
 python manage.py collectstatic --noinput
 
+
 #This little bit uses cron to keep updating stats within the application
 if [ ! -f mycron ];then
         crontab -l > mycron
@@ -54,4 +55,9 @@ if [ ! -f mycron ];then
         #install new cron file
         crontab mycron
 fi
+
+# Create new keys
+cd /home/vagrant/saturnring/ssddj/config
+ssh-keygen -q -f saturnkey -N ''
+ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
 
