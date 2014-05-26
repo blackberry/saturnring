@@ -22,7 +22,7 @@ class PollServer():
         print str(BASE_DIR)
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
         self.userName=config.get('saturnnode','user')
-        self.keyFile=os.path.join(BASE_DIR,config.get('saturnring','privatekeyfile')
+        self.keyFile=os.path.join(BASE_DIR,config.get('saturnring','privatekeyfile'))
         self.rembashpath=config.get('saturnnode','bashpath')
         self.rempypath=config.get('saturnnode','pythonpath')
         self.vg=config.get('saturnnode','volgroup')
