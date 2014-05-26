@@ -33,6 +33,7 @@ from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
 import django_rq
 import hashlib
+import configparser
 
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
@@ -194,7 +195,9 @@ class Provision(APIView):
                 p = PollServer(targetHost)
                 if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
                     #p.GetTargets()
-                    (devDic,tarDic)=ParseSCSTConf('/home/local/ssddj/saturnring/ssddj/config/'+targetHost+'.scst.conf')
+		    BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+			
+                    (devDic,tarDic)=ParseSCSTConf(self.iscsiconfdir=os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
 #                    logger.info("Got devDic via parsescst:")
 #                    logger.info(devDic)
 #                    logger.info("Got tarDic via parsescst:")

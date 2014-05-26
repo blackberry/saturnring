@@ -22,13 +22,13 @@ class PollServer():
         print str(BASE_DIR)
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
         self.userName=config.get('saturnnode','user')
-        self.keyFile=config.get('saturnring','privatekeyfile')
+        self.keyFile=os.path.join(BASE_DIR,config.get('saturnring','privatekeyfile')
         self.rembashpath=config.get('saturnnode','bashpath')
         self.rempypath=config.get('saturnnode','pythonpath')
         self.vg=config.get('saturnnode','volgroup')
-        self.iscsiconfdir=config.get('saturnring','iscsiconfigdir')
+        self.iscsiconfdir=os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
         self.remoteinstallLoc=config.get('saturnnode','install_location')
-        self.localbashscripts=config.get('saturnring','bashscripts')
+        self.localbashscripts=os.path.join(BASE_DIR,config.get('saturnring','bashscripts'))
 
     # Copy over scripts from the saturnring server to the iscsi server
     def InstallScripts(self):
