@@ -142,7 +142,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.FileHandler',
 #            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
-            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath')),
+            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
             'formatter': 'verbose'
         },
     },
