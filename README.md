@@ -2,6 +2,8 @@
 
 Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring.
 
+You may also want to read the user guide in the /doc directory.
+
 ## Motivation
 
 1. The IO capabilities of high performance block storage offered by cloud providers (e.g. SSDs attached to VMs) often exceed the requirements of that one VM. 
@@ -25,7 +27,7 @@ c) Facilities like user quotas, ingesting multiple iSCSI target servers into a S
 2. A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
 Fig 1. shows how Saturnring may be setup to serve out block storage.
-![Fig 1: high level architecture](http://gitlab.rim.net/ssd/saturnring/raw/localrun/doc/high-level-arch.png "High Level Architecture")
+![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
 
 
