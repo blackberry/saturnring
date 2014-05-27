@@ -36,13 +36,13 @@ Clients can use the RESTful provisioner call to create iSCSI targets on saturn s
 Saturnring is built out of multiple components - the iSCSI server(s), the Django-driven Saturnring portal and API and Apache webserver with modwsgi extensions, the backend database (sqlite or other Django-compatible relational DB) and a redis-server and job workers for running periodic tasks. A Vagrant file and shell provisioner scripts are included to automatically setup these components for illustration. Instead of supplying pre-baked and customized VM images for quick setup the idea is to provide scripts that can be adapted to instantiate Saturnring on any private or public cloud. The Vagrant file setups up Virtualbox VMs that take on the roles of the Saturnring server, 2 iSCSI servers, and an iSCSI client. Vagrant brings up vanilla Ubuntu 14.04 images, and the shell provisioner scripts do the work of adapting the vanilla VMs into these different roles. These bash scripts are an easy segway to setting up Saturnring in any other virtual or bare-metal environment, or for creating custom images to be used in the cloud.
 
 An unhindered Internet connection and a computer capable of running at least 2 VMs (256M RAM per VM, 1 vCPU per VM, 20GiB disk) is assumed here. 'Host' refers to the PC running the VMs, the SSH login/password for all VMs is vagrant/vagrant, and the Vagrant file defines an internal network 192.168.61/24 and a bridged adaptor to let VMs access the Internet.
-1. Install Virtualbox
-http://www.virtualbox.org
+
+1. http://www.virtualbox.org
 
 2. Install vagrant 
 http://docs.vagrantup.com/v2/installation/
 
-3. On the Virtualbox host machine (your PC) Clone into <GITHUB DIRECTORY> in local directory <DIRROOT>
+3. On the Virtualbox host machine (your PC) Clone into <GITHUB URL> in local directory <DIRROOT>
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
 git clone <GITHUB URL> 
