@@ -92,33 +92,6 @@ Confirm in the portal (under VGs) that there is a new volume group
 STAGE 3: Testing via a client VM
 
 
-To run
-
-Use screen, set the python environment as specified in the requirements file using pip and virtualenv
-
-Screen 1
-python manage.py runserver 0.0.0.0:8000
-
-Screen 2
-python manage.py rqworker default
-
-Screen 3
-crontab -e and then insert
-* * * * * curl -X GET http://saturnring.store.altus.bblabs:8000/api/stateupdate/
-Later you may do a tail -f saturn.log to see the log
-
-On the browser:
-http://<satunring.store.altus.bblabs>:8000/admin
-
-On the iSCSI client (for example):
-curl -X GET http://saturnring.store.altus.bblabs:8000/api/provisioner/ -d "clienthost=bbmserver62&sizeinGB=1.0&serviceName=b8mworkers" -u bbmserviceowner:password
-
-Provisioning a new saturn server
-Copy the SSH key
-ssh-copy-id -i ./config/saturnserver.pub local@newhost.bb.com
-Add the host to via the admin interface of Saturnring
-Then kick the vgscanner
-curl -X GET http://saturnring.store.altus.bblabs/saturnring/api/vgscan/ -d 'saturnserver=newhost.bb.com'
 
 Directory Structure
 
@@ -130,3 +103,19 @@ The doc directory contains some more documentation and images
 
 The misc directory contains some scripts/supporting open-source software and their licenses if applicable
 
+LICENSE
+
+#Copyright 2014 Blackberry Limited
+#
+#Licensed under the Apache License, Version 2.0 (the "License");
+#you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+#implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
