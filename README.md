@@ -147,9 +147,13 @@ All targets provisioned with the same "anti affinity group" will be spread among
 
 Here are some ideas for Saturnring in production
 1. Monitoring and Alerting - consider something like Zabbix or Nagios to keep tabs on Saturnring components
+
 2. Configuration management (Puppet/Chef etc.) or pre-built images will reduce the pain and errors that come with managing multiple servers manually
+
 3. SSDs wear out - they have limited PE cycles; best to keep a close eye on them  
+
 4. Saturnring uses a recent LVM2 implementation, look at its documentation for its many features
+
 5. The Vagrant example does not patch the Linux kernel for optimal SCST iSCSI target software performance. Read more here: http://scst.sourceforge.net/iscsi-scst-howto.txt
 
 ## License
