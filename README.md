@@ -24,8 +24,8 @@ b) A HTTP RESTful-API call to provision iSCSI targets. To keep things simple the
 c) Facilities like user quotas, ingesting multiple iSCSI target servers into a Saturnring cluster, deleting storage, thin provisioning, and basic monitoring support etc. are available via the Saturnring portal
 2. A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
-Fig 1. shows how Saturnring works. 
-![Fig 1: high level architecture](http://gitlab.rim.net/ssd/saturnring/blob/localrun/doc/high-level-arch.png "High Level Architecture")
+Fig 1. shows how Saturnring may be setup to serve out block storage.
+![Fig 1: high level architecture](http://gitlab.rim.net/ssd/saturnring/raw/localrun/doc/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
 
 
