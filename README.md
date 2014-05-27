@@ -4,9 +4,9 @@ Saturnring enables sharing multiple block storage devices on multiple hosts via 
 
 ## Motivation
 
-1) The IO capabilities of high performance block storage offered by cloud providers (e.g. SSDs attached to VMs) often exceed the requirements of that one VM. 
-2) Non-IO bottlenecks like CPU load or memory prevent the optimal use of high performance IO devices like SSDs . The unused IO capabilities (high number of IOs/sec, throughput, low latency) of SSDs can be exported to other VMs. This is usually more economical than buying SSD storage for VMs seperately.
-3) Saturnring can be used to create highly available block storage and remove single points of failure (single SSD block device attached to a VM). For example Saturnring can offer (parts of) two block devices from two different VMs to a third client VM, and the client can use software RAID 1 (like md or mirror LVM) to create a highly available block device. This setup also doubles the read IO capability.
+1. The IO capabilities of high performance block storage offered by cloud providers (e.g. SSDs attached to VMs) often exceed the requirements of that one VM. 
+2. Non-IO bottlenecks like CPU load or memory prevent the optimal use of high performance IO devices like SSDs . The unused IO capabilities (high number of IOs/sec, throughput, low latency) of SSDs can be exported to other VMs. This is usually more economical than buying SSD storage for VMs seperately.
+3. Saturnring can be used to create highly available block storage and remove single points of failure (single SSD block device attached to a VM). For example Saturnring can offer (parts of) two block devices from two different VMs to a third client VM, and the client can use software RAID 1 (like md or mirror LVM) to create a highly available block device. This setup also doubles the read IO capability.
  
 A use case for Saturnring might be an application that uses a relational database (e.g. Postgres or MariaDB) and a persistent messaging queue system (e.g. RabbitMQ) in the cloud. Both class of applications benefit from high-performing SSD storage, but may not individually require the full capabilities of 2 independent SSDs. Another use case is building a multi-head  SSD storage array for a private cloud by using Saturnring to provision and manage multiple bare-metal x86 boxes containing SSDs or PCIe solid-state storage cards. Saturnring aggregates block storage resources and enables architects to move block storage capabilities to where they are required in the application. 
 
@@ -25,7 +25,7 @@ c) Facilities like user quotas, ingesting multiple iSCSI target servers into a S
 2. A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
 Fig 1. shows how Saturnring works. 
-![Fig 1: high level architecture](https://github.com/<GITHUB URL>/raw/master/doc/high-level-arch "High Level Architecture")
+![Fig 1: high level architecture](http://gitlab.rim.net/ssd/saturnring/blob/localrun/doc/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
 
 
@@ -95,6 +95,7 @@ Confirm in the portal (under VGs) that there is a new volume group
 16. Repeat steps 11-15 for iscsiserver2 (192.168.61.22) if you want (it is useful to have 2 iscsiservers if you want to try the anti-affinity provisioning)
 
 STAGE 3: Testing via an iscsi client VM (192.168.21.23)
+
 17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets.
 
 19. On the host  navigate to <DIRROOT>/deployments/vagrant
