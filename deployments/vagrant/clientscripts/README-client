@@ -1,0 +1,18 @@
+First, log into the Saturnring storage portal via a browser and create a user
+e.g. fastiouser/password
+
+Then, edit the script storage-provisioner.sh and set appropriate values for
+
+##################################################
+SIZEINGB=1.0
+SERVICENAME="fastiorequired"
+SATURNRINGUSERNAME="fastiouser"
+SATURNRINGPASSWORD="fastiopassword"
+ANTI_AFFINITY_GROUP=${SATURNRINGUSERNAME}"unique-string"
+SATURNRINGURL="http://192.168.61.20/api/provisioner/"
+##################################################
+
+Then run the storage-provisioner.sh script
+
+sudo ./storage-provisioner.sh
+

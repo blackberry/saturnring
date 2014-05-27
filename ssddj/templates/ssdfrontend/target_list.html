@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+    <h2>Targets</h2>
+    <ul>
+        {% for target in object_list %}
+            <li>{{ target.iqntar }}</li>
+        {% endfor %}
+    </ul>
+{% endblock %}
