@@ -49,6 +49,7 @@ http://docs.vagrantup.com/v2/installation/
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
 git clone https://github.com/sachinkagarwal/saturnring/
+
 ```
 4. Navigate to <DIRROOT>/saturnring/deployments/vagrant
 
@@ -59,7 +60,7 @@ cd ~/DIRROOT/saturnring/deployments/vagrant
 STAGE 1: Bringing up Saturnring portal/API server
 (192.168.61.20)
 
-5. Use Vagrant to bring up the Saturnring VM, you should see a lot of bootup activity happening on the VM (takes a while) 
+5. Use Vagrant to bring up the Saturnring VM, you should see a lot of bootup activity happening on the VM (takes a while). You may download the Ubuntu 14.04 Vagrant box from https://cloud-images.ubuntu.com/vagrant/trusty/current/trusty-server-cloudimg-amd64-vagrant-disk1.box.
 
 ```
 vagrant up saturnring
