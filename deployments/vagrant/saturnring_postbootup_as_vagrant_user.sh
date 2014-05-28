@@ -1,4 +1,4 @@
-
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,9 +13,9 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
+
 cd /home/vagrant
-git clone -b localrun http://gitlab.rim.net/ssd/saturnring.git
+git clone https://github.com/sachinkagarwal/saturnring/
 
 cd /home/vagrant/saturnring
 if [ ! -d "/home/vagrant/saturnring/saturnenv" ]; then

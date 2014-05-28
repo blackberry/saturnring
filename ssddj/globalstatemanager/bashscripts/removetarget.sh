@@ -1,3 +1,4 @@
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
+
 if  python /home/local/saturn/saturn-bashscripts/parsetarget.py | grep $1 | grep "no sessions"
 then
         yes | scstadmin -rem_target $1 -driver iscsi

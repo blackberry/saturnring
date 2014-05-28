@@ -1,4 +1,4 @@
-
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
+
 apt-get update
 apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl
 mkdir -p /nfsmount/saturnringlog

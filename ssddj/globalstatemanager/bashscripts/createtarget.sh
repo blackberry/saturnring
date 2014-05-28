@@ -1,3 +1,4 @@
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
+
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
 CSTR=`lvcreate -V$1G -T $6/thinpool -n $lvolName`

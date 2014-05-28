@@ -1,3 +1,4 @@
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +13,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
+
 source /home/vagrant/saturnring/saturnenv/bin/activate
 python /home/vagrant/saturnring/ssddj/manage.py rqworker default
