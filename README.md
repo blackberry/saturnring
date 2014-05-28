@@ -50,6 +50,7 @@ cd ~/DIRROOT
 git clone <GITHUB URL> 
 ```
 4. Navigate to <DIRROOT>/saturnring/deployments/vagrant
+
 ```cd ~/DIRROOT/saturnring/deployments/vagrant
 ```
 
@@ -57,6 +58,7 @@ STAGE 1: Bringing up Saturnring portal/API server
 (192.168.61.20)
 
 5. Use Vagrant to bring up the Saturnring VM, you should see a lot of bootup activity happening on the VM (takes a while) 
+
 ```
 vagrant up saturnring
 ```
@@ -64,21 +66,25 @@ vagrant up saturnring
    http://192.168.61.20/admin from a web brower on the host machine 
 
 7. Log into the Saturnring VM
+
 ```
 vagrant ssh saturnring
 ```
 
 8. Activate the Saturnring Python environment
+
 ```
 cd saturnring
 source saturnenv/bin/activate
 ```
 
 9. Create a Storage admin superuser  
+
 ```
 cd /home/vagrant/saturnring/ssddj
 python manage.py createsuperuser
 ```
+
 (follow the prompts to setup a superuser)
 
 10. Exit to the host and confirm that you can log into the Saturnring
@@ -87,17 +93,20 @@ python manage.py createsuperuser
 STAGE 2: Bringing up the iSCSI server(s)
 
 11. Navigate to 
+
 ```
 cd ~/DIRROOT/saturnring/deployments/vagrant
 ```
 
 12. Bring up  an iSCSI VM defined in Vagrantfile 
+
 ```
 vagrant up iscsiserver1 (192.168.61.21)
 ```
 
 13. Log into the saturnring VM and copy SSH keys for Saturning to
     access the iSCSI server
+
 ```
 vagrant ssh saturnring
 cd ~/saturnring/ssddj/config
@@ -107,9 +116,11 @@ ssh-copy-id -i saturnkey vagrant@192.168.61.21
 14. Log into the saturnring portal as admin superuser and add the new  iscsi server. For this simple example, Dnsname=Ipaddress=Storageip1=Storageip2=192.168.61.21. Failure to save indicates a problem in the configuration steps (11-13). Saturnring will not allow a Storagehost being saved before all the config is right.
 
 15. From the VM host or one of the above 2 fired up VMs, Make a "initial scan" request to the Saturnring server so that it ingests the storage made available by iscsiserver1 at IP address 192.168.61.21 (Networking is defined in the Vagrantfile)
+
 ```
 curl -s -X http://192.168.61.20/api/vgscan -d "saturnserver=192.168.61.21" 
 ```
+
 Confirm in the portal (under VGs) that there is a new volume group
 
 16. Repeat steps 11-15 for iscsiserver2 (192.168.61.22) if you want (it is useful to have 2 iscsiservers if you want to try the anti-affinity provisioning)
@@ -119,12 +130,14 @@ STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets.
 
 19. On the host  navigate to <DIRROOT>/deployments/vagrant
+
 ```
 cd ~/DIRROOT/deployments/vagrant
 vagrant up iscsiclient
 ```
 
 20. Log into the iscsi client
+
 ```
 vagrant ssh iscsiclient
 ```
@@ -142,10 +155,12 @@ SATURNRINGURL="http://192.168.61.20/api/provisioner/"
 ##################################################
 
 Then run the storage-provisioner.sh script
+
 ```
 sudo ./storage-provisioner.sh
 ```
 An iSCSI session from the iscsiclient to an iscsi server will be created. A block device will be inserted in the client VM's /dev directory. dmesg should show the initialization details, including the name of the new block device. More information about the iscsi Session is available on the client via the command
+
 ```
 iscsiadm -m session -P3
 ```
