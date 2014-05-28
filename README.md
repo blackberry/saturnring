@@ -131,7 +131,7 @@ STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 
 17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets.
 
-19. On the host  navigate to <DIRROOT>/deployments/vagrant
+19. On the host  navigate to <DIRROOT>/saturnring/deployments/vagrant
 
 ```
 cd ~/DIRROOT/deployments/vagrant
