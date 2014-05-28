@@ -1,3 +1,4 @@
+#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#!/bin/bash
 
 # For ideal performance SCST should be installed on a patched kernel. For how to patch the Ubuntu kernel for SCST see link:
 # http://scst.sourceforge.net/iscsi-scst-howto.txt
