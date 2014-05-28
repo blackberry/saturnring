@@ -134,7 +134,7 @@ STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 19. On the host  navigate to <DIRROOT>/saturnring/deployments/vagrant
 
 ```
-cd ~/DIRROOT/deployments/vagrant
+cd ~/DIRROOT/saturnring/deployments/vagrant
 vagrant up iscsiclient
 ```
 
