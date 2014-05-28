@@ -164,7 +164,7 @@ iqn.2014.01.192.168.61.21:fastiorequired:47bb7658
 
 The encoding is as follows: 
 
-iqn.2014.01.<IP address of iscsiserver>:<servicename>:<client IQN hash>
+iqn.2014.01.IP address of iscsiserver:servicename:client IQN hash
 
 The key to note is that the <servicename>:<client IQN hash> is unique so attempts to create the same target will instead result in the pre-existing target data to be returned in the provisioner API call. Access is by client IQN - meaning that only targets assigned to the client IQN at creation will be visible during iSCSI discovery and session establishment. Therefore the client IQN can double up as a security password (yep its not a very secure, but then the underlying assumption is that your VMs running on your networking under your cloud account are trustworthy); and its best to keep it secret. More security-conscious users may want to look at modifying Saturnring to include iSCSI CHAP authentication etc.
 
