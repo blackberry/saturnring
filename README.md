@@ -44,6 +44,7 @@ http://www.virtualbox.org
 http://docs.vagrantup.com/v2/installation/
 
 3. On the Virtualbox host machine (your PC) Clone into <GITHUB URL> in local directory <DIRROOT>
+
 ```
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
@@ -51,7 +52,8 @@ git clone <GITHUB URL>
 ```
 4. Navigate to <DIRROOT>/saturnring/deployments/vagrant
 
-```cd ~/DIRROOT/saturnring/deployments/vagrant
+```
+cd ~/DIRROOT/saturnring/deployments/vagrant
 ```
 
 STAGE 1: Bringing up Saturnring portal/API server
