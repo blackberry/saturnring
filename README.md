@@ -53,12 +53,13 @@ git clone <GITHUB URL>
 ```cd ~/DIRROOT/saturnring/deployments/vagrant
 ```
 
-STAGE 1: Getting Bringing up Saturnring portal/API server
+STAGE 1: Bringing up Saturnring portal/API server
 (192.168.61.20)
 
 5. Use Vagrant to bring up the Saturnring VM, you should see a lot of bootup activity happening on the VM (takes a while) 
+```
 vagrant up saturnring
-
+```
 6. If all went well, you should be able to navigate to
    http://192.168.61.20/admin from a web brower on the host machine 
 
