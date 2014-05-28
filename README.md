@@ -86,33 +86,28 @@ STAGE 1: Bringing up Saturnring portal/API server
 STAGE 2: Bringing up the iSCSI server(s)
 
 11. Navigate to 
-
-```
-cd ~/DIRROOT/saturnring/deployments/vagrant
-```
-
+    ```
+    cd ~/DIRROOT/saturnring/deployments/vagrant
+    ```
 12. Bring up  an iSCSI VM defined in Vagrantfile 
-
-```
-vagrant up iscsiserver1 (192.168.61.21)
-```
-
+    ```
+    vagrant up iscsiserver1 (192.168.61.21)
+    ```
 13. Log into the saturnring VM and copy SSH keys for Saturning to
     access the iSCSI server
-```
-vagrant ssh saturnring
-cd ~/saturnring/ssddj/config
-ssh-copy-id -i saturnkey vagrant@192.168.61.21
-```
-(password is vagrant)
-
+    ```
+    vagrant ssh saturnring
+    cd ~/saturnring/ssddj/config
+    ssh-copy-id -i saturnkey vagrant@192.168.61.21
+    (password is vagrant)
+    ```
 14. Log into the saturnring portal as admin superuser and add the new  iscsi server. For this simple example, Dnsname=Ipaddress=Storageip1=Storageip2=192.168.61.21. Failure to save indicates a problem in the configuration steps (11-13). Saturnring will not allow a Storagehost being saved before all the config is right.
 
 15. From the VM host or one of the above 2 fired up VMs, Make a "initial scan" request to the Saturnring server so that it ingests the storage made available by iscsiserver1 at IP address 192.168.61.21 (Networking is defined in the Vagrantfile)
 
-```
-curl -s -X http://192.168.61.20/api/vgscan -d "saturnserver=192.168.61.21" 
-```
+    ```
+    curl -s -X http://192.168.61.20/api/vgscan -d "saturnserver=192.168.61.21" 
+    ```
 
 Confirm in the portal (under VGs) that there is a new volume group
 
@@ -123,38 +118,36 @@ STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets.
 
 19. On the host  navigate to <DIRROOT>/saturnring/deployments/vagrant
-
-```
-cd ~/DIRROOT/saturnring/deployments/vagrant
-vagrant up iscsiclient
-```
+    ```
+    cd ~/DIRROOT/saturnring/deployments/vagrant 
+    vagrant up iscsiclient
+    ```
 20. Log into the iscsi client
-
-```
-vagrant ssh iscsiclient
-```
+    ```
+    vagrant ssh iscsiclient
+    ```
 21. Edit the script storage-provisioner.sh and set appropriate values
     for these variables
-
-##################################################
-SIZEINGB=1.0
-SERVICENAME="fastiorequired"
-SATURNRINGUSERNAME="fastiouser"
-SATURNRINGPASSWORD="fastiopassword"
-ANTI_AFFINITY_GROUP=${SATURNRINGUSERNAME}"unique-string"
-SATURNRINGURL="http://192.168.61.20/api/provisioner/"
-##################################################
-
+    ```
+    ##################################################
+    SIZEINGB=1.0
+    SERVICENAME="fastiorequired"
+    SATURNRINGUSERNAME="fastiouser"
+    SATURNRINGPASSWORD="fastiopassword"
+    ANTI_AFFINITY_GROUP=${SATURNRINGUSERNAME}"unique-string"
+    SATURNRINGURL="http://192.168.61.20/api/provisioner/"
+    ##################################################
+    ```
 Then run the storage-provisioner.sh script
 
-```
-sudo ./storage-provisioner.sh
-```
+    ```
+    sudo ./storage-provisioner.sh
+    ```
 An iSCSI session from the iscsiclient to an iscsi server will be created. A block device will be inserted in the client VM's /dev directory. dmesg should show the initialization details, including the name of the new block device. More information about the iscsi Session is available on the client via the command
 
-```
-iscsiadm -m session -P3
-```
+    ```
+    iscsiadm -m session -P3
+    ```
 
 22. Any filesystem can be created on the device. The target block device is thin provisioned, but sometimes thin provisioning's unmap doesnt play well if large files are deleted. For now, its best to create the filesystem with nodiscard options set and use fstrim for asynchronous unmapped block recovery.
 
