@@ -44,19 +44,15 @@ http://www.virtualbox.org
 http://docs.vagrantup.com/v2/installation/
 
 3. On the Virtualbox host machine (your PC) Clone into https://github.com/sachinkagarwal/saturnring/ in local directory <DIRROOT>
-
 ```
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
 git clone https://github.com/sachinkagarwal/saturnring/
-
 ```
 4. Navigate to <DIRROOT>/saturnring/deployments/vagrant
-
 ```
 cd ~/DIRROOT/saturnring/deployments/vagrant
 ```
-
 STAGE 1: Bringing up Saturnring portal/API server
 (192.168.61.20)
 
@@ -69,27 +65,20 @@ vagrant up saturnring
    http://192.168.61.20/admin from a web brower on the host machine 
 
 7. Log into the Saturnring VM
-
 ```
 vagrant ssh saturnring
 ```
-
 8. Activate the Saturnring Python environment
-
 ```
 cd saturnring
 source saturnenv/bin/activate
 ```
-
 9. Create a Storage admin superuser  
-
 ```
 cd /home/vagrant/saturnring/ssddj
 python manage.py createsuperuser
 ```
-
 (follow the prompts to setup a superuser)
-
 10. Exit to the host and confirm that you can log into the Saturnring
    portal using the superuser credentials in the web browser.
 
