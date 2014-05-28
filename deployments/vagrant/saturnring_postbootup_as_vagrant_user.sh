@@ -15,7 +15,7 @@
 
 #!/bin/bash
 cd /home/vagrant
-git clone -b localrun https://github.com/sachinkagarwal/saturnring/
+git clone https://github.com/sachinkagarwal/saturnring/
 
 cd /home/vagrant/saturnring
 if [ ! -d "/home/vagrant/saturnring/saturnenv" ]; then

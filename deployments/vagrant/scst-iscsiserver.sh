@@ -81,4 +81,3 @@ lvcreate -L9000MiB --poolmetadatasize 950MiB --type thin-pool --thinpool storevg
 
 
 
-                                          /dev/loop0
