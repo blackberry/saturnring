@@ -20,3 +20,5 @@ rq-scheduler==0.4.0
 six==1.6.1
 times==0.6.2
 wsgiref==0.1.2
+psycopg2==2.5.2
+
