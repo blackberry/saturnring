@@ -43,12 +43,12 @@ http://www.virtualbox.org
 2. Install vagrant 
 http://docs.vagrantup.com/v2/installation/
 
-3. On the Virtualbox host machine (your PC) Clone into <GITHUB URL> in local directory <DIRROOT>
+3. On the Virtualbox host machine (your PC) Clone into https://github.com/sachinkagarwal/saturnring/ in local directory <DIRROOT>
 
 ```
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
-git clone <GITHUB URL> 
+git clone https://github.com/sachinkagarwal/saturnring/
 ```
 4. Navigate to <DIRROOT>/saturnring/deployments/vagrant
 
@@ -189,6 +189,7 @@ All targets provisioned with the same "anti affinity group" will be spread among
 ## Deployment Considerations
 
 Here are some ideas for Saturnring in production
+
 1. Monitoring and Alerting - consider something like Zabbix or Nagios to keep tabs on Saturnring components
 
 2. Configuration management (Puppet/Chef etc.) or pre-built images will reduce the pain and errors that come with managing multiple servers manually
@@ -198,6 +199,9 @@ Here are some ideas for Saturnring in production
 4. Saturnring uses a recent LVM2 implementation, look at its documentation for its many features
 
 5. The Vagrant example does not patch the Linux kernel for optimal SCST iSCSI target software performance. Read more here: http://scst.sourceforge.net/iscsi-scst-howto.txt
+
+ 
+
 
 ## License
 
