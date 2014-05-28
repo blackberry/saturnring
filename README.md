@@ -20,11 +20,11 @@ Unlike clustered data storage systems (e.g. GPFS, Gluster, CEPH etc.) Saturnring
 
 Saturnring provides the following components:
 
-1. A web portal and API which 
-a)allows the storage administrator to manage users and their iSCSI targets
-b) A HTTP RESTful-API call to provision iSCSI targets. To keep things simple the API is very sparse by design - there are only 3 API methods.
-c) Facilities like user quotas, ingesting multiple iSCSI target servers into a Saturnring cluster, deleting storage, thin provisioning, and basic monitoring support etc. are available via the Saturnring portal
-2. A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
+1. A web portal and API which allows the storage administrator to manage users and their iSCSI targets
+2. A HTTP RESTful-API call to provision iSCSI targets. To keep things simple the API is very sparse by design - there are only 3 API methods.
+3. Facilities like user quotas, ingesting multiple iSCSI target servers into a Saturnring cluster, deleting storage, thin provisioning, and basic monitoring support etc. are available via the Saturnring portal
+
+A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
 Fig 1. shows how Saturnring may be setup to serve out block storage.
 ![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/high-level-arch.png "High Level Architecture")
@@ -44,10 +44,11 @@ http://www.virtualbox.org
 http://docs.vagrantup.com/v2/installation/
 
 3. On the Virtualbox host machine (your PC) Clone into <GITHUB URL> in local directory <DIRROOT>
+```
 mkdir -p ~/DIRROOT
 cd ~/DIRROOT
 git clone <GITHUB URL> 
-
+```
 4. Navigate to <DIRROOT>/deployments/vagrant
 cd ~/DIRROOT/deployments/vagrant
 
