@@ -138,13 +138,11 @@ STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 cd ~/DIRROOT/saturnring/deployments/vagrant
 vagrant up iscsiclient
 ```
-
 20. Log into the iscsi client
 
 ```
 vagrant ssh iscsiclient
 ```
-
 21. Edit the script storage-provisioner.sh and set appropriate values
     for these variables
 
