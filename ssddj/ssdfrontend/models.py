@@ -85,6 +85,14 @@ class Target(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
+class TargetHistory(models.Model):
+    owner = models.ForeignKey(User)
+    iqntar=models.CharField(max_length=200)
+    created_at = models.DateTimeField(blank=True, null=True)
+    deleted_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    sizeinGB=models.FloatField(max_length=200)
+    rkb=models.BigIntegerField(default=0)
+    wkb=models.BigIntegerField(default=0)
 
 
 class AAGroup(models.Model):

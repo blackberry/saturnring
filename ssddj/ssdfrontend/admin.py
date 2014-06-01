@@ -20,6 +20,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG 
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
+from ssdfrontend.models import TargetHistory
 #from ssdfrontend.models import HostGroup
 
 from globalstatemanager.gsm import PollServer
@@ -45,7 +46,16 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
         p = PollServer(obj.targethost)
         if p.DeleteTarget(obj.iqntar)==1:
             #p.GetTargetsState()
+            newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
+            newth.save()
             obj.delete()
+
+class TargetHistoryAdmin(StatsAdmin):
+    readonly_fields = ('iqntar','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    list_display = ('iqntar','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    search_fields = ['iqntar,owner']
+    stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
+    actions=[]
 
 
 
