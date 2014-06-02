@@ -16,6 +16,8 @@ Saturnring relies on recent versions of Linux LVM (Logical volume manager) to di
 
 Unlike clustered data storage systems (e.g. GPFS, Gluster, CEPH etc.) Saturnring makes no effort of replicating data on the back-end. There are no multiple copies being created on write. Instead Saturnring defers high-availability and data protection to the application (e.g. NoSQL database replication or software RAID 1 across 2 target LVs on the initiator). Saturnring manages one or more iSCSI servers. Saturnring focus is on preserving low latency, highIOPs and high throughput properties of SSDs or other "fast" storage over the cloud network. For this it relies on the well vetted Linux iSCSI implementation SCST (other iSCSI implmentations can be substituted with moderate effort). Its chief value add is manageability and RESTFul block storage sharing and provisioning, all amenable to cloud applications.
 
+For ideas on how a high-availability can be created using Saturnring anti-affinity-groups look at the example script saturnring/deployments/vagrant/clientscripts/high\_availability\_storage.sh
+
 ## Architecture
 
 Saturnring provides the following components:
@@ -27,7 +29,7 @@ Saturnring provides the following components:
 A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
 Fig 1. shows how Saturnring may be setup to serve out block storage.
-![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/high-level-arch.png "High Level Architecture")
+![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/images/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
 
 

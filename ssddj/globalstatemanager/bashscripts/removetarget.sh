@@ -13,8 +13,8 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-
-if  python /home/local/saturn/saturn-bashscripts/parsetarget.py | grep $1 | grep "no sessions"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if  python $DIR/parsetarget.py | grep $1 | grep "no sessions"
 then
         yes | scstadmin -rem_target $1 -driver iscsi
         TARGETMD5=`echo $1 | md5sum | cut -f1 -d" "`
