@@ -57,7 +57,7 @@ class TargetHistoryAdmin(StatsAdmin):
     stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
     actions=[]
 
-
+admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
