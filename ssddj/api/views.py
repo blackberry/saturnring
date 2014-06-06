@@ -113,9 +113,8 @@ class Provision(APIView):
         for eachlv in lvs:
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
-    
 
-    def VGFilter(self,storageSize, aagroup):
+    def VGFilter(self,storageSize, aagroup, stripe):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -125,7 +124,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -135,7 +134,7 @@ class Provision(APIView):
                 eachvg.save()
                 if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
                    logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
-                   numDel=numDel+1 
+                   numDel=numDel+1
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
                     if aagroup=="random":
@@ -175,11 +174,17 @@ class Provision(APIView):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
+
+        if 'stripe' not in requestDic:
+            stripe = "nostripe"
+        else:
+            stripe = requestDic['stripe']
+
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientiqn, serviceName, str(storageSize), aagroup))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Stripe: %s " %(clientiqn, serviceName, str(storageSize), aagroup, stripe))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
@@ -187,7 +192,7 @@ class Provision(APIView):
         else:
             logger.info(quotaReason)
         
-        chosenVG = self.VGFilter(storageSize,aagroup)
+        chosenVG = self.VGFilter(storageSize,aagroup,stripe)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
             clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]

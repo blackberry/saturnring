@@ -46,13 +46,13 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
         p = PollServer(obj.targethost)
         if p.DeleteTarget(obj.iqntar)==1:
             #p.GetTargetsState()
-            newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
+            newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
             newth.save()
             obj.delete()
 
 class TargetHistoryAdmin(StatsAdmin):
-    readonly_fields = ('iqntar','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
-    list_display = ('iqntar','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    list_display = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
     search_fields = ['iqntar,owner']
     stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
     actions=[]
@@ -79,7 +79,7 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
-    list_display = ['iqntar','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
@@ -182,7 +182,7 @@ class StorageHostForm(forms.ModelForm):
  
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
-    list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at']
+    list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']
 admin.site.register(StorageHost, StorageHostAdmin)
 
 
