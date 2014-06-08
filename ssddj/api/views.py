@@ -56,9 +56,15 @@ class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
 #    permission_classes = (IsAuthenticated,)
     def get(self, request):
-        queue = django_rq.get_queue('default')
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))			
+        numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:
+            queuename = 'queue'+str(hash(eachhost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            logger.info('Using queue %s for storagehost %s' % (queuename,eachhost))
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
 
