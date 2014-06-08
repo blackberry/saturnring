@@ -45,10 +45,12 @@ logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
 from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
+from utils.targetops import ExecMakeTarget
 import django_rq
 import hashlib
 import ConfigParser
 import os
+import time
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -64,7 +66,7 @@ class UpdateStateData(APIView):
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
-            logger.info('Using queue %s for storagehost %s' % (queuename,eachhost))
+            #logger.info('Using queue %s for storagehost %s' % (queuename,eachhost))
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
 
@@ -197,70 +199,21 @@ class Provision(APIView):
             return (-1,quotaReason)
         else:
             logger.info(quotaReason)
-        
         chosenVG = self.VGFilter(storageSize,aagroup,stripe)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
-            try:
-                targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-                if len(targets) == 0:
-                    raise ObjectDoesNotExist
-                for t in targets:
-                    iqnComponents = t.iqntar.split(':')
-                    if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
-                        logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                        return (1,t.iqntar)
-                    else:
-                        raise ObjectDoesNotExist
-            except ObjectDoesNotExist:
-                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
-                targetIP = StorageHost.objects.get(dnsname=targetHost)
-                p = PollServer(targetHost)
-                if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
-                    #p.GetTargets()
-                    BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
-                    config = ConfigParser.RawConfigParser()
-                    config.read(os.path.join(BASE_DIR,'saturn.ini'))			
-                    (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
-#                    logger.info("Got devDic via parsescst:")
-#                    logger.info(devDic)
-#                    logger.info("Got tarDic via parsescst:")
-#                    logger.info(tarDic)
-                    if iqnTarget in tarDic:
-                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
-                            iqntar=iqnTarget,sizeinGB=float(storageSize))
-                        newTarget.save()
-                        lvDict=p.GetLVs()
-#                        logger.info("Got LVDICT on 203/api/views.py:")
-#                        logger.info(lvDict)
-                        lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
-#                        logger.info("lvol name should be: %s" %(lvName,))
-                        if lvName in lvDict:
-                            newLV = LV(target=newTarget,vg=chosenVG,
-                                    lvname=lvName,
-                                    lvsize=storageSize,
-                                    lvthinmapped=lvDict[lvName]['Mapped size'],
-                                    lvuuid=lvDict[lvName]['LV UUID'])
-                            newLV.save()
-                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
-                            chosenVG.save()
-
-                    if 'aagroup' in requestDic:
-                        aagroup = requestDic['aagroup']
-                        tar = Target.objects.get(iqntar=iqnTarget)
-                        aa = AAGroup(name=requestDic['aagroup'],target=tar)
-                        aa.save()
-                        aa.hosts.add(chosenVG.vghost)
-                        aa.save()
-                        newTarget.aagroup=aa
-                        newTarget.save()
-
-                    return (0,iqnTarget)
+            BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+            config = ConfigParser.RawConfigParser()
+            config.read(os.path.join(BASE_DIR,'saturn.ini'))			
+            numqueues = config.get('saturnring','numqueues')
+            queuename = 'queue'+str(hash(targetHost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize)
+            while 1:
+                if job.result:
+                    return job.result
                 else:
-                    logger.warn('CreateTarget did not work')
-                    return (-1,"CreateTarget returned error, contact admin")
+                    time.sleep(1)
         else:
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")
