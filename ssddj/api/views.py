@@ -58,9 +58,9 @@ class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
 #    permission_classes = (IsAuthenticated,)
     def get(self, request):
-        BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         config = ConfigParser.RawConfigParser()
-        config.read(os.path.join(BASE_DIR,'saturn.ini'))			
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
         numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:
@@ -214,7 +214,6 @@ class Provision(APIView):
                 if job.result:
                     return job.result
                 else:
-                    logger.info("None result")
                     time.sleep(1)
         else:
             logger.warn('VG filtering did not return a choice')

@@ -19,6 +19,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import StorageHost
+from ssdfrontend.models import TargetHistory
 import django_rq
 import ConfigParser
 import os
@@ -47,7 +48,7 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,owner):
         logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
         targethost = StorageHost.objects.get(dnsname=targetHost)
         p = PollServer(targetHost)
-        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
+        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targethost.storageip1,targethost.storageip2)):
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -80,3 +81,14 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,owner):
         else:
             logger.warn('CreateTarget did not work')
             return (-1,"CreateTarget returned error, contact admin")
+
+
+def DeleteTargetObject(obj):
+    p = PollServer(obj.targethost)
+    if p.DeleteTarget(obj.iqntar)==1:
+        newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
+        newth.save()
+        obj.delete()
+        return 0
+    else:
+        return 1

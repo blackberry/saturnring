@@ -22,16 +22,20 @@ from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import TargetHistory
 #from ssdfrontend.models import HostGroup
-
+from utils.targetops import DeleteTargetObject
 from globalstatemanager.gsm import PollServer
 #admin.site.register(StorageHost)
 # Register your models here.
 #from django.contrib import admin
 from admin_stats.admin import StatsAdmin, Avg, Sum
-
+import time
 import logging
+import django_rq
+import os
+import ConfigParser
 logger = logging.getLogger(__name__)
 admin.site.disable_action('delete_selected')
+
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
     list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf']
@@ -42,13 +46,19 @@ admin.site.register(VG,VGAdmin)
 
 
 def delete_iscsi_target(StatsAdmin,request,queryset):
+    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+    config = ConfigParser.RawConfigParser()
+    config.read(os.path.join(BASE_DIR,'saturn.ini'))
+    numqueues = config.get('saturnring','numqueues')
     for obj in queryset:
-        p = PollServer(obj.targethost)
-        if p.DeleteTarget(obj.iqntar)==1:
-            #p.GetTargetsState()
-            newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
-            newth.save()
-            obj.delete()
+        queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
+        queue = django_rq.get_queue(queuename)
+        job = queue.enqueue(DeleteTargetObject,obj)
+        while 1:
+            if (job.result == 0) or (job.result == 1):
+                return job.result
+            else:
+                time.sleep(0.5)
 
 class TargetHistoryAdmin(StatsAdmin):
     readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
