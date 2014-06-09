@@ -208,7 +208,7 @@ class Provision(APIView):
             numqueues = config.get('saturnring','numqueues')
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
-            logger.info("Launching job into queue")
+            logger.info("Launching create target job into queue %s" %(queuename,) )
             job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,owner)
             while 1:
                 if job.result:

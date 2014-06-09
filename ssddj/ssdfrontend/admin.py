@@ -54,6 +54,7 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = django_rq.get_queue(queuename)
         job = queue.enqueue(DeleteTargetObject,obj)
+        logger.info("using queue %s for deletion" %(queuename,))
         while 1:
             if (job.result == 0) or (job.result == 1):
                 return job.result
