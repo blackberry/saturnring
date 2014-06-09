@@ -20,17 +20,22 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG 
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
+from ssdfrontend.models import TargetHistory
 #from ssdfrontend.models import HostGroup
-
+from utils.targetops import DeleteTargetObject
 from globalstatemanager.gsm import PollServer
 #admin.site.register(StorageHost)
 # Register your models here.
 #from django.contrib import admin
 from admin_stats.admin import StatsAdmin, Avg, Sum
-
+import time
 import logging
+import django_rq
+import os
+import ConfigParser
 logger = logging.getLogger(__name__)
 admin.site.disable_action('delete_selected')
+
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
     list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf']
@@ -41,17 +46,51 @@ admin.site.register(VG,VGAdmin)
 
 
 def delete_iscsi_target(StatsAdmin,request,queryset):
+    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+    config = ConfigParser.RawConfigParser()
+    config.read(os.path.join(BASE_DIR,'saturn.ini'))
+    numqueues = config.get('saturnring','numqueues')
     for obj in queryset:
-        p = PollServer(obj.targethost)
-        if p.DeleteTarget(obj.iqntar)==1:
-            #p.GetTargetsState()
-            obj.delete()
+        queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
+        queue = django_rq.get_queue(queuename)
+        job = queue.enqueue(DeleteTargetObject,obj)
+        logger.info("using queue %s for deletion" %(queuename,))
+        while 1:
+            if (job.result == 0) or (job.result == 1):
+                return job.result
+            else:
+                time.sleep(0.5)
 
+class TargetHistoryAdmin(StatsAdmin):
+    readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    list_display = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
+    search_fields = ['iqntar,owner']
+    stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
+    actions=[]
 
+    def has_change_permission(self, request, obj=None):
+        has_class_permission = super(TargetHistoryAdmin, self).has_change_permission(request, obj)
+        if not has_class_permission:
+            return False
+        if obj is not None and not request.user.is_superuser and request.user.id != obj.owner.id:
+            return False
+        return True
+
+    def queryset(self, request):
+        if request.user.is_superuser:
+            return TargetHistory.objects.all()
+        return TargetHistory.objects.filter(owner=request.user)
+
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.owner = request.user
+        obj.save()
+
+admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
-    list_display = ['iqntar','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
@@ -154,7 +193,7 @@ class StorageHostForm(forms.ModelForm):
  
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
-    list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at']
+    list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']
 admin.site.register(StorageHost, StorageHostAdmin)
 
 

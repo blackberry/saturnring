@@ -30,7 +30,7 @@ class PollServer():
         self.serverDNS = str(serverDNS)
         # Read configuration
         config = ConfigParser.RawConfigParser()
-#        config.read('/home/vagrant/saturnring/ssddj/saturn.ini')
+#        config.read('/home/local/saturnring/ssddj/saturn.ini')
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         print str(BASE_DIR)
         config.read(os.path.join(BASE_DIR,'saturn.ini'))

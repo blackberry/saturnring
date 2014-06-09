@@ -45,10 +45,12 @@ logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
 from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
+from utils.targetops import ExecMakeTarget
 import django_rq
 import hashlib
 import ConfigParser
 import os
+import time
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -56,9 +58,15 @@ class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
 #    permission_classes = (IsAuthenticated,)
     def get(self, request):
-        queue = django_rq.get_queue('default')
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:
+            queuename = 'queue'+str(hash(eachhost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            #logger.info('Using queue %s for storagehost %s' % (queuename,eachhost))
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
 
@@ -113,9 +121,8 @@ class Provision(APIView):
         for eachlv in lvs:
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
-    
 
-    def VGFilter(self,storageSize, aagroup):
+    def VGFilter(self,storageSize, aagroup, stripe):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -125,7 +132,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -135,7 +142,7 @@ class Provision(APIView):
                 eachvg.save()
                 if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
                    logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
-                   numDel=numDel+1 
+                   numDel=numDel+1
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
                     if aagroup=="random":
@@ -175,81 +182,39 @@ class Provision(APIView):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
+        aagroup =''
+        if 'stripe' not in requestDic:
+            stripe = "nostripe"
+        else:
+            stripe = requestDic['stripe']
+
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientiqn, serviceName, str(storageSize), aagroup))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Stripe: %s " %(clientiqn, serviceName, str(storageSize), aagroup, stripe))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
             return (-1,quotaReason)
         else:
             logger.info(quotaReason)
-        
-        chosenVG = self.VGFilter(storageSize,aagroup)
+        chosenVG = self.VGFilter(storageSize,aagroup,stripe)
         if chosenVG <> -1:
             targetHost=str(chosenVG.vghost)
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
-            try:
-                targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-                if len(targets) == 0:
-                    raise ObjectDoesNotExist
-                for t in targets:
-                    iqnComponents = t.iqntar.split(':')
-                    if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
-                        logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                        return (1,t.iqntar)
-                    else:
-                        raise ObjectDoesNotExist
-            except ObjectDoesNotExist:
-                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
-                targetIP = StorageHost.objects.get(dnsname=targetHost)
-                p = PollServer(targetHost)
-                if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
-                    #p.GetTargets()
-                    BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
-                    config = ConfigParser.RawConfigParser()
-                    config.read(os.path.join(BASE_DIR,'saturn.ini'))			
-                    (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
-#                    logger.info("Got devDic via parsescst:")
-#                    logger.info(devDic)
-#                    logger.info("Got tarDic via parsescst:")
-#                    logger.info(tarDic)
-                    if iqnTarget in tarDic:
-                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
-                            iqntar=iqnTarget,sizeinGB=float(storageSize))
-                        newTarget.save()
-                        lvDict=p.GetLVs()
-#                        logger.info("Got LVDICT on 203/api/views.py:")
-#                        logger.info(lvDict)
-                        lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
-#                        logger.info("lvol name should be: %s" %(lvName,))
-                        if lvName in lvDict:
-                            newLV = LV(target=newTarget,vg=chosenVG,
-                                    lvname=lvName,
-                                    lvsize=storageSize,
-                                    lvthinmapped=lvDict[lvName]['Mapped size'],
-                                    lvuuid=lvDict[lvName]['LV UUID'])
-                            newLV.save()
-                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
-                            chosenVG.save()
-
-                    if 'aagroup' in requestDic:
-                        aagroup = requestDic['aagroup']
-                        tar = Target.objects.get(iqntar=iqnTarget)
-                        aa = AAGroup(name=requestDic['aagroup'],target=tar)
-                        aa.save()
-                        aa.hosts.add(chosenVG.vghost)
-                        aa.save()
-                        newTarget.aagroup=aa
-                        newTarget.save()
-
-                    return (0,iqnTarget)
+            BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+            config = ConfigParser.RawConfigParser()
+            config.read(os.path.join(BASE_DIR,'saturn.ini'))
+            numqueues = config.get('saturnring','numqueues')
+            queuename = 'queue'+str(hash(targetHost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            logger.info("Launching create target job into queue %s" %(queuename,) )
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,owner)
+            while 1:
+                if job.result:
+                    return job.result
                 else:
-                    logger.warn('CreateTarget did not work')
-                    return (-1,"CreateTarget returned error, contact admin")
+                    time.sleep(1)
         else:
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")
