@@ -182,7 +182,7 @@ class Provision(APIView):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
-
+        aagroup =''
         if 'stripe' not in requestDic:
             stripe = "nostripe"
         else:
@@ -204,15 +204,17 @@ class Provision(APIView):
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
-            config.read(os.path.join(BASE_DIR,'saturn.ini'))			
+            config.read(os.path.join(BASE_DIR,'saturn.ini'))
             numqueues = config.get('saturnring','numqueues')
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
-            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize)
+            logger.info("Launching job into queue")
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,owner)
             while 1:
                 if job.result:
                     return job.result
                 else:
+                    logger.info("None result")
                     time.sleep(1)
         else:
             logger.warn('VG filtering did not return a choice')

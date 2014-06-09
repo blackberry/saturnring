@@ -18,11 +18,18 @@ from ssdfrontend.models import Target
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import AAGroup
+from ssdfrontend.models import StorageHost
+import django_rq
+import ConfigParser
+import os
 import logging
 from globalstatemanager.gsm import PollServer
+from django.core.exceptions import ObjectDoesNotExist
+from utils.scstconf import ParseSCSTConf
 
-def ExecMakeTarget(targethost,clientiqn,serviceName,storageSize):
-    chosenVG=VG.objects.filter(vghost=targethost)
+logger = logging.getLogger(__name__)
+def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,owner):
+    chosenVG=VG.objects.get(vghost=targetHost)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
     try:
@@ -38,15 +45,15 @@ def ExecMakeTarget(targethost,clientiqn,serviceName,storageSize):
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:
         logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
-        targetIP = StorageHost.objects.get(dnsname=targetHost)
+        targethost = StorageHost.objects.get(dnsname=targetHost)
         p = PollServer(targetHost)
         if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
-            config.read(os.path.join(BASE_DIR,'saturn.ini'))			
+            config.read(os.path.join(BASE_DIR,'saturn.ini'))
             (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
             if iqnTarget in tarDic:
-                newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
+                newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize))
                 newTarget.save()
                 lvDict=p.GetLVs()
@@ -61,15 +68,13 @@ def ExecMakeTarget(targethost,clientiqn,serviceName,storageSize):
                     chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
                     chosenVG.save()
 
-            if 'aagroup' in requestDic:
-                aagroup = requestDic['aagroup']
-                tar = Target.objects.get(iqntar=iqnTarget)
-                aa = AAGroup(name=requestDic['aagroup'],target=tar)
-                aa.save()
-                aa.hosts.add(chosenVG.vghost)
-                aa.save()
-                newTarget.aagroup=aa
-                newTarget.save()
+            tar = Target.objects.get(iqntar=iqnTarget)
+            aa = AAGroup(name=aagroup,target=tar)
+            aa.save()
+            aa.hosts.add(targethost)
+            aa.save()
+            newTarget.aagroup=aa
+            newTarget.save()
 
             return (0,iqnTarget)
         else:
