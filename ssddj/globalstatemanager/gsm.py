@@ -172,7 +172,11 @@ class PollServer():
         try:
             repo = git.Repo(self.iscsiconfdir)
             g = repo.git
-            g.add()
+            try:
+                g.add(os.path.join(self.iscsiconfdir,'*.conf'))
+                g.add(os.path.join(self.iscsiconfdir,'*.lvm'))
+            except:
+                pass
             g.commit(a='',m=str(commentStr))
         except:
             e = sys.exc_info()[0]
@@ -182,12 +186,12 @@ class PollServer():
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
+        srv.close()
         #exStr = srv.execute(cmdStr)
         exStr=self.Exec(cmdStr)
         commentStr = "Trying to create target %s " %( iqnTarget, )
         self.GitSave(commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
-        srv.close()
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
             return 1
