@@ -25,7 +25,8 @@ import utils.scstconf
 from django.db.models import Sum
 import git
 import sys
-
+reload (sys)
+sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverDNS):
@@ -174,17 +175,20 @@ class PollServer():
             g = repo.git
             try:
                 g.add(os.path.join(self.iscsiconfdir,'*.conf'))
+            except:
+                pass
+            try:
                 g.add(os.path.join(self.iscsiconfdir,'*.lvm'))
             except:
                 pass
-            g.commit(a='',m=str(commentStr))
+            g.commit(a='',m=commentStr)
         except:
             e = sys.exc_info()[0]
-            logger.warn("Git save error: %s" % (e,))
+            logger.warn("%s: Git save error: %s" % (commentStr,e))
 
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
-        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
         srv.close()
         #exStr = srv.execute(cmdStr)

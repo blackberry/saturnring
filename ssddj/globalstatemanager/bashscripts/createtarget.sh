@@ -44,8 +44,8 @@ echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf
 mkdir -p /temp
-chmod 777 /temp
 sudo cp /etc/scst.conf /temp
 sudo cp /etc/lvm/backup/$6 /temp
-sudo chmod -R 666 /temp/*
+sudo chmod  666 /temp/scst.conf
+sudo chmod 666 /temp/$6
 echo "SUCCESS"

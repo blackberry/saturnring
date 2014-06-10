@@ -27,9 +27,10 @@ then
 else
         echo "Error deleting "$1" , doing nothing (check if target exists, is the session down?)"
 fi
+
 mkdir -p /temp
-chmod 777 /temp
 sudo cp /etc/scst.conf /temp
 sudo cp /etc/lvm/backup/$6 /temp
-sudo chmod -R 666 /temp/*
+sudo chmod  666 /temp/scst.conf
+sudo chmod 666 /temp/$6
 
