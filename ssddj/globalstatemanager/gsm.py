@@ -166,6 +166,9 @@ class PollServer():
 
     #Check in changes to config files into git repository
     def GitSave(self,commentStr):
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
+        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
             repo = git.Repo(self.iscsiconfdir)
             g = repo.git
@@ -179,9 +182,8 @@ class PollServer():
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
-        exStr = srv.execute(cmdStr)
-        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+        #exStr = srv.execute(cmdStr)
+        exStr=self.Exec(cmdStr)
         commentStr = "Trying to create target %s " %( iqnTarget, )
         self.GitSave(commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
@@ -237,8 +239,6 @@ class PollServer():
         if not tar.sessionup:
             cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,self.vg])
             exStr = self.Exec(cmdStr)
-            srv.get('/etc/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            srv.get('/etc/lvm/backup/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
             self.GitSave("Trying to delete  target %s " %( iqntar,))
             success1 = False
             success2 = False
