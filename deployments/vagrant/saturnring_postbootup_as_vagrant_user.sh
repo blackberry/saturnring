@@ -74,6 +74,9 @@ fi
 # Create new keys
 mkdir -p /home/vagrant/saturnring/ssddj/config
 cd /home/vagrant/saturnring/ssddj/config
+git init
 ssh-keygen -q -f saturnkey -N ''
 ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
+git add *
+git commit -a -m "Created Saturn keys"
 

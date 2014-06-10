@@ -23,6 +23,8 @@ from ssdfrontend.models import Target
 import logging
 import utils.scstconf
 from django.db.models import Sum
+import git
+import sys
 
 logger = logging.getLogger(__name__)
 class PollServer():
@@ -162,12 +164,26 @@ class PollServer():
             myvg.save()#force_update=True)
         return vgs[self.vg]['VG UUID']
 
+    #Check in changes to config files into git repository
+    def GitSave(self,commentStr):
+        try:
+            repo = git.Repo(self.iscsiconfdir)
+            g = repo.git
+            g.add()
+            g.commit(a='',m=str(commentStr))
+        except:
+            e = sys.exc_info()[0]
+            logger.warn("Git save error: %s" % (e,))
+
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
         exStr = srv.execute(cmdStr)
-        srv.get('/etc/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+        commentStr = "Trying to create target %s " %( iqnTarget, )
+        self.GitSave(commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
         if "SUCCESS" in str(exStr):
@@ -221,6 +237,9 @@ class PollServer():
         if not tar.sessionup:
             cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,self.vg])
             exStr = self.Exec(cmdStr)
+            srv.get('/etc/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            srv.get('/etc/lvm/backup/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+            self.GitSave("Trying to delete  target %s " %( iqntar,))
             success1 = False
             success2 = False
             for eachLine in exStr:
