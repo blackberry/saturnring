@@ -23,7 +23,7 @@ from ssdfrontend.models import Target
 import logging
 import utils.scstconf
 from django.db.models import Sum
-import git
+import subprocess
 import sys
 reload (sys)
 sys.setdefaultencoding("utf-8")
@@ -171,10 +171,14 @@ class PollServer():
         srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
         srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
-            repo = git.Repo(self.iscsiconfdir)
-            index = repo.index
-            index.add(["."])
-            index.commit(commentStr)
+            cmd = ['/usr/bin/git', 'add', '*.*']
+            subprocess.call(cmd, cwd=os.path.dirname(self.iscsiconfdir),shell=True)
+        except:
+            e = sys.exc_info()[0]
+            logger.warn("%s: Git save error: %s" % (commentStr,e))
+        try:
+            cmd = ['/usr/bin/git', 'commit', '-a', '-m',commentStr]
+            subprocess.call(cmd, cwd=os.path.dirname(self.iscsiconfdir),shell=True)
         except:
             e = sys.exc_info()[0]
             logger.warn("%s: Git save error: %s" % (commentStr,e))
