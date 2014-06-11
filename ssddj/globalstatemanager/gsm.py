@@ -172,16 +172,9 @@ class PollServer():
         srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
             repo = git.Repo(self.iscsiconfdir)
-            g = repo.git
-            try:
-                g.add(os.path.join(self.iscsiconfdir,'*.conf'))
-            except:
-                pass
-            try:
-                g.add(os.path.join(self.iscsiconfdir,'*.lvm'))
-            except:
-                pass
-            g.commit(a='',m=commentStr)
+            index = repo.index
+            index.add(["."])
+            index.commit(commentStr)
         except:
             e = sys.exc_info()[0]
             logger.warn("%s: Git save error: %s" % (commentStr,e))
