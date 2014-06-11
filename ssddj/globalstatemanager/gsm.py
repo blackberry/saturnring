@@ -14,6 +14,8 @@
 
 import pysftp #remember to use at least 0.2.2 - the pip install doesnt give you that version.
 import os
+from os import listdir
+from os.path import isfile, join
 import ConfigParser
 from django.core.management import execute_from_command_line
 from ssdfrontend.models import VG
@@ -24,7 +26,9 @@ import logging
 import utils.scstconf
 from django.db.models import Sum
 import subprocess
+from dulwich.repo import Repo
 import sys
+import traceback
 reload (sys)
 sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
@@ -171,17 +175,13 @@ class PollServer():
         srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
         srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
-            cmd = ['/usr/bin/git', 'add', '*.*']
-            subprocess.call(cmd, cwd=os.path.dirname(self.iscsiconfdir),shell=True)
+            repo = Repo(self.iscsiconfdir)
+            filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
+            repo.stage(filelist)
+            repo.do_commit(commentStr)
         except:
-            e = sys.exc_info()[0]
-            logger.warn("%s: Git save error: %s" % (commentStr,e))
-        try:
-            cmd = ['/usr/bin/git', 'commit', '-a', '-m',commentStr]
-            subprocess.call(cmd, cwd=os.path.dirname(self.iscsiconfdir),shell=True)
-        except:
-            e = sys.exc_info()[0]
-            logger.warn("%s: Git save error: %s" % (commentStr,e))
+            var = traceback.format_exc()
+            logger.warn("%s: Git save error: %s" % (commentStr,var))
 
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
