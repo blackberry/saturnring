@@ -18,7 +18,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 #from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
-
+from ssdfrontend.models import ClumpGroup
 from django.db.models import Sum
 from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
@@ -122,7 +122,7 @@ class Provision(APIView):
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
 
-    def VGFilter(self,storageSize, aagroup, stripe):
+    def VGFilter(self,storageSize, aagroup, clumpgroup="noclump"):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -145,15 +145,21 @@ class Provision(APIView):
                    numDel=numDel+1
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
-                    if aagroup=="random":
-                        chosenVG = eachvg
-                        break
+                    if clumpgroup=="noclump":
+                        if aagroup=="random":
+                            return eachvg
+                        else:
+                            qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
                     else:
-                        qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
+                        qualvgs.append((eachvg,eachvg.vghost.clumpgroup_set.all().filter(name=clumpgroup).count()))
+            if ( len(qualvgs) > 0 ) and (clumpgroup != "noclump"):
+                chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1]
+                logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
+                return chosenVG
 
             if len(qualvgs) > 0:
                 chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
-                logger.info('Anti-affinity chose Saturn server %s with an overlap of %d.' %(chosenVG.vghost,overlap))
+                logger.info('Anti-affinity group %s chose Saturn server %s with an overlap of %d.' %(aagroup,chosenVG.vghost,overlap))
                 return chosenVG
             if len(vgchoices)>numDel:
                 logger.info("Randomly chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
@@ -183,24 +189,24 @@ class Provision(APIView):
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
         aagroup =''
-        if 'stripe' not in requestDic:
-            stripe = "nostripe"
+        if 'clumpgroup' not in requestDic:
+            clump = "noclump"
         else:
-            stripe = requestDic['stripe']
+            clump = requestDic['clump']
 
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Stripe: %s " %(clientiqn, serviceName, str(storageSize), aagroup, stripe))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clump))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
             return (-1,quotaReason)
         else:
             logger.info(quotaReason)
-        chosenVG = self.VGFilter(storageSize,aagroup,stripe)
-        if chosenVG <> -1:
+        chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        if chosenVG != -1:
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()

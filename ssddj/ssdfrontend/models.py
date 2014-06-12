@@ -102,7 +102,16 @@ class AAGroup(models.Model):
     target = models.ForeignKey(Target,null=True, blank=True)
 
     def __unicode__(self):
-        return self.name 
+        return self.name
+
+class ClumpGroup(models.Model):
+    name = models.CharField(max_length=200,default='noclump')
+    hosts = models.ManyToManyField(StorageHost)
+    target = models.ForeignKey(Target,null=True,blank=True)
+
+    def __unicode__(self):
+        return self.name
+
 
 from django.contrib.auth.models import User
 
