@@ -20,6 +20,7 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import TargetHistory
+from ssdfrontend.models import ClumpGroup
 import django_rq
 import ConfigParser
 import os
@@ -29,7 +30,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
 
 logger = logging.getLogger(__name__)
-def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,owner):
+def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner):
     chosenVG=VG.objects.get(vghost=targetHost)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
@@ -75,6 +76,12 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,owner):
             aa.hosts.add(targethost)
             aa.save()
             newTarget.aagroup=aa
+
+            cg =ClumpGroup(name=clumpgroup,target=tar)
+            cg.save()
+            cg.hosts.add(targethost)
+            cg.save()
+            newTarget.clumpgroup=cg
             newTarget.save()
 
             return (0,iqnTarget)

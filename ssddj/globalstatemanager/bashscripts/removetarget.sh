@@ -12,7 +12,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-
+set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if  python $DIR/parsetarget.py | grep $1 | grep "no sessions"
 then
@@ -27,4 +27,10 @@ then
 else
         echo "Error deleting "$1" , doing nothing (check if target exists, is the session down?)"
 fi
+
+mkdir -p /temp
+sudo cp /etc/scst.conf /temp
+sudo cp /etc/lvm/backup/$6 /temp
+sudo chmod  666 /temp/scst.conf
+sudo chmod 666 /temp/$6
 
