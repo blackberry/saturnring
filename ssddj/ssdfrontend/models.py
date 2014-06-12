@@ -105,7 +105,7 @@ class AAGroup(models.Model):
         return self.name
 
 class ClumpGroup(models.Model):
-    name = models.CharField(max_length=200,default='noclump')
+    name = models.CharField(max_length=200)
     hosts = models.ManyToManyField(StorageHost)
     target = models.ForeignKey(Target,null=True,blank=True)
 

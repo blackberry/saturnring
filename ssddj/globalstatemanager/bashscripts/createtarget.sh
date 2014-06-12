@@ -29,7 +29,7 @@ scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
-if [ "$3" -ne "$4" ]
+if [ "$3" != "$4" ]
 then
   echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 fi

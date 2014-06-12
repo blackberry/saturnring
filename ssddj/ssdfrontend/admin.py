@@ -20,6 +20,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG 
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
+from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import TargetHistory
 #from ssdfrontend.models import HostGroup
 from utils.targetops import DeleteTargetObject
@@ -33,6 +34,8 @@ import logging
 import django_rq
 import os
 import ConfigParser
+
+
 logger = logging.getLogger(__name__)
 admin.site.disable_action('delete_selected')
 
@@ -57,7 +60,7 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
         logger.info("using queue %s for deletion" %(queuename,))
         while 1:
             if (job.result == 0) or (job.result == 1):
-                return job.result
+                break
             else:
                 time.sleep(0.5)
 
@@ -90,7 +93,7 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar']
     stats = (Sum('sizeinGB'),)
@@ -113,6 +116,13 @@ class TargetAdmin(StatsAdmin):
             return name
         except:
             return "No AAGroup"
+        
+    def clumpgroup(self,obj):
+        try:
+            name = ClumpGroup.objects.get(target=obj).name
+            return name
+        except:
+            return "No ClumpGroup"
         
     def iscsi_storeip1(self, obj):
         return obj.targethost.storageip1
@@ -168,7 +178,8 @@ class LVAdmin(StatsAdmin):
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-#admin.site.register(AAGroup)
+admin.site.register(AAGroup)
+admin.site.register(ClumpGroup)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):

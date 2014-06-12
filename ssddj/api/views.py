@@ -96,7 +96,7 @@ class Provision(APIView):
                 #return Response(rtnDict,status=status.HTTP_201_CREATED)
 
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','sessionup')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['already_existed']=flag
                 rtnDict['error']=0
@@ -153,9 +153,15 @@ class Provision(APIView):
                     else:
                         qualvgs.append((eachvg,eachvg.vghost.clumpgroup_set.all().filter(name=clumpgroup).count()))
             if ( len(qualvgs) > 0 ) and (clumpgroup != "noclump"):
-                chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1]
-                logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
-                return chosenVG
+                chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1] #Chose host with maximum clump peers
+                if overlap == 0:
+                    for ii in range(0,len(qualvgs)): #There is no clump peer, so need to fall back to aagroup
+                        (vg,discardthis) = qualvgs[ii]
+                        qualvgs[ii]= (vg,vg.vghost.aagroup_set.all().filter(name=aagroup).count())
+                    logger.info('No other clump peer found, falling back to AAgroup')
+                else:
+                    logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
+                    return chosenVG
 
             if len(qualvgs) > 0:
                 chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
@@ -190,15 +196,15 @@ class Provision(APIView):
         storageSize = requestDic['sizeinGB']
         aagroup =''
         if 'clumpgroup' not in requestDic:
-            clump = "noclump"
+            clumpgroup = "noclump"
         else:
-            clump = requestDic['clump']
+            clumpgroup = requestDic['clumpgroup']
 
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clump))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
@@ -215,7 +221,7 @@ class Provision(APIView):
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
             logger.info("Launching create target job into queue %s" %(queuename,) )
-            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,owner)
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
             while 1:
                 if job.result:
                     return job.result
