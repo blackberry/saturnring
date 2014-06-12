@@ -14,5 +14,5 @@
 #limitations under the License.
 
 
-source /home/local/saturnring/godjango/bin/activate
+source /home/local/saturnring/saturnenv/bin/activate
 python /home/local/saturnring/ssddj/manage.py rqworker $1
