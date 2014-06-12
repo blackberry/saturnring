@@ -18,7 +18,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 #from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
-
+from ssdfrontend.models import ClumpGroup
 from django.db.models import Sum
 from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
@@ -96,7 +96,7 @@ class Provision(APIView):
                 #return Response(rtnDict,status=status.HTTP_201_CREATED)
 
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','sessionup')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['already_existed']=flag
                 rtnDict['error']=0
@@ -122,7 +122,7 @@ class Provision(APIView):
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
 
-    def VGFilter(self,storageSize, aagroup, stripe):
+    def VGFilter(self,storageSize, aagroup, clumpgroup="noclump"):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -145,15 +145,27 @@ class Provision(APIView):
                    numDel=numDel+1
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
-                    if aagroup=="random":
-                        chosenVG = eachvg
-                        break
+                    if clumpgroup=="noclump":
+                        if aagroup=="random":
+                            return eachvg
+                        else:
+                            qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
                     else:
-                        qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
+                        qualvgs.append((eachvg,eachvg.vghost.clumpgroup_set.all().filter(name=clumpgroup).count()))
+            if ( len(qualvgs) > 0 ) and (clumpgroup != "noclump"):
+                chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1] #Chose host with maximum clump peers
+                if overlap == 0:
+                    for ii in range(0,len(qualvgs)): #There is no clump peer, so need to fall back to aagroup
+                        (vg,discardthis) = qualvgs[ii]
+                        qualvgs[ii]= (vg,vg.vghost.aagroup_set.all().filter(name=aagroup).count())
+                    logger.info('No other clump peer found, falling back to AAgroup')
+                else:
+                    logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
+                    return chosenVG
 
             if len(qualvgs) > 0:
                 chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
-                logger.info('Anti-affinity chose Saturn server %s with an overlap of %d.' %(chosenVG.vghost,overlap))
+                logger.info('Anti-affinity group %s chose Saturn server %s with an overlap of %d.' %(aagroup,chosenVG.vghost,overlap))
                 return chosenVG
             if len(vgchoices)>numDel:
                 logger.info("Randomly chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
@@ -183,24 +195,24 @@ class Provision(APIView):
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
         aagroup =''
-        if 'stripe' not in requestDic:
-            stripe = "nostripe"
+        if 'clumpgroup' not in requestDic:
+            clumpgroup = "noclump"
         else:
-            stripe = requestDic['stripe']
+            clumpgroup = requestDic['clumpgroup']
 
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Stripe: %s " %(clientiqn, serviceName, str(storageSize), aagroup, stripe))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
             return (-1,quotaReason)
         else:
             logger.info(quotaReason)
-        chosenVG = self.VGFilter(storageSize,aagroup,stripe)
-        if chosenVG <> -1:
+        chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        if chosenVG != -1:
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
@@ -209,7 +221,7 @@ class Provision(APIView):
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
             logger.info("Launching create target job into queue %s" %(queuename,) )
-            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,owner)
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
             while 1:
                 if job.result:
                     return job.result

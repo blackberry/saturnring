@@ -13,10 +13,11 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-
+set -e
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
 CSTR=`lvcreate -V$1G -T $6/thinpool -n $lvolName`
+
 #lvolName=$(echo "$CSTR" | grep -o '\".*\"' | sed -e 's/\"//g')
 lvu=`lvdisplay $6/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 vgu=`vgdisplay $6 | grep "VG UUID" | sed  's/VG UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
@@ -28,7 +29,7 @@ scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
-if [ "$3" -ne "$4" ]
+if [ "$3" != "$4" ]
 then
   echo "add_target_attribute $2 allowed_portal $4" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 fi
@@ -42,4 +43,9 @@ echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/init
 echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf
+mkdir -p /temp
+sudo cp /etc/scst.conf /temp
+sudo cp /etc/lvm/backup/$6 /temp
+sudo chmod  666 /temp/scst.conf
+sudo chmod 666 /temp/$6
 echo "SUCCESS"

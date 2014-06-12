@@ -14,6 +14,8 @@
 
 import pysftp #remember to use at least 0.2.2 - the pip install doesnt give you that version.
 import os
+from os import listdir
+from os.path import isfile, join
 import ConfigParser
 from django.core.management import execute_from_command_line
 from ssdfrontend.models import VG
@@ -23,14 +25,19 @@ from ssdfrontend.models import Target
 import logging
 import utils.scstconf
 from django.db.models import Sum
-
+import subprocess
+from dulwich.repo import Repo
+import sys
+import traceback
+reload (sys)
+sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
 class PollServer():
     def __init__(self,serverDNS):
         self.serverDNS = str(serverDNS)
         # Read configuration
         config = ConfigParser.RawConfigParser()
-#        config.read('/home/local/saturnring/ssddj/saturn.ini')
+#        config.read('/home/vagrant/saturnring/ssddj/saturn.ini')
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         print str(BASE_DIR)
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -162,14 +169,30 @@ class PollServer():
             myvg.save()#force_update=True)
         return vgs[self.vg]['VG UUID']
 
+    #Check in changes to config files into git repository
+    def GitSave(self,commentStr):
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
+        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+        try:
+            repo = Repo(self.iscsiconfdir)
+            filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
+            repo.stage(filelist)
+            repo.do_commit(commentStr)
+        except:
+            var = traceback.format_exc()
+            logger.warn("%s: Git save error: %s" % (commentStr,var))
+
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
-        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile) 
+        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
-        exStr = srv.execute(cmdStr)
-        srv.get('/etc/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-        logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         srv.close()
+        #exStr = srv.execute(cmdStr)
+        exStr=self.Exec(cmdStr)
+        commentStr = "Trying to create target %s " %( iqnTarget, )
+        self.GitSave(commentStr)
+        logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
             return 1
@@ -221,6 +244,7 @@ class PollServer():
         if not tar.sessionup:
             cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,self.vg])
             exStr = self.Exec(cmdStr)
+            self.GitSave("Trying to delete  target %s " %( iqntar,))
             success1 = False
             success2 = False
             for eachLine in exStr:
