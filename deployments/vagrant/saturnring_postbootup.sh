@@ -29,33 +29,34 @@ sudo -u vagrant -H bash -c "cd /vagrant; ./saturnring_postbootup_as_vagrant_user
 cd /home/vagrant/saturnring/ssddj
 cat <<EOF > /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-1]
-command=/home/vagrant/saturnring/misc/rqworker.sh
+command=/home/vagrant/saturnring/misc/rqworker.sh queue1
 user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-1.log
 redirect_stderr=true
 
-
 [program:django-rqworker-2]
-command=/home/vagrant/saturnring/misc/rqworker.sh
+command=/home/vagrant/saturnring/misc/rqworker.sh queue2
 user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-2.log
 redirect_stderr=true
 
-
 [program:django-rqworker-3]
-command=/home/vagrant/saturnring/misc/rqworker.sh
+command=/home/vagrant/saturnring/misc/rqworker.sh queue3
 user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-3.log
 redirect_stderr=true
 
-
-
 [program:django-rqworker-4]
-command=/home/vagrant/saturnring/misc/rqworker.sh
+command=/home/vagrant/saturnring/misc/rqworker.sh queue4
 user=vagrant
 stdout_logfile=/nfsmount/saturnringlog/rqworker-4.log
 redirect_stderr=true
 
+[program:django-rqworker-5]
+command=/home/vagrant/saturnring/misc/rqworker.sh queue5
+user=vagrant
+stdout_logfile=/nfsmount/saturnringlog/rqworker-5.log
+redirect_stderr=true
 EOF
 cat <<EOF > /etc/apache2/sites-available/saturnring.conf
 <VirtualHost *:80>

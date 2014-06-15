@@ -1,13 +1,14 @@
 Django==1.6.2
+GitPython==0.1.7
 Markdown==2.4
 PyYAML==3.10
 South==0.8.4
 argparse==1.2.1
-distribute==0.6.24
 django-admin-changelist-stats==0.2
 django-filter==0.7
 django-rq==0.6.1
 djangorestframework==2.3.13
+dulwich==0.9.7
 ecdsa==0.11
 paramiko==1.13.0
 pycrypto==2.6.1

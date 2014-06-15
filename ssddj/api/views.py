@@ -18,7 +18,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 #from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
-
+from ssdfrontend.models import ClumpGroup
 from django.db.models import Sum
 from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
@@ -45,10 +45,13 @@ logger = logging.getLogger(__name__)
 from utils.scstconf import ParseSCSTConf
 from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
+from utils.targetops import ExecMakeTarget
+from utils.targetops import DeleteTargetObject
 import django_rq
 import hashlib
 import ConfigParser
 import os
+import time
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -56,11 +59,70 @@ class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
 #    permission_classes = (IsAuthenticated,)
     def get(self, request):
-        queue = django_rq.get_queue('default')
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:
+            queuename = 'queue'+str(hash(eachhost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
+
+class Delete(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request ):
+        logger.info("Raw request data is "+str(request.DATA))
+        (flag,statusStr) = self.DeleteTarget(request.DATA,request.user)
+        logger.info("Deletion via API result" + str(statusStr))
+        if flag!=0:
+            rtnDict={}
+            rtnDict['error']=1
+            rtnDict['detail']=statusStr
+            return Response(rtnDict,status=status.HTTP_400_BAD_REQUEST)
+        else:
+            rtnDict={}
+            rtnDict['error']=0
+            rtnDict['detail']=statusStr
+            return Response(rtnDict,status=status.HTTP_200_OK)
+
+    def DeleteTarget(self,requestDic,owner):
+        queryset = None
+        if 'iqntar' in requestDic:
+            queryset=Target.objects.filter(iqntar=requestDic['iqntar'],owner=owner)
+        if 'iqnini' in requestDic:
+            if queryset is None:
+                queryset=Target.objects.filter(iqnini=requestDic['iqnini'],owner=owner)
+            else:
+                queryset=queryset.objects.filter(iqnini=requestDic['iqnini'])
+        if 'targethost' in requestDic:
+            if queryset is None:
+                queryset=Target.objects.filter(targethost=requestDic['targethost'],owner=owner)
+            else:
+                queryset=queryset.objects.filter(targethost=requestDic['targethost'])
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        numqueues = config.get('saturnring','numqueues')
+        rtnFlag=-1
+        rtnStatus=" "
+        for obj in queryset:
+            queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            job = queue.enqueue(DeleteTargetObject,obj)
+            logger.info("Using queue %s for deletion" %(queuename,))
+            while 1:
+                if (job.result == 0) or (job.result == 1):
+                    rtnFlag=rtnFlag*job.result
+                    rtnStatus = "\n".join([obj.iqntar," delete errors = ",str(rtnFlag)])
+                    break
+                else:
+                    time.sleep(0.5)
+        if rtnStatus==" ":
+            rtnStatus="Nothing was deleted; check parameters, did you specify at least an iqntar, iqnini or targethost; do their values really exist? Saturnring received: "
+        return (rtnFlag,rtnStatus)
 
 class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
@@ -69,26 +131,15 @@ class Provision(APIView):
         logger.info("Raw request data is "+str(request.DATA))
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            #provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
-            #if len(provfilter):
-            #    return Response("ERROR: Duplicate request, ignored")
-            #else:
             (flag,statusStr) = self.MakeTarget(request.DATA,request.user)
             if flag==-1:
                 rtnDict = {}
                 rtnDict['error']=1
                 rtnDict['detail']=statusStr
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
-            #serializer.save()
             if (flag==0 or flag==1):
-                #tar = Target.objects.get(iqntar=statusStr)
-                #rtnDict = model_to_dict(tar)
-                #rtnDict['pre-existing']=flag
-                #rtnDict.pop('owner',None)
-                #return Response(rtnDict,status=status.HTTP_201_CREATED)
-
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','sessionup')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['already_existed']=flag
                 rtnDict['error']=0
@@ -99,23 +150,19 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
-            #rtnDict = ValuesQuerySetToDict(serializer.errors)
             rtnDict={}
             rtnDict['error']=1
             rtnDict['detail']=serializer.errors
             return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
 
     def LVAllocSumVG(self,vg):
-#        p = PollServer(vg.vghost) # Check this
- #       p.UpdateLVs(vg)
         lvs = LV.objects.filter(vg=vg)
         lvalloc=0.0
         for eachlv in lvs:
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
-    
 
-    def VGFilter(self,storageSize, aagroup):
+    def VGFilter(self,storageSize, aagroup, clumpgroup="noclump"):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -125,7 +172,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -135,18 +182,30 @@ class Provision(APIView):
                 eachvg.save()
                 if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
                    logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
-                   numDel=numDel+1 
+                   numDel=numDel+1
                 else:
                     logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
-                    if aagroup=="random":
-                        chosenVG = eachvg
-                        break
+                    if clumpgroup=="noclump":
+                        if aagroup=="random":
+                            return eachvg
+                        else:
+                            qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
                     else:
-                        qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
+                        qualvgs.append((eachvg,eachvg.vghost.clumpgroup_set.all().filter(name=clumpgroup).count()))
+            if ( len(qualvgs) > 0 ) and (clumpgroup != "noclump"):
+                chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1] #Chose host with maximum clump peers
+                if overlap == 0:
+                    for ii in range(0,len(qualvgs)): #There is no clump peer, so need to fall back to aagroup
+                        (vg,discardthis) = qualvgs[ii]
+                        qualvgs[ii]= (vg,vg.vghost.aagroup_set.all().filter(name=aagroup).count())
+                    logger.info('No other clump peer found, falling back to AAgroup')
+                else:
+                    logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
+                    return chosenVG
 
             if len(qualvgs) > 0:
                 chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
-                logger.info('Anti-affinity chose Saturn server %s with an overlap of %d.' %(chosenVG.vghost,overlap))
+                logger.info('Anti-affinity group %s chose Saturn server %s with an overlap of %d.' %(aagroup,chosenVG.vghost,overlap))
                 return chosenVG
             if len(vgchoices)>numDel:
                 logger.info("Randomly chosen Host/VG combo is %s/%s" %(chosenVG.vghost,chosenVG.vguuid))
@@ -175,81 +234,39 @@ class Provision(APIView):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
+        aagroup =''
+        if 'clumpgroup' not in requestDic:
+            clumpgroup = "noclump"
+        else:
+            clumpgroup = requestDic['clumpgroup']
+
         if 'aagroup' not in requestDic:
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s" %(clientiqn, serviceName, str(storageSize), aagroup))
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
         (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
             return (-1,quotaReason)
         else:
             logger.info(quotaReason)
-        
-        chosenVG = self.VGFilter(storageSize,aagroup)
-        if chosenVG <> -1:
+        chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        if chosenVG != -1:
             targetHost=str(chosenVG.vghost)
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-            iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
-            try:
-                targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-                if len(targets) == 0:
-                    raise ObjectDoesNotExist
-                for t in targets:
-                    iqnComponents = t.iqntar.split(':')
-                    if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
-                        logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                        return (1,t.iqntar)
-                    else:
-                        raise ObjectDoesNotExist
-            except ObjectDoesNotExist:
-                logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
-                targetIP = StorageHost.objects.get(dnsname=targetHost)
-                p = PollServer(targetHost)
-                if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targetIP.storageip1,targetIP.storageip2)):
-                    #p.GetTargets()
-                    BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
-                    config = ConfigParser.RawConfigParser()
-                    config.read(os.path.join(BASE_DIR,'saturn.ini'))			
-                    (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
-#                    logger.info("Got devDic via parsescst:")
-#                    logger.info(devDic)
-#                    logger.info("Got tarDic via parsescst:")
-#                    logger.info(tarDic)
-                    if iqnTarget in tarDic:
-                        newTarget = Target(owner=owner,targethost=chosenVG.vghost,iqnini=clientiqn,
-                            iqntar=iqnTarget,sizeinGB=float(storageSize))
-                        newTarget.save()
-                        lvDict=p.GetLVs()
-#                        logger.info("Got LVDICT on 203/api/views.py:")
-#                        logger.info(lvDict)
-                        lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
-#                        logger.info("lvol name should be: %s" %(lvName,))
-                        if lvName in lvDict:
-                            newLV = LV(target=newTarget,vg=chosenVG,
-                                    lvname=lvName,
-                                    lvsize=storageSize,
-                                    lvthinmapped=lvDict[lvName]['Mapped size'],
-                                    lvuuid=lvDict[lvName]['LV UUID'])
-                            newLV.save()
-                            chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
-                            chosenVG.save()
-
-                    if 'aagroup' in requestDic:
-                        aagroup = requestDic['aagroup']
-                        tar = Target.objects.get(iqntar=iqnTarget)
-                        aa = AAGroup(name=requestDic['aagroup'],target=tar)
-                        aa.save()
-                        aa.hosts.add(chosenVG.vghost)
-                        aa.save()
-                        newTarget.aagroup=aa
-                        newTarget.save()
-
-                    return (0,iqnTarget)
+            BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
+            config = ConfigParser.RawConfigParser()
+            config.read(os.path.join(BASE_DIR,'saturn.ini'))
+            numqueues = config.get('saturnring','numqueues')
+            queuename = 'queue'+str(hash(targetHost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            logger.info("Launching create target job into queue %s" %(queuename,) )
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
+            while 1:
+                if job.result:
+                    return job.result
                 else:
-                    logger.warn('CreateTarget did not work')
-                    return (-1,"CreateTarget returned error, contact admin")
+                    time.sleep(1)
         else:
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")

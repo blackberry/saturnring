@@ -49,7 +49,7 @@ class VG (models.Model):
     opf = models.FloatField(default=0.7)
     thinusedmaxpercent = models.FloatField(default=70)
     enabled = models.BooleanField(default=True)
-    CurrentAllocGB = models.FloatField(default=-100.0)
+    CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -88,6 +88,7 @@ class Target(models.Model):
 class TargetHistory(models.Model):
     owner = models.ForeignKey(User)
     iqntar=models.CharField(max_length=200)
+    iqnini= models.CharField(max_length=200,blank=True,null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     deleted_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     sizeinGB=models.FloatField(max_length=200)
@@ -101,7 +102,16 @@ class AAGroup(models.Model):
     target = models.ForeignKey(Target,null=True, blank=True)
 
     def __unicode__(self):
-        return self.name 
+        return self.name
+
+class ClumpGroup(models.Model):
+    name = models.CharField(max_length=200)
+    hosts = models.ManyToManyField(StorageHost)
+    target = models.ForeignKey(Target,null=True,blank=True)
+
+    def __unicode__(self):
+        return self.name
+
 
 from django.contrib.auth.models import User
 

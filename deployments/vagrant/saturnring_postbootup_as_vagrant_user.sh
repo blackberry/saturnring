@@ -72,8 +72,13 @@ if [ ! -f mycron ];then
 fi
 
 # Create new keys
-mkdir -p /home/vagrant/saturnring/ssddj/config
-cd /home/vagrant/saturnring/ssddj/config
+CONFIGDIR=/nfsmount/saturnconfig
+sudo mkdir -p $CONFIGDIR
+sudo chown vagrant:vagrant $CONFIGDIR
+cd $CONFIGDIR
+git init
 ssh-keygen -q -f saturnkey -N ''
 ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
+git add *
+git commit -a -m "Created Saturn keys"
 
