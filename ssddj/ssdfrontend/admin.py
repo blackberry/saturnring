@@ -197,8 +197,12 @@ class StorageHostForm(forms.ModelForm):
             p = PollServer(saturnserver)
             p.InstallScripts()
         except:
-            raise forms.ValidationError("Error with Saturn Server "+saturnserver)
-            logger.warn("Error with Saturn server specified on the form "+saturnserver)
+            logger.warn("Error with Saturn server specified on the form, disabling server "+saturnserver)
+            obj = StorageHost.objects.get(dnsname=saturnserver)
+            obj.enabled=False
+            obj.save()
+            raise forms.ValidationError("Error with Saturn Server, therefore disabled "+saturnserver)
+            
 	return self.cleaned_data['dnsname']
              
  
