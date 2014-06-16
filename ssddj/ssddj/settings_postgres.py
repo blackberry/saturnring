@@ -120,6 +120,14 @@ RQ_QUEUES = {
     },
 }
 
+numqueues = config.get('saturnring','numqueues')
+for ii in range(0,int(numqueues)):
+    RQ_QUEUES['queue'+str(ii)]={
+            'HOST': 'localhost',
+            'PORT' : 6379,
+            'DB': 0,
+            }
+
 
 
 # Internationalization
