@@ -53,16 +53,34 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
     numqueues = config.get('saturnring','numqueues')
+    jobs =[]
     for obj in queryset:
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = django_rq.get_queue(queuename)
-        job = queue.enqueue(DeleteTargetObject,obj)
-        logger.info("using queue %s for deletion" %(queuename,))
-        while 1:
+        jobs = []
+        jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
+        logger.info("Using queue %s for deletion" %(queuename,))
+    rtnStatus= {}
+    rtnFlag=0
+    numDone=0
+    while numDone < len(jobs):
+        ii=0
+        time.sleep(1)
+        for ii in range(0,len(jobs)):
+            if jobs[ii] == 0:
+                continue
+            (job,target) = jobs[ii]
             if (job.result == 0) or (job.result == 1):
-                break
+                if job.result==1:
+                    logger.error('Failed deletion of '+target)
+                rtnStatus[target]="Error "+str(job.result)
+                rtnFlag=rtnFlag + job.result
+                jobs[ii]=0
+                numDone=numDone+1
             else:
-                time.sleep(0.5)
+                logger.info('...Working on deleting target '+target)
+                break
+    return (rtnFlag,str(rtnStatus))
 
 class TargetHistoryAdmin(StatsAdmin):
     readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
