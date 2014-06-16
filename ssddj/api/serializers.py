@@ -21,6 +21,7 @@ class ProvisionerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Provisioner
         fields = ('clientiqn','sizeinGB','serviceName')
+
 class TargetSerializer(serializers.ModelSerializer):
     class Meta:
         model = Target

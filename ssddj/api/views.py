@@ -46,6 +46,7 @@ from utils.scstconf import ParseSCSTConf
 from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
 from utils.targetops import ExecMakeTarget
+from utils.targetops import DeleteTargetObject
 import django_rq
 import hashlib
 import ConfigParser
@@ -66,9 +67,73 @@ class UpdateStateData(APIView):
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
-            #logger.info('Using queue %s for storagehost %s' % (queuename,eachhost))
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
+
+class Delete(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request ):
+        logger.info("Raw request data is "+str(request.DATA))
+        (flag,statusStr) = self.DeleteTarget(request.DATA,request.user)
+        logger.info("Deletion via API result" + str(statusStr))
+        if flag!=0:
+            rtnDict={}
+            rtnDict['error']=1
+            rtnDict['detail']=statusStr
+            return Response(rtnDict,status=status.HTTP_400_BAD_REQUEST)
+        else:
+            rtnDict={}
+            rtnDict['error']=0
+            rtnDict['detail']=statusStr
+            return Response(rtnDict,status=status.HTTP_200_OK)
+
+    def DeleteTarget(self,requestDic,owner):
+        queryset = None
+        if 'iqntar' in requestDic:
+            queryset=Target.objects.filter(iqntar=requestDic['iqntar'],owner=owner)
+        if 'iqnini' in requestDic:
+            if queryset is None:
+                queryset=Target.objects.filter(iqnini=requestDic['iqnini'],owner=owner)
+            else:
+                queryset=queryset.objects.filter(iqnini=requestDic['iqnini'])
+        if 'targethost' in requestDic:
+            if queryset is None:
+                queryset=Target.objects.filter(targethost=requestDic['targethost'],owner=owner)
+            else:
+                queryset=queryset.objects.filter(targethost=requestDic['targethost'])
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        numqueues = config.get('saturnring','numqueues')
+        jobs =[]
+        for obj in queryset:
+            queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
+            queue = django_rq.get_queue(queuename)
+            jobs = []
+            jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
+            logger.info("Using queue %s for deletion" %(queuename,))
+        rtnStatus= {}
+        rtnFlag=0
+        numDone=0
+        while numDone < len(jobs):
+            ii=0
+            time.sleep(1)
+            for ii in range(0,len(jobs)):
+                if jobs[ii] == 0:
+                    continue
+                (job,target) = jobs[ii]
+                if (job.result == 0) or (job.result == 1):
+                    if job.result==1:
+                        logger.error('Failed deletion of '+target)
+                    rtnStatus[target]="Error "+str(job.result)
+                    rtnFlag=rtnFlag + job.result
+                    jobs[ii]=0
+                    numDone=numDone+1
+                else:
+                    logger.info('...Working on deleting target '+target)
+                    break
+        return (rtnFlag,str(rtnStatus))
 
 class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
@@ -77,24 +142,13 @@ class Provision(APIView):
         logger.info("Raw request data is "+str(request.DATA))
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
-            #provfilter= Provisioner.objects.filter(clienthost=request.DATA[u'clienthost'],serviceName=request.DATA[u'serviceName'])
-            #if len(provfilter):
-            #    return Response("ERROR: Duplicate request, ignored")
-            #else:
             (flag,statusStr) = self.MakeTarget(request.DATA,request.user)
             if flag==-1:
                 rtnDict = {}
                 rtnDict['error']=1
                 rtnDict['detail']=statusStr
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
-            #serializer.save()
             if (flag==0 or flag==1):
-                #tar = Target.objects.get(iqntar=statusStr)
-                #rtnDict = model_to_dict(tar)
-                #rtnDict['pre-existing']=flag
-                #rtnDict.pop('owner',None)
-                #return Response(rtnDict,status=status.HTTP_201_CREATED)
-
                 tar = Target.objects.filter(iqntar=statusStr)
                 data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
@@ -107,15 +161,12 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
             logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
-            #rtnDict = ValuesQuerySetToDict(serializer.errors)
             rtnDict={}
             rtnDict['error']=1
             rtnDict['detail']=serializer.errors
             return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
 
     def LVAllocSumVG(self,vg):
-#        p = PollServer(vg.vghost) # Check this
- #       p.UpdateLVs(vg)
         lvs = LV.objects.filter(vg=vg)
         lvalloc=0.0
         for eachlv in lvs:
