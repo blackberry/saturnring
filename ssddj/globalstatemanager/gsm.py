@@ -171,17 +171,21 @@ class PollServer():
 
     #Check in changes to config files into git repository
     def GitSave(self,commentStr):
-        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
-        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
-            repo = Repo(self.iscsiconfdir)
-            filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
-            repo.stage(filelist)
-            repo.do_commit(commentStr)
+            srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
+            srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+            try:
+                repo = Repo(self.iscsiconfdir)
+                filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
+                repo.stage(filelist)
+                repo.do_commit(commentStr)
+            except:
+                var = traceback.format_exc()
+                logger.warn("%s: Git save error: %s" % (commentStr,var))
         except:
             var = traceback.format_exc()
-            logger.warn("%s: Git save error: %s" % (commentStr,var))
+            logger.warn("%s: PYSFTP download error: %s" % (commentStr,var))
 
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):

@@ -46,7 +46,7 @@ echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/init
 echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf
-mkdir -p /temp
+sudo mkdir -p /temp
 sudo cp /etc/scst.conf /temp
 sudo cp /etc/lvm/backup/$6 /temp
 sudo chmod  666 /temp/scst.conf
