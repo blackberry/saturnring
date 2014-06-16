@@ -16,9 +16,12 @@
 set -e
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
-CSTR=`lvcreate -V$1G -T $6/thinpool -n $lvolName`
-
-#lvolName=$(echo "$CSTR" | grep -o '\".*\"' | sed -e 's/\"//g')
+if sudo lvs | egrep -q "$lvolName"; then
+   echo "Warning: Using previously-created LV "$lvolName
+else
+  LVCOUTPUT=`lvcreate -V$1G -T $6/thinpool -n $lvolName`
+  echo $LVCOUTPUT
+fi
 lvu=`lvdisplay $6/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 vgu=`vgdisplay $6 | grep "VG UUID" | sed  's/VG UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu

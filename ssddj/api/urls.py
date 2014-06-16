@@ -18,6 +18,7 @@ import views
 
 urlpatterns = patterns('',
             url(r'^provisioner/$', views.Provision.as_view()),
+            url(r'^delete/$', views.Delete.as_view()),
             url(r'^vgscan/$', views.VGScanner.as_view()),
             url(r'^stateupdate/$',views.UpdateStateData.as_view()),
                 )
