@@ -30,7 +30,7 @@ fi
 
 sudo mkdir -p /temp
 sudo cp /etc/scst.conf /temp
-sudo cp /etc/lvm/backup/$6 /temp
+sudo cp /etc/lvm/backup/$2 /temp
 sudo chmod  666 /temp/scst.conf
-sudo chmod 666 /temp/$6
+sudo chmod 666 /temp/$2
 
