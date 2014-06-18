@@ -25,6 +25,7 @@ e) create /nfsmount/saturnring/saturnringconfig/redis and change its owner to re
 crontab -e
 * * * * * curl -X GET http://<local_ipaddress>/api/stateupdate/
 
+
 General  notes:
 Remember - if you change any of the above directories etc., you may have to change it in the saturnring/ssddj/ssddj/settings.py and saturnring/ssddj/saturn.ini
 In general, follow the scripts in saturnring/deployments/vagrant/saturnring*, be careful about substituting vagrant <-> local everywhere
