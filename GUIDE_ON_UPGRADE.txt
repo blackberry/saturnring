@@ -1,151 +1,66 @@
-Saturnring was at:
+
+STEPS after VM boots up
+
+Post bootup (or via-context) steps:
+0. You may want to upgrade to the latest software version 
+cd saturnring
+git pull origin master
+
+2. Point to the production database and not the sqlite database. This is acheived by editing the file ~/saturnring/ssddj/ssddj/settings_postgres.py and inserting the correct postgres details. Then copy this file over to ~/saturnring/ssddj/ssddj/settings.py
+3. Create mountpoint (NFS) /nfsmount, and then 
+a) create subdirectory saturnring/saturnringlog, set owner to local:local
+b) create subdirectory saturnring/saturnconfig, set owner to local:local
+c) Initialize an empty git repo
+git init /nfsmount/saturnring/saturnringconfig
+d) Create keys 
+cd /nfsmount/saturnring/saturnringconfig and run
+ssh-keygen -q -f saturnkey -N ''
+ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
+git add *
+git commit -a -m "Created Saturn keys"
+e) create /nfsmount/saturnring/saturnringconfig/redis and change its owner to redis:redis
+4. sudo service redis-server restart
+5. sudo service supervisord restart; check via sudo supervisorctl if the 5 job threads are running
+6. update crontab to do stateupdates
+crontab -e
+* * * * * curl -X GET http://<local_ipaddress>/api/stateupdate/
+
+General  notes:
+Remember - if you change any of the above directories etc., you may have to change it in the saturnring/ssddj/ssddj/settings.py and saturnring/ssddj/saturn.ini
+In general, follow the scripts in saturnring/deployments/vagrant/saturnring*, be careful about substituting vagrant <-> local everywhere
 
 
 
-0bb926a8d0334672195e068c0669db2487769075
 
-
+In case of upgrading software etc.
 
 Brought down apache2 server
 
 sudo service apache2 stop
 
-
-
-Made directory /nfsmount/saturnring/saturnringlog
-
-Made directory /nfsmount/saturnring/saturnconfig
-
 Pull git
 
-
-
-PIP Installed requiments
-
-
+PIP Install requiments
 
 Edited /var/www/saturnring/index.wsgi for any directory changes
 
-
-
 set settings_postgres to settings.py
 
+Activate the virtual environment
+source ~/saturnring/saturnenv/bin/activate
 
+Update the schema if required
+cd ~/saturnring/ssddj
+python manage.py schemamigration ssdfrontend
+python manage.py migrate ssdfrontend
 
-Did the change in the /etc/supervisor/conf.d/rqworker.conf
-
-[program:django-rqworker-1]
-
-command=/home/local/saturnring/misc/rqworker.sh  "queue0"
-
-user=local
-
-stdout_logfile=/nfsmount/saturnring/saturnringlog/rqworker-1.log
-
-redirect_stderr=true
-
-
-
-
-
-[program:django-rqworker-2]
-
-command=/home/local/saturnring/misc/rqworker.sh  "queue1"
-
-user=local
-
-stdout_logfile=/nfsmount/saturnring/saturnringlog/rqworker-2.log
-
-redirect_stderr=true
-
-
-
-
-
-[program:django-rqworker-3]
-
-command=/home/local/saturnring/misc/rqworker.sh  "queue2"
-
-user=local
-
-stdout_logfile=/nfsmount/saturnring/saturnringlog/rqworker-3.log
-
-redirect_stderr=true
-
-
-
-
-
-
-
-[program:django-rqworker-4]
-
-command=/home/local/saturnring/misc/rqworker.sh  "queue3"
-
-user=local
-
-stdout_logfile=/nfsmount/saturnring/saturnringlog/rqworker-4.log
-
-redirect_stderr=true
-
-
-
-[program:django-rqworker-5]
-
-command=/home/local/saturnring/misc/rqworker.sh  "queue4"
-
-user=local
-
-stdout_logfile=/nfsmount/saturnring/saturnringlog/rqworker-5.log
-
-redirect_stderr=true
-
-
-
-
-
-
-
-
-
-
+Do any changes in the /etc/supervisor/conf.d/rqworker.conf
 
 restart redis-server
-
 restart supervisor
 
-
-
 Check threads come up in sudo supervisorctl
-
-
-
-python manage.py schemamigration
-
-migrate
-
-
-
-
-
-cd $CONFIGDIR
-
-git init
-
-ssh-keygen -q -f saturnkey -N ''
-
-ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
-
-git add *
-
-git commit -a -m "Created Saturn keys"
-
-
-
-ssh-copy-id -i saturnkey local@saturn-node01.store.altus.bblabs
-
-ssh-copy-id -i saturnkey local@saturn-node02.store.altus.bblabs
-
+sudo supervisorctl, then run status; if threads are not running run reload
 
 
 
