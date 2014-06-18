@@ -44,7 +44,7 @@ class Migration(SchemaMigration):
             ('opf', self.gf('django.db.models.fields.FloatField')(default=0.7)),
             ('thinusedmaxpercent', self.gf('django.db.models.fields.FloatField')(default=70)),
             ('enabled', self.gf('django.db.models.fields.BooleanField')(default=True)),
-            ('CurrentAllocGB', self.gf('django.db.models.fields.FloatField')(default=-100.0)),
+            ('CurrentAllocGB', self.gf('django.db.models.fields.FloatField')(default=-100.0, null=True)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
         ))
@@ -79,6 +79,20 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'ssdfrontend', ['Target'])
 
+        # Adding model 'TargetHistory'
+        db.create_table(u'ssdfrontend_targethistory', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('owner', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
+            ('iqntar', self.gf('django.db.models.fields.CharField')(max_length=200)),
+            ('iqnini', self.gf('django.db.models.fields.CharField')(max_length=200, null=True, blank=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
+            ('deleted_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
+            ('sizeinGB', self.gf('django.db.models.fields.FloatField')(max_length=200)),
+            ('rkb', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
+            ('wkb', self.gf('django.db.models.fields.BigIntegerField')(default=0)),
+        ))
+        db.send_create_signal(u'ssdfrontend', ['TargetHistory'])
+
         # Adding model 'AAGroup'
         db.create_table(u'ssdfrontend_aagroup', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -95,6 +109,23 @@ class Migration(SchemaMigration):
             ('storagehost', models.ForeignKey(orm[u'ssdfrontend.storagehost'], null=False))
         ))
         db.create_unique(m2m_table_name, ['aagroup_id', 'storagehost_id'])
+
+        # Adding model 'ClumpGroup'
+        db.create_table(u'ssdfrontend_clumpgroup', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=200)),
+            ('target', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ssdfrontend.Target'], null=True, blank=True)),
+        ))
+        db.send_create_signal(u'ssdfrontend', ['ClumpGroup'])
+
+        # Adding M2M table for field hosts on 'ClumpGroup'
+        m2m_table_name = db.shorten_name(u'ssdfrontend_clumpgroup_hosts')
+        db.create_table(m2m_table_name, (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('clumpgroup', models.ForeignKey(orm[u'ssdfrontend.clumpgroup'], null=False)),
+            ('storagehost', models.ForeignKey(orm[u'ssdfrontend.storagehost'], null=False))
+        ))
+        db.create_unique(m2m_table_name, ['clumpgroup_id', 'storagehost_id'])
 
         # Adding model 'Profile'
         db.create_table(u'ssdfrontend_profile', (
@@ -122,11 +153,20 @@ class Migration(SchemaMigration):
         # Deleting model 'Target'
         db.delete_table(u'ssdfrontend_target')
 
+        # Deleting model 'TargetHistory'
+        db.delete_table(u'ssdfrontend_targethistory')
+
         # Deleting model 'AAGroup'
         db.delete_table(u'ssdfrontend_aagroup')
 
         # Removing M2M table for field hosts on 'AAGroup'
         db.delete_table(db.shorten_name(u'ssdfrontend_aagroup_hosts'))
+
+        # Deleting model 'ClumpGroup'
+        db.delete_table(u'ssdfrontend_clumpgroup')
+
+        # Removing M2M table for field hosts on 'ClumpGroup'
+        db.delete_table(db.shorten_name(u'ssdfrontend_clumpgroup_hosts'))
 
         # Deleting model 'Profile'
         db.delete_table(u'ssdfrontend_profile')
@@ -171,6 +211,13 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.aagroup': {
             'Meta': {'object_name': 'AAGroup'},
+            'hosts': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['ssdfrontend.StorageHost']", 'symmetrical': 'False'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
+            'target': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.Target']", 'null': 'True', 'blank': 'True'})
+        },
+        u'ssdfrontend.clumpgroup': {
+            'Meta': {'object_name': 'ClumpGroup'},
             'hosts': ('django.db.models.fields.related.ManyToManyField', [], {'to': u"orm['ssdfrontend.StorageHost']", 'symmetrical': 'False'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
@@ -226,8 +273,20 @@ class Migration(SchemaMigration):
             'wkb': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
             'wkbpm': ('django.db.models.fields.BigIntegerField', [], {'default': '0'})
         },
+        u'ssdfrontend.targethistory': {
+            'Meta': {'object_name': 'TargetHistory'},
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'deleted_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'iqnini': ('django.db.models.fields.CharField', [], {'max_length': '200', 'null': 'True', 'blank': 'True'}),
+            'iqntar': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
+            'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
+            'rkb': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
+            'sizeinGB': ('django.db.models.fields.FloatField', [], {'max_length': '200'}),
+            'wkb': ('django.db.models.fields.BigIntegerField', [], {'default': '0'})
+        },
         u'ssdfrontend.vg': {
-            'CurrentAllocGB': ('django.db.models.fields.FloatField', [], {'default': '-100.0'}),
+            'CurrentAllocGB': ('django.db.models.fields.FloatField', [], {'default': '-100.0', 'null': 'True'}),
             'Meta': {'object_name': 'VG'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
