@@ -102,6 +102,8 @@ class Delete(APIView):
                 queryset=Target.objects.filter(targethost=requestDic['targethost'],owner=owner)
             else:
                 queryset=queryset.objects.filter(targethost=requestDic['targethost'])
+        if queryset is None:
+            return (1,"No targets to delete, or check delete API call")
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         config = ConfigParser.RawConfigParser()
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
