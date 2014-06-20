@@ -222,15 +222,15 @@ class PollServer():
                 else:
                     tar.sessionup=True
                     rkb = long(eachLine.split()[1])
-                    logger.info("parsed rkb ="+str(rkb))
-                    logger.info("tar.rkb = "+str(tar.rkb))
+    #                logger.info("parsed rkb ="+str(rkb))
+    #                logger.info("tar.rkb = "+str(tar.rkb))
                     tar.rkbpm = long(rkb-tar.rkb)
                     tar.rkb=rkb
                     wkb = long(eachLine.split()[2])
-                    logger.info("parsed wkb ="+str(wkb))
-                    logger.info("tar.wkb = "+str(tar.wkb))
+    #                logger.info("parsed wkb ="+str(wkb))
+    #                logger.info("tar.wkb = "+str(tar.wkb))
                     wpm = long(wkb-tar.wkb)
-                    logger.info("computed wpm = "+str(wpm))
+    #                logger.info("computed wpm = "+str(wpm))
                     tar.wkbpm = wpm
                     tar.wkb=wkb
                 tar.save()
