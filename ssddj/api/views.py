@@ -230,19 +230,6 @@ class Provision(APIView):
             logger.warn('No vghost/VG enabled')
             return -1
 
-    def CheckUserQuotas(self,storageSize,owner):
-        user = User.objects.get(username=owner)
-        if (storageSize > user.profile.max_target_sizeGB):
-            rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
-            return(-1,rtnStr)
-        totalAlloc = Target.objects.filter(owner=owner).aggregate(Sum('sizeinGB'))
-        if not totalAlloc['sizeinGB__sum']:
-            totalAlloc['sizeinGB__sum'] = 0.0
-        if (totalAlloc['sizeinGB__sum']+storageSize > user.profile.max_alloc_sizeGB):
-            rtnStr = "User quota exceeded %dGb > %dGb" %(totalAlloc['sizeinGB__sum']+storageSize,user.profile.max_alloc_sizeGB)
-            return (-1,rtnStr)
-        return (1, "Quota checks ok, proceeding")
-
     def MakeTarget(self,requestDic,owner):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
@@ -258,12 +245,6 @@ class Provision(APIView):
         else:
             aagroup = requestDic['aagroup']
         logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
-        (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
-        if quotaFlag == -1:
-            logger.debug(quotaReason)
-            return (-1,quotaReason)
-        else:
-            logger.info(quotaReason)
         chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
         if chosenVG != -1:
             targetHost=str(chosenVG.vghost)
