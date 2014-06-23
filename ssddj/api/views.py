@@ -185,7 +185,8 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        time.sleep(1) # Hack to make it sleep for a second to allow locking chosenVGs; not ideal needs more thinking
+        vgchoices = VG.objects.filter(is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -247,6 +248,8 @@ class Provision(APIView):
         logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
         chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
         if chosenVG != -1:
+            chosenVG.is_locked = True
+            chosenVG.save(update_fields=['is_locked'])
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
@@ -258,6 +261,8 @@ class Provision(APIView):
             job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
             while 1:
                 if job.result:
+                    chosenVG.is_locked = False
+                    chosenVG.save(update_fields=['is_locked'])
                     return job.result
                 else:
                     time.sleep(1)

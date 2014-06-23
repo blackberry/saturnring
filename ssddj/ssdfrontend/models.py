@@ -52,6 +52,7 @@ class VG (models.Model):
     CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    is_locked = models.BooleanField(default=False)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 
