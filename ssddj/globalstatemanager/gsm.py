@@ -147,18 +147,26 @@ class PollServer():
             thintotalGB = float(cmdStr[1].rstrip())
             maxthinavl = thintotalGB*(100-thinusedpercent)/100
         except:
-            logger.warn("Unable to run LVScan on "+self.serverDNS)
+            logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+            try:
+                vg = VG.objects.get(vguuid=vgs[self.vg]['VG UUID'])
+                vg.in_error = True
+                vg.save(update_fields=['in_error'])
+            except:
+                logger.error("VG not found in DB: %s" % ( vgs[self.vg]['VG UUID'],))
             return -1
-        logger.info(vgs)
+
+        #logger.info(vgs)
         existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
         if len(existingvgs)==1:
             existingvg = existingvgs[0]
+            existingvgs.in_error=False
             existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
             existingvg.thinusedpercent=thinusedpercent
             existingvg.thintotalGB=thintotalGB
             existingvg.maxthinavlGB=maxthinavl
             existingvg.vgsize = vgs[self.vg]['VG Size']
-            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB'])
+            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
         else:
             myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
                     vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],

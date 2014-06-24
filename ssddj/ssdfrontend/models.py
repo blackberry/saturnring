@@ -36,6 +36,11 @@ class LV(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
 
+class Lock(models.Model):
+    lockname=models.CharField(max_length=100,primary_key=True)
+    locked = models.BooleanField(default=False)
+
+
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
     vgsize = models.FloatField()
@@ -53,6 +58,7 @@ class VG (models.Model):
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
+    in_error = models.BooleanField(default=False)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 

@@ -19,6 +19,7 @@ from ssdfrontend.models import VG
 #from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import ClumpGroup
+from ssdfrontend.models import Lock
 from django.db.models import Sum
 from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
@@ -185,8 +186,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        time.sleep(1) # Hack to make it sleep for a second to allow locking chosenVGs; not ideal needs more thinking
-        vgchoices = VG.objects.filter(is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -246,9 +246,25 @@ class Provision(APIView):
         else:
             aagroup = requestDic['aagroup']
         logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
+        try:
+            while 1:
+                globallock = Lock.objects.get(lockname='allvglock')
+                if globallock.locked==False:
+                    globallock.locked=True
+                    globallock.save()
+                    break
+                else:
+                    time.sleep(0.2)
+        except:
+            globallock = Lock(lockname='allvglock',locked=True)
+            globallock.save()
+        
         chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
             chosenVG.is_locked = True
+            globallock.locked=False
+            globallock.save()
             chosenVG.save(update_fields=['is_locked'])
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
@@ -267,6 +283,8 @@ class Provision(APIView):
                 else:
                     time.sleep(1)
         else:
+            globallock.locked=False
+            globallock.save()
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")
 
