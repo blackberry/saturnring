@@ -186,7 +186,6 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        time.sleep(1) # Hack to make it sleep for a second to allow locking chosenVGs; not ideal needs more thinking
         vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
