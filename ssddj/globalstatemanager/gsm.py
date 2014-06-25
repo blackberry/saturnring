@@ -160,7 +160,7 @@ class PollServer():
         existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
         if len(existingvgs)==1:
             existingvg = existingvgs[0]
-            existingvgs.in_error=False
+            existingvg.in_error=False
             existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
             existingvg.thinusedpercent=thinusedpercent
             existingvg.thintotalGB=thintotalGB
