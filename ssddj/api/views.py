@@ -19,6 +19,7 @@ from ssdfrontend.models import VG
 #from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import ClumpGroup
+from ssdfrontend.models import Lock
 from django.db.models import Sum
 from django.contrib.auth.models import User
 #from ssdfrontend.models import HostGroup
@@ -102,27 +103,40 @@ class Delete(APIView):
                 queryset=Target.objects.filter(targethost=requestDic['targethost'],owner=owner)
             else:
                 queryset=queryset.objects.filter(targethost=requestDic['targethost'])
+        if queryset is None:
+            return (1,"No targets to delete, or check delete API call")
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
         config = ConfigParser.RawConfigParser()
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
         numqueues = config.get('saturnring','numqueues')
-        rtnFlag=-1
-        rtnStatus=" "
+        jobs =[]
         for obj in queryset:
             queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
-            job = queue.enqueue(DeleteTargetObject,obj)
+            jobs = []
+            jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
             logger.info("Using queue %s for deletion" %(queuename,))
-            while 1:
+        rtnStatus= {}
+        rtnFlag=0
+        numDone=0
+        while numDone < len(jobs):
+            ii=0
+            time.sleep(1)
+            for ii in range(0,len(jobs)):
+                if jobs[ii] == 0:
+                    continue
+                (job,target) = jobs[ii]
                 if (job.result == 0) or (job.result == 1):
-                    rtnFlag=rtnFlag*job.result
-                    rtnStatus = "\n".join([obj.iqntar," delete errors = ",str(rtnFlag)])
-                    break
+                    if job.result==1:
+                        logger.error('Failed deletion of '+target)
+                    rtnStatus[target]="Error "+str(job.result)
+                    rtnFlag=rtnFlag + job.result
+                    jobs[ii]=0
+                    numDone=numDone+1
                 else:
-                    time.sleep(0.5)
-        if rtnStatus==" ":
-            rtnStatus="Nothing was deleted; check parameters, did you specify at least an iqntar, iqnini or targethost; do their values really exist? Saturnring received: "
-        return (rtnFlag,rtnStatus)
+                    logger.info('...Working on deleting target '+target)
+                    break
+        return (rtnFlag,str(rtnStatus))
 
 class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
@@ -172,7 +186,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = None
@@ -217,19 +231,6 @@ class Provision(APIView):
             logger.warn('No vghost/VG enabled')
             return -1
 
-    def CheckUserQuotas(self,storageSize,owner):
-        user = User.objects.get(username=owner)
-        if (storageSize > user.profile.max_target_sizeGB):
-            rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
-            return(-1,rtnStr)
-        totalAlloc = Target.objects.filter(owner=owner).aggregate(Sum('sizeinGB'))
-        if not totalAlloc['sizeinGB__sum']:
-            totalAlloc['sizeinGB__sum'] = 0.0
-        if (totalAlloc['sizeinGB__sum']+storageSize > user.profile.max_alloc_sizeGB):
-            rtnStr = "User quota exceeded %dGb > %dGb" %(totalAlloc['sizeinGB__sum']+storageSize,user.profile.max_alloc_sizeGB)
-            return (-1,rtnStr)
-        return (1, "Quota checks ok, proceeding")
-
     def MakeTarget(self,requestDic,owner):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
@@ -245,14 +246,26 @@ class Provision(APIView):
         else:
             aagroup = requestDic['aagroup']
         logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
-        (quotaFlag, quotaReason) = self.CheckUserQuotas(float(storageSize),owner)
-        if quotaFlag == -1:
-            logger.debug(quotaReason)
-            return (-1,quotaReason)
-        else:
-            logger.info(quotaReason)
+        try:
+            while 1:
+                globallock = Lock.objects.get(lockname='allvglock')
+                if globallock.locked==False:
+                    globallock.locked=True
+                    globallock.save()
+                    break
+                else:
+                    time.sleep(0.2)
+        except:
+            globallock = Lock(lockname='allvglock',locked=True)
+            globallock.save()
+        
         chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
+            chosenVG.is_locked = True
+            globallock.locked=False
+            globallock.save()
+            chosenVG.save(update_fields=['is_locked'])
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
@@ -264,10 +277,14 @@ class Provision(APIView):
             job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
             while 1:
                 if job.result:
+                    chosenVG.is_locked = False
+                    chosenVG.save(update_fields=['is_locked'])
                     return job.result
                 else:
                     time.sleep(1)
         else:
+            globallock.locked=False
+            globallock.save()
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")
 

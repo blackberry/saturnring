@@ -21,6 +21,8 @@ from ssdfrontend.models import AAGroup
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import TargetHistory
 from ssdfrontend.models import ClumpGroup
+from ssdfrontend.models import User
+from django.db.models import Sum
 import django_rq
 import ConfigParser
 import os
@@ -30,6 +32,20 @@ from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
 
 logger = logging.getLogger(__name__)
+
+def CheckUserQuotas(storageSize,owner):
+    user = User.objects.get(username=owner)
+    if (storageSize > user.profile.max_target_sizeGB):
+        rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
+        return(-1,rtnStr)
+    totalAlloc = Target.objects.filter(owner=owner).aggregate(Sum('sizeinGB'))
+    if not totalAlloc['sizeinGB__sum']:
+        totalAlloc['sizeinGB__sum'] = 0.0
+    if (totalAlloc['sizeinGB__sum']+storageSize > user.profile.max_alloc_sizeGB):
+        rtnStr = "User quota exceeded %dGb > %dGb" %(totalAlloc['sizeinGB__sum']+storageSize,user.profile.max_alloc_sizeGB)
+        return (-1,rtnStr)
+    return (1, "Quota checks ok, proceeding")
+
 def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner):
     chosenVG=VG.objects.get(vghost=targetHost)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
@@ -46,6 +62,12 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
             else:
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:
+        (quotaFlag, quotaReason) = CheckUserQuotas(float(storageSize),owner)
+        if quotaFlag == -1:
+            logger.debug(quotaReason)
+            return (-1,quotaReason)
+        else:
+            logger.info(quotaReason)
         logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
         targethost = StorageHost.objects.get(dnsname=targetHost)
         p = PollServer(targetHost)

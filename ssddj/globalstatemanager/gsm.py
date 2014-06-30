@@ -147,18 +147,26 @@ class PollServer():
             thintotalGB = float(cmdStr[1].rstrip())
             maxthinavl = thintotalGB*(100-thinusedpercent)/100
         except:
-            logger.warn("Unable to run LVScan on "+self.serverDNS)
+            logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+            try:
+                vg = VG.objects.get(vguuid=vgs[self.vg]['VG UUID'])
+                vg.in_error = True
+                vg.save(update_fields=['in_error'])
+            except:
+                logger.error("VG not found in DB: %s" % ( vgs[self.vg]['VG UUID'],))
             return -1
-        logger.info(vgs)
+
+        #logger.info(vgs)
         existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
         if len(existingvgs)==1:
             existingvg = existingvgs[0]
+            existingvg.in_error=False
             existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
             existingvg.thinusedpercent=thinusedpercent
             existingvg.thintotalGB=thintotalGB
             existingvg.maxthinavlGB=maxthinavl
             existingvg.vgsize = vgs[self.vg]['VG Size']
-            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB'])
+            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
         else:
             myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
                     vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],
@@ -171,17 +179,21 @@ class PollServer():
 
     #Check in changes to config files into git repository
     def GitSave(self,commentStr):
-        srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
-        srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-        srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
         try:
-            repo = Repo(self.iscsiconfdir)
-            filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
-            repo.stage(filelist)
-            repo.do_commit(commentStr)
+            srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
+            srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+            try:
+                repo = Repo(self.iscsiconfdir)
+                filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
+                repo.stage(filelist)
+                repo.do_commit(commentStr)
+            except:
+                var = traceback.format_exc()
+                logger.warn("%s: Git save error: %s" % (commentStr,var))
         except:
             var = traceback.format_exc()
-            logger.warn("%s: Git save error: %s" % (commentStr,var))
+            logger.warn("%s: PYSFTP download error: %s" % (commentStr,var))
 
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
@@ -218,15 +230,15 @@ class PollServer():
                 else:
                     tar.sessionup=True
                     rkb = long(eachLine.split()[1])
-                    logger.info("parsed rkb ="+str(rkb))
-                    logger.info("tar.rkb = "+str(tar.rkb))
+    #                logger.info("parsed rkb ="+str(rkb))
+    #                logger.info("tar.rkb = "+str(tar.rkb))
                     tar.rkbpm = long(rkb-tar.rkb)
                     tar.rkb=rkb
                     wkb = long(eachLine.split()[2])
-                    logger.info("parsed wkb ="+str(wkb))
-                    logger.info("tar.wkb = "+str(tar.wkb))
+    #                logger.info("parsed wkb ="+str(wkb))
+    #                logger.info("tar.wkb = "+str(tar.wkb))
                     wpm = long(wkb-tar.wkb)
-                    logger.info("computed wpm = "+str(wpm))
+    #                logger.info("computed wpm = "+str(wpm))
                     tar.wkbpm = wpm
                     tar.wkb=wkb
                 tar.save()
