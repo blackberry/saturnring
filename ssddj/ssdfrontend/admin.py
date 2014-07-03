@@ -206,27 +206,25 @@ class StorageHostForm(forms.ModelForm):
 	
     def clean_dnsname(self):
 #        featuredCount = Country.objects.filter(featured=True).count()
- 
  #       if featuredCount >= 5 and self.cleaned_data['featured'] is True:
  #           raise forms.ValidationError("5 Countries can be featured at most!")
  #       return self.cleaned_data['featured']a
-	saturnserver = self.cleaned_data['dnsname']
+    	saturnserver = self.cleaned_data['dnsname']
         try:
             p = PollServer(saturnserver)
             p.InstallScripts()
         except:
-            logger.error("Error with Saturn server specified on the form, disabling server "+saturnserver)
+            logger.error("Error with Saturn server specified on the form, will try to disable server "+saturnserver)
             try:
                 obj = StorageHost.objects.get(dnsname=saturnserver)
                 obj.enabled=False
                 obj.save()
                 raise forms.ValidationError("Error with Saturn Server, therefore disabled "+saturnserver)
             except:
-                logger.error("Could not install scripts on the new server, new server not in DB")
-            
+                logger.error("Could not install scripts on the new server, new server not in DB, check its DNS entry")
+                raise forms.ValidationError("Error with Saturn Server, check its DNS entry perhaps? "+saturnserver)
 	return self.cleaned_data['dnsname']
-             
- 
+
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
     list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']
