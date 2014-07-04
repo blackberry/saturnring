@@ -263,9 +263,10 @@ class Provision(APIView):
         globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
             chosenVG.is_locked = True
+            chosenVG.save(update_fields=['is_locked'])
+            time.sleep(0.1) #Safety net to make sure the save did complete on the DB end
             globallock.locked=False
             globallock.save()
-            chosenVG.save(update_fields=['is_locked'])
             targetHost=str(chosenVG.vghost)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
