@@ -30,6 +30,13 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'ssdfrontend', ['LV'])
 
+        # Adding model 'Lock'
+        db.create_table(u'ssdfrontend_lock', (
+            ('lockname', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
+            ('locked', self.gf('django.db.models.fields.BooleanField')(default=False)),
+        ))
+        db.send_create_signal(u'ssdfrontend', ['Lock'])
+
         # Adding model 'VG'
         db.create_table(u'ssdfrontend_vg', (
             ('vghost', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ssdfrontend.StorageHost'])),
@@ -47,6 +54,8 @@ class Migration(SchemaMigration):
             ('CurrentAllocGB', self.gf('django.db.models.fields.FloatField')(default=-100.0, null=True)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
+            ('is_locked', self.gf('django.db.models.fields.BooleanField')(default=False)),
+            ('in_error', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
         db.send_create_signal(u'ssdfrontend', ['VG'])
 
@@ -144,6 +153,9 @@ class Migration(SchemaMigration):
         # Deleting model 'LV'
         db.delete_table(u'ssdfrontend_lv')
 
+        # Deleting model 'Lock'
+        db.delete_table(u'ssdfrontend_lock')
+
         # Deleting model 'VG'
         db.delete_table(u'ssdfrontend_vg')
 
@@ -223,6 +235,11 @@ class Migration(SchemaMigration):
             'name': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.Target']", 'null': 'True', 'blank': 'True'})
         },
+        u'ssdfrontend.lock': {
+            'Meta': {'object_name': 'Lock'},
+            'locked': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'lockname': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'})
+        },
         u'ssdfrontend.lv': {
             'Meta': {'object_name': 'LV'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
@@ -290,6 +307,8 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'VG'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'in_error': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'is_locked': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'maxthinavlGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
             'opf': ('django.db.models.fields.FloatField', [], {'default': '0.7'}),
             'thintotalGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
