@@ -22,6 +22,7 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import Target
+from ssdfrontend.models import Interface
 import logging
 import utils.scstconf
 from django.db.models import Sum
@@ -29,6 +30,7 @@ import subprocess
 from dulwich.repo import Repo
 import sys
 import traceback
+import socket
 reload (sys)
 sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
@@ -271,6 +273,31 @@ class PollServer():
             else:
                 return -1
         return -1
+
+    def GetInterfaces(self):
+        cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
+        ipadds=self.Exec(cmdStr)
+        sh = StorageHost.objects.get(dnsname=self.serverDNS)
+        for addr in ipadds:
+            try:
+                addr = addr.rstrip()
+                socket.inet_aton(addr)
+                try:
+                    interface = Interface.objects.get(ip=addr)
+                    if interface.storagehost != self.serverDNS:
+                        logger.warn("Interface IP  "+ip +" switched host from"+interface.storagehost+"to host "+self.serverDNS)
+                        interface.storagehost=self.serverDNS
+                        interface.save()
+                except:
+                    try:
+                        newInterface = Interface(storagehost=sh,ip=addr)
+                        newInterface.save()
+                    except:
+                        logger.warn("Error saving newly discovered Interface "+addr+ " of host "+self.serverDNS)
+            except socket.error:
+                logger.warn("Invalid IP address retuned in GetInterfaces call: "+eachLine)
+
+
 
 
 if __name__=="__main__":

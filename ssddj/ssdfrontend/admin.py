@@ -14,14 +14,16 @@
 
 from django.contrib import admin
 from django import forms
-from ssdfrontend.models import Target 
+from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
-from ssdfrontend.models import LV 
-from ssdfrontend.models import VG 
+from ssdfrontend.models import LV
+from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import TargetHistory
+from ssdfrontend.models import Interface
+from ssdfrontend.models import IPRange
 #from ssdfrontend.models import HostGroup
 from utils.targetops import DeleteTargetObject
 from globalstatemanager.gsm import PollServer
@@ -47,6 +49,10 @@ class VGAdmin(StatsAdmin):
         return False
 admin.site.register(VG,VGAdmin)
 
+
+class InterfaceAdmin(StatsAdmin):	
+    list_display = ['ip','storagehost']
+admin.site.register(Interface,InterfaceAdmin)
 
 def delete_iscsi_target(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -198,6 +204,7 @@ admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
 admin.site.register(AAGroup)
 admin.site.register(ClumpGroup)
+admin.site.register(IPRange)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
