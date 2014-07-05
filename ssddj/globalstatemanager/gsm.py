@@ -282,18 +282,20 @@ class PollServer():
             try:
                 addr = addr.rstrip()
                 socket.inet_aton(addr)
-                try:
-                    interface = Interface.objects.get(ip=addr)
-                    if interface.storagehost != self.serverDNS:
-                        logger.warn("Interface IP  "+ip +" switched host from"+interface.storagehost+"to host "+self.serverDNS)
-                        interface.storagehost=self.serverDNS
-                        interface.save()
-                except:
+                interfaces = Interface.objects.filter(ip=addr)
+                if len(interfaces) != 1: #If 0, then new interface
+                    Interface.objects.filter(ip=addr).delete()
+                    logger.info("Adding newly discovered interface "+addr + " to storage host "+self.serverDNS)
                     try:
                         newInterface = Interface(storagehost=sh,ip=addr)
                         newInterface.save()
                     except:
                         logger.warn("Error saving newly discovered Interface "+addr+ " of host "+self.serverDNS)
+                else:
+                    if interfaces[0].storagehost.dnsname != self.serverDNS:
+                        Interface.objects.filter(ip=addr).delete()
+                        logger.warn("IP address "+addr+" was reassigned to another host")
+
             except socket.error:
                 logger.warn("Invalid IP address retuned in GetInterfaces call: "+eachLine)
 
