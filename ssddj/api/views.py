@@ -258,7 +258,6 @@ class Provision(APIView):
         except:
             globallock = Lock(lockname='allvglock',locked=True)
             globallock.save()
-        
         chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
         globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
@@ -282,7 +281,7 @@ class Provision(APIView):
                     chosenVG.save(update_fields=['is_locked'])
                     return job.result
                 else:
-                    time.sleep(1)
+                    time.sleep(0.25)
         else:
             globallock.locked=False
             globallock.save()

@@ -119,13 +119,17 @@ class ClumpGroup(models.Model):
     def __unicode__(self):
         return self.name
 
-class Interface(models.Model):
-    storagehost = models.ForeignKey(StorageHost)
-    ip = models.CharField(max_length=15)
 
 class IPRange(models.Model):
     owner = models.ForeignKey(User)
     iprange = models.CharField(max_length=20)
+    hosts = models.ManyToManyField(StorageHost)
+
+class Interface(models.Model):
+    storagehost = models.ForeignKey(StorageHost)
+    ip = models.CharField(max_length=15)
+    iprange = models.ManyToManyField(IPRange)
+    owner=models.ForeignKey(User,null=True)
 
 from django.contrib.auth.models import User
 
