@@ -119,7 +119,7 @@ class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
     list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
-    search_fields = ['iqntar']
+    search_fields = ['iqntar','iqnini']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
         return False
@@ -149,10 +149,10 @@ class TargetAdmin(StatsAdmin):
             return "No ClumpGroup"
         
     def iscsi_storeip1(self, obj):
-        return obj.targethost.storageip1
+        return obj.storageip1
 
     def iscsi_storeip2(self, obj):
-        return obj.targethost.storageip2
+        return obj.storageip2
 
     def queryset(self, request):
         if request.user.is_superuser:

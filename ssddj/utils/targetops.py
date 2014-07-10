@@ -22,6 +22,8 @@ from ssdfrontend.models import StorageHost
 from ssdfrontend.models import TargetHistory
 from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import User
+from ssdfrontend.models import Interface
+from ssdfrontend.models import IPRange
 from django.db.models import Sum
 import django_rq
 import ConfigParser
@@ -46,7 +48,7 @@ def CheckUserQuotas(storageSize,owner):
         return (-1,rtnStr)
     return (1, "Quota checks ok, proceeding")
 
-def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner):
+def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
     chosenVG=VG.objects.get(vghost=targetHost)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
@@ -62,6 +64,13 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
             else:
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:
+        try:
+            if subnet != 'public':
+                IPRange.objects.get(iprange=subnet)
+        except:
+            logger.debug('Subnet %s not found on host %s while trying to create target %s, creation aborted, contact admin' %(subnet, targetHost, iqnTarget ))
+            return (-1,"Invalid subnet specified")
+
         (quotaFlag, quotaReason) = CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
             logger.debug(quotaReason)
@@ -71,14 +80,20 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
         logger.info("Creating new target for request {%s %s %s}, this is the generated iSCSItarget: %s" % (clientiqn, serviceName, str(storageSize), iqnTarget))
         targethost = StorageHost.objects.get(dnsname=targetHost)
         p = PollServer(targetHost)
-        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),targethost.storageip1,targethost.storageip2)):
+        storeip1 = targethost.storageip1
+        storeip2 = targethost.storageip2
+        if subnet != 'public':
+            storeip1 = Interface.objects.get(storagehost=targethost,iprange__iprange=unicode(subnet)).ip
+            storeip2 = storeip1
+    
+        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2)):
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
             (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
             if iqnTarget in tarDic:
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
-                    iqntar=iqnTarget,sizeinGB=float(storageSize))
+                    iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)
                 newTarget.save()
                 lvDict=p.GetLVs()
                 lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
