@@ -22,6 +22,9 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import Target
+from ssdfrontend.models import Interface
+from ssdfrontend.models import IPRange
+from django.contrib.auth.models import User
 import logging
 import utils.scstconf
 from django.db.models import Sum
@@ -29,6 +32,8 @@ import subprocess
 from dulwich.repo import Repo
 import sys
 import traceback
+import socket
+import ipaddress
 reload (sys)
 sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
@@ -271,6 +276,43 @@ class PollServer():
             else:
                 return -1
         return -1
+
+    def GetInterfaces(self):
+        cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
+        ipadds=self.Exec(cmdStr)
+        sh = StorageHost.objects.get(dnsname=self.serverDNS)
+        superuser=User.objects.filter(is_superuser=True).order_by('username')[0]
+        for addr in ipadds:
+            try:
+                addr = addr.rstrip()
+                socket.inet_aton(addr)
+                interfaces = Interface.objects.filter(ip=addr)
+                if len(interfaces) != 1: #If 0, then new interface
+                    Interface.objects.filter(ip=addr).delete()
+                    logger.info("Adding newly discovered interface "+addr + " to storage host "+self.serverDNS)
+                    try:
+                        newInterface = Interface(storagehost=sh,ip=addr,owner=superuser)
+                        newInterface.save()
+                        for eachIPRange in IPRange.objects.all():
+                            if ipaddress.ip_address(unicode(addr)) in ipaddress.ip_network(unicode(eachIPRange.iprange)):
+                                eachIPRange.hosts.add(sh)
+                                eachIPRange.save()
+                                newInterface.iprange.add(eachIPRange)
+                                newInterface.owner=eachIPRange.owner
+                                newInterface.save()
+                    except:
+                        logger.warn("Error saving newly discovered Interface "+addr+ " of host "+self.serverDNS)
+                        var = traceback.format_exc()
+                        logger.warn(var)
+                else:
+                    if interfaces[0].storagehost.dnsname != self.serverDNS:
+                        Interface.objects.filter(ip=addr).delete()
+                        logger.warn("IP address "+addr+" was reassigned to another host")
+
+            except socket.error:
+                logger.warn("Invalid IP address retuned in GetInterfaces call: "+eachLine)
+
+
 
 
 if __name__=="__main__":

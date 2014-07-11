@@ -53,6 +53,7 @@ import hashlib
 import ConfigParser
 import os
 import time
+import traceback
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -153,8 +154,11 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
             if (flag==0 or flag==1):
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','targethost__storageip1','targethost__storageip2','aagroup__name','clumpgroup__name','sessionup')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
+                rtnDict['targethost__storageip1']=rtnDict.pop('storageip1') #in order to not change the user interface
+                rtnDict['targethost__storageip2']=rtnDict.pop('storageip2')
+
                 rtnDict['already_existed']=flag
                 rtnDict['error']=0
                 return Response(rtnDict, status=status.HTTP_201_CREATED)
@@ -176,7 +180,7 @@ class Provision(APIView):
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
 
-    def VGFilter(self,storageSize, aagroup, clumpgroup="noclump"):
+    def VGFilter(self,storageSize, aagroup,owner,clumpgroup="noclump",subnet="public"):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -189,8 +193,17 @@ class Provision(APIView):
         vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
-            chosenVG = None
+            chosenVG = -1
             for eachvg in vgchoices:
+                if subnet != "public":
+                    try:
+                        eachvg.vghost.iprange_set.get(iprange=subnet,owner=owner)
+                    except:
+                        var = traceback.format_exc()
+                        logger.debug(var)
+                        logger.info('Ignoring VG because subnet not in host or owner not authorized for this VG')
+                        continue
+
                 lvalloc = self.LVAllocSumVG(eachvg)
                 eachvg.CurrentAllocGB=lvalloc
                 eachvg.save()
@@ -230,12 +243,15 @@ class Provision(APIView):
         else:
             logger.warn('No vghost/VG enabled')
             return -1
+        logger.error('VG filter failed to find a suitable VG')
+        return -1
 
     def MakeTarget(self,requestDic,owner):
         clientiqn = requestDic['clientiqn']
         serviceName = requestDic['serviceName']
         storageSize = requestDic['sizeinGB']
         aagroup =''
+        subnet=''
         if 'clumpgroup' not in requestDic:
             clumpgroup = "noclump"
         else:
@@ -245,7 +261,13 @@ class Provision(APIView):
             aagroup = "random"
         else:
             aagroup = requestDic['aagroup']
-        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup))
+
+        if 'subnet' in requestDic:
+            subnet = requestDic['subnet']
+        else:
+            subnet = "public"
+
+        logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet))
         try:
             while 1:
                 globallock = Lock.objects.get(lockname='allvglock')
@@ -258,8 +280,7 @@ class Provision(APIView):
         except:
             globallock = Lock(lockname='allvglock',locked=True)
             globallock.save()
-        
-        chosenVG = self.VGFilter(storageSize,aagroup,clumpgroup)
+        chosenVG = self.VGFilter(storageSize,aagroup,owner,clumpgroup,subnet)
         globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
             chosenVG.is_locked = True
@@ -275,14 +296,14 @@ class Provision(APIView):
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
             logger.info("Launching create target job into queue %s" %(queuename,) )
-            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,owner)
+            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
             while 1:
                 if job.result:
                     chosenVG.is_locked = False
                     chosenVG.save(update_fields=['is_locked'])
                     return job.result
                 else:
-                    time.sleep(1)
+                    time.sleep(0.25)
         else:
             globallock.locked=False
             globallock.save()
