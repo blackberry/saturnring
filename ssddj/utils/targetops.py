@@ -64,12 +64,12 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
             else:
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:
-        try:
-            if subnet != 'public':
-                IPRange.objects.get(iprange=subnet)
-        except:
-            logger.debug('Subnet %s not found on host %s while trying to create target %s, creation aborted, contact admin' %(subnet, targetHost, iqnTarget ))
-            return (-1,"Invalid subnet specified")
+    #    try:
+    #        if subnet != 'public':
+    #            IPRange.objects.get(iprange=subnet)
+    #    except:
+    #        logger.debug('Subnet %s not found on host %s while trying to create target %s, creation aborted, contact admin' %(subnet, targetHost, iqnTarget ))
+    #        return (-1,"Invalid subnet specified")
 
         (quotaFlag, quotaReason) = CheckUserQuotas(float(storageSize),owner)
         if quotaFlag == -1:
@@ -83,9 +83,13 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
         storeip1 = targethost.storageip1
         storeip2 = targethost.storageip2
         if subnet != 'public':
-            storeip1 = Interface.objects.get(storagehost=targethost,iprange__iprange=unicode(subnet)).ip
-            storeip2 = storeip1
-    
+            try:
+                storeip1 = Interface.objects.get(owner=owner,storagehost=targethost,iprange__iprange=unicode(subnet)).ip
+                storeip2 = storeip1
+            except:
+                logger.error('Chosen host %s is missing IP addresses in requested subnet' % ( targethost, ) )
+                return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
+
         if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2)):
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()

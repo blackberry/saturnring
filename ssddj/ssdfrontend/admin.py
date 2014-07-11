@@ -24,6 +24,7 @@ from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import TargetHistory
 from ssdfrontend.models import Interface
 from ssdfrontend.models import IPRange
+from ssdfrontend.models import Lock
 #from ssdfrontend.models import HostGroup
 from utils.targetops import DeleteTargetObject
 from globalstatemanager.gsm import PollServer
@@ -199,12 +200,17 @@ class LVAdmin(StatsAdmin):
     def has_add_permission(self, request):
         return False
 
+class LockAdmin(StatsAdmin):
+    readonly_fields = ('lockname')
+    list_display = ('localname','locked')
+
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
 admin.site.register(AAGroup)
 admin.site.register(ClumpGroup)
 admin.site.register(IPRange)
+admin.site.register(Lock)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):

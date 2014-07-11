@@ -53,6 +53,7 @@ import hashlib
 import ConfigParser
 import os
 import time
+import traceback
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -155,7 +156,7 @@ class Provision(APIView):
                 tar = Target.objects.filter(iqntar=statusStr)
                 data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup')
                 rtnDict = ValuesQuerySetToDict(data)[0]
-                rtnDict['targethost__storageip1']=rtnDict.pop('storageip1')
+                rtnDict['targethost__storageip1']=rtnDict.pop('storageip1') #in order to not change the user interface
                 rtnDict['targethost__storageip2']=rtnDict.pop('storageip2')
 
                 rtnDict['already_existed']=flag
@@ -192,7 +193,7 @@ class Provision(APIView):
         vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
-            chosenVG = None
+            chosenVG = -1
             for eachvg in vgchoices:
                 if subnet != "public":
                     try:
@@ -242,6 +243,8 @@ class Provision(APIView):
         else:
             logger.warn('No vghost/VG enabled')
             return -1
+        logger.error('VG filter failed to find a suitable VG')
+        return -1
 
     def MakeTarget(self,requestDic,owner):
         clientiqn = requestDic['clientiqn']

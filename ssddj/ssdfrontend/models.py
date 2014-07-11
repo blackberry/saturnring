@@ -40,6 +40,8 @@ class Lock(models.Model):
     lockname=models.CharField(max_length=100,primary_key=True)
     locked = models.BooleanField(default=False)
 
+    def __unicode__(self):
+        return self.lockname
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
