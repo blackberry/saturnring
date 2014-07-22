@@ -51,8 +51,8 @@ class VG (models.Model):
     thinusedpercent = models.FloatField(default=-1)
     thintotalGB = models.FloatField(default=-1)
     maxthinavlGB = models.FloatField(default=-1)
-    opf = models.FloatField(default=0.7)
-    thinusedmaxpercent = models.FloatField(default=70)
+    opf = models.FloatField(default=0.99)
+    thinusedmaxpercent = models.FloatField(default=99)
     enabled = models.BooleanField(default=True)
     CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -125,8 +125,8 @@ from django.contrib.auth.models import User
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
     user = models.OneToOneField(User,unique=True)
-    max_target_sizeGB = models.FloatField(default=100.0)
-    max_alloc_sizeGB = models.FloatField(default=400.0)
+    max_target_sizeGB = models.FloatField(default=5)
+    max_alloc_sizeGB = models.FloatField(default=10)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
