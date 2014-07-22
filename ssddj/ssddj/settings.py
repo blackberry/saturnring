@@ -53,6 +53,9 @@ AUTHENTICATION_BACKENDS = (
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
     try:
+        #logger = logging.getLogger('django_auth_ldap')
+        #logger.addHandler(logging.StreamHandler())
+        #logger.setLevel(logging.DEBUG)
         AUTH_LDAP_USER_FLAGS_BY_GROUP = {
             "is_staff": config.get('activedirectory','staff_group').strip('"'),
         }
@@ -61,7 +64,7 @@ if (config.get('activedirectory','enabled')=='1'):
         AUTH_LDAP_BIND_PASSWORD = config.get('activedirectory','bind_user_pw').strip('"')
         AUTH_LDAP_SERVER_URI = config.get('activedirectory','ldap_uri').strip('"')
         AUTH_LDAP_CONNECTION_OPTIONS = {
-                ldap.OPT_DEBUG_LEVEL: 255,
+                ldap.OPT_DEBUG_LEVEL: 4095,
                 ldap.OPT_PROTOCOL_VERSION: 3,
                 ldap.OPT_REFERRALS: 0,
         }

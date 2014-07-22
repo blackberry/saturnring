@@ -201,8 +201,8 @@ class LVAdmin(StatsAdmin):
         return False
 
 class LockAdmin(StatsAdmin):
-    readonly_fields = ('lockname')
-    list_display = ('localname','locked')
+    readonly_fields = ('lockname',)
+    list_display = ['lockname','locked']
 
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
@@ -210,7 +210,7 @@ admin.site.register(LV,LVAdmin)
 admin.site.register(AAGroup)
 admin.site.register(ClumpGroup)
 admin.site.register(IPRange)
-admin.site.register(Lock)
+admin.site.register(Lock,LockAdmin)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
