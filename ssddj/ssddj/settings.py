@@ -46,16 +46,16 @@ config.read(os.path.join(BASE_DIR,'saturn.ini'))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config.get('saturnring','django_secret_key')
 
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-    'django_auth_ldap.backend.LDAPBackend',
-)
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
     try:
-        #logger = logging.getLogger('django_auth_ldap')
-        #logger.addHandler(logging.StreamHandler())
-        #logger.setLevel(logging.DEBUG)
+        logger = logging.getLogger('django_auth_ldap')
+        logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+        AUTHENTICATION_BACKENDS = (
+            'django.contrib.auth.backends.ModelBackend',
+            'django_auth_ldap.backend.LDAPBackend',
+        )
         AUTH_LDAP_USER_FLAGS_BY_GROUP = {
             "is_staff": config.get('activedirectory','staff_group').strip('"'),
         }
@@ -71,15 +71,13 @@ if (config.get('activedirectory','enabled')=='1'):
         AUTH_LDAP_USER_SEARCH = LDAPSearch(config.get('activedirectory','user_dn').strip('"'), ldap.SCOPE_SUBTREE, '(SAMAccountName=%(user)s)')
         # Populate the Django user from the LDAP directory.
         AUTH_LDAP_USER_ATTR_MAP = {
-            "first_name": "givenName",
-            "last_name": "sn",
+            "first_name": "displayName",
+            "last_name": "cn",
             "email": "mail"
         }
         AUTH_LDAP_GROUP_SEARCH = LDAPSearch(config.get('activedirectory','staff_group').strip('"'), ldap.SCOPE_SUBTREE)
         AUTH_LDAP_ALWAYS_UPDATE_USER = True
-        # Use LDAP group membership to calculate group permissions.
         AUTH_LDAP_FIND_GROUP_PERMS = True
-        # Cache group memberships for an hour to minimize LDAP traffic
         AUTH_LDAP_CACHE_GROUPS = True
         AUTH_LDAP_GROUP_CACHE_TIMEOUT = 3600
 
@@ -87,6 +85,10 @@ if (config.get('activedirectory','enabled')=='1'):
     except:
         var = traceback.format_exc()
         print var
+else:
+    AUTHENTICATION_BACKENDS = (
+        'django.contrib.auth.backends.ModelBackend',
+    )
 
 TEMPLATE_INFO = True
 ALLOWED_HOSTS = ['*']
