@@ -55,13 +55,24 @@ import os
 import time
 import traceback
 from utils.reportmaker import StatInfo
+import mimetypes
+from django.core.servers.basehttp import FileWrapper
+from django.http import HttpResponse
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
 class ReturnStats(APIView):
     def get(self, request):
         StatInfo()
-        return Response("Ok, created stat file")
+        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
+        config = ConfigParser.RawConfigParser()
+        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        thefile = os.path.join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
+        filename = os.path.basename(thefile)
+        response = HttpResponse(FileWrapper(open(thefile)),content_type=mimetypes.guess_type(thefile)[0])
+        response['Content-Length'] = os.path.getsize(thefile)
+        response['Content-Disposition'] = "attachment; filename=%s" % filename
+        return response
 
 class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
