@@ -15,7 +15,7 @@
 
 
 apt-get update
-apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl
+apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl libsasl2-dev libldap2-dev
 mkdir -p /nfsmount/saturnringlog
 chown vagrant:vagrant /nfsmount/saturnringlog
 

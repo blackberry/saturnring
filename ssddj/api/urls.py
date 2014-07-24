@@ -21,6 +21,7 @@ urlpatterns = patterns('',
             url(r'^delete/$', views.Delete.as_view()),
             url(r'^vgscan/$', views.VGScanner.as_view()),
             url(r'^stateupdate/$',views.UpdateStateData.as_view()),
+            url(r'^stats/$',views.ReturnStats.as_view()),
                 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)
