@@ -54,8 +54,14 @@ import ConfigParser
 import os
 import time
 import traceback
+from utils.reportmaker import StatInfo
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
+
+class ReturnStats(APIView):
+    def get(self, request):
+        StatInfo()
+        return Response("Ok, created stat file")
 
 class UpdateStateData(APIView):
 #    authentication_classes = (SessionAuthentication, BasicAuthentication)
