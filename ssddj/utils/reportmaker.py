@@ -71,7 +71,7 @@ def StatMaker():
                     tot_sizeinGB = tot_sizeinGB + eachTarget.sizeinGB
                     tot_rkb = tot_rkb + eachTarget.rkb
                     tot_wkb = tot_wkb + eachTarget.wkb
-                    quotaGB = quotaGB+aUser.profile.max_alloc_sizeGB
+                quotaGB = quotaGB+aUser.profile.max_alloc_sizeGB
                 wsusers.write(userCtr,0,aUser.username)
                 wsusers.write(userCtr,1,tot_sizeinGB)
                 wsusers.write(userCtr,2,aUser.profile.max_alloc_sizeGB)
