@@ -70,23 +70,34 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
     rtnStatus= {}
     rtnFlag=0
     numDone=0
-    while numDone < len(jobs):
+    timeCtr=0
+    while (numDone < len(jobs)) and (timeCtr < 120):
         ii=0
-        time.sleep(1)
+        timeCtr=timeCtr+1
+        time.sleep(0.5)
         for ii in range(0,len(jobs)):
             if jobs[ii] == 0:
                 continue
             (job,target) = jobs[ii]
             if (job.result == 0) or (job.result == 1):
                 if job.result==1:
-                    logger.error('Failed deletion of '+target)
-                rtnStatus[target]="Error "+str(job.result)
+                    try:
+                        logger.error('Failed deletion of '+target)
+                        raise forms.ValidationError(
+                            ('Failed deletion target: %(target)'),
+                            code='invalid', 
+                            params={'values': 'Check if session is up'},
+                        )
+                    except:
+                        rtnStatus[target]="Error "+str(job.result)
                 rtnFlag=rtnFlag + job.result
                 jobs[ii]=0
                 numDone=numDone+1
             else:
                 logger.info('...Working on deleting target '+target)
                 break
+    if timeCtr == 120:
+        logger.error("Gave up trying to delete after 1 minute")
     return (rtnFlag,str(rtnStatus))
 
 class TargetHistoryAdmin(StatsAdmin):
@@ -117,7 +128,7 @@ class TargetHistoryAdmin(StatsAdmin):
 admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
+    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
     list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
     search_fields = ['iqntar','iqnini']
