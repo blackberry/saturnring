@@ -14,14 +14,17 @@
 
 from django.contrib import admin
 from django import forms
-from ssdfrontend.models import Target 
+from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
-from ssdfrontend.models import LV 
-from ssdfrontend.models import VG 
+from ssdfrontend.models import LV
+from ssdfrontend.models import VG
 from ssdfrontend.models import Provisioner
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import TargetHistory
+from ssdfrontend.models import Interface
+from ssdfrontend.models import IPRange
+from ssdfrontend.models import Lock
 #from ssdfrontend.models import HostGroup
 from utils.targetops import DeleteTargetObject
 from globalstatemanager.gsm import PollServer
@@ -40,13 +43,17 @@ logger = logging.getLogger(__name__)
 admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
-    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB','is_locked')
+    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
     list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
 admin.site.register(VG,VGAdmin)
 
+
+class InterfaceAdmin(StatsAdmin):	
+    list_display = ['ip','storagehost']
+admin.site.register(Interface,InterfaceAdmin)
 
 def delete_iscsi_target(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -63,23 +70,34 @@ def delete_iscsi_target(StatsAdmin,request,queryset):
     rtnStatus= {}
     rtnFlag=0
     numDone=0
-    while numDone < len(jobs):
+    timeCtr=0
+    while (numDone < len(jobs)) and (timeCtr < 120):
         ii=0
-        time.sleep(1)
+        timeCtr=timeCtr+1
+        time.sleep(0.5)
         for ii in range(0,len(jobs)):
             if jobs[ii] == 0:
                 continue
             (job,target) = jobs[ii]
             if (job.result == 0) or (job.result == 1):
                 if job.result==1:
-                    logger.error('Failed deletion of '+target)
-                rtnStatus[target]="Error "+str(job.result)
+                    try:
+                        logger.error('Failed deletion of '+target)
+                        raise forms.ValidationError(
+                            ('Failed deletion target: %(target)'),
+                            code='invalid', 
+                            params={'values': 'Check if session is up'},
+                        )
+                    except:
+                        rtnStatus[target]="Error "+str(job.result)
                 rtnFlag=rtnFlag + job.result
                 jobs[ii]=0
                 numDone=numDone+1
             else:
                 logger.info('...Working on deleting target '+target)
                 break
+    if timeCtr == 120:
+        logger.error("Gave up trying to delete after 1 minute")
     return (rtnFlag,str(rtnStatus))
 
 class TargetHistoryAdmin(StatsAdmin):
@@ -110,10 +128,10 @@ class TargetHistoryAdmin(StatsAdmin):
 admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm')
+    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
     list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
-    search_fields = ['iqntar']
+    search_fields = ['iqntar','iqnini']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
         return False
@@ -143,10 +161,10 @@ class TargetAdmin(StatsAdmin):
             return "No ClumpGroup"
         
     def iscsi_storeip1(self, obj):
-        return obj.targethost.storageip1
+        return obj.storageip1
 
     def iscsi_storeip2(self, obj):
-        return obj.targethost.storageip2
+        return obj.storageip2
 
     def queryset(self, request):
         if request.user.is_superuser:
@@ -193,11 +211,17 @@ class LVAdmin(StatsAdmin):
     def has_add_permission(self, request):
         return False
 
+class LockAdmin(StatsAdmin):
+    readonly_fields = ('lockname',)
+    list_display = ['lockname','locked']
+
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
 admin.site.register(AAGroup)
 admin.site.register(ClumpGroup)
+admin.site.register(IPRange)
+admin.site.register(Lock,LockAdmin)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
@@ -206,24 +230,25 @@ class StorageHostForm(forms.ModelForm):
 	
     def clean_dnsname(self):
 #        featuredCount = Country.objects.filter(featured=True).count()
- 
  #       if featuredCount >= 5 and self.cleaned_data['featured'] is True:
  #           raise forms.ValidationError("5 Countries can be featured at most!")
  #       return self.cleaned_data['featured']a
-	saturnserver = self.cleaned_data['dnsname']
+    	saturnserver = self.cleaned_data['dnsname']
         try:
             p = PollServer(saturnserver)
             p.InstallScripts()
         except:
-            logger.warn("Error with Saturn server specified on the form, disabling server "+saturnserver)
-            obj = StorageHost.objects.get(dnsname=saturnserver)
-            obj.enabled=False
-            obj.save()
-            raise forms.ValidationError("Error with Saturn Server, therefore disabled "+saturnserver)
-            
+            logger.error("Error with Saturn server specified on the form, will try to disable server "+saturnserver)
+            try:
+                obj = StorageHost.objects.get(dnsname=saturnserver)
+                obj.enabled=False
+                obj.save()
+                raise forms.ValidationError("Error with Saturn Server, therefore disabled "+saturnserver)
+            except:
+                logger.error("Could not install scripts on the new server, new server not in DB, check its DNS entry")
+                raise forms.ValidationError("Error with Saturn Server, check its DNS entry perhaps? "+saturnserver)
 	return self.cleaned_data['dnsname']
-             
- 
+
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
     list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']

@@ -40,6 +40,8 @@ class Lock(models.Model):
     lockname=models.CharField(max_length=100,primary_key=True)
     locked = models.BooleanField(default=False)
 
+    def __unicode__(self):
+        return self.lockname
 
 class VG (models.Model):
     vghost = models.ForeignKey('StorageHost')
@@ -51,8 +53,8 @@ class VG (models.Model):
     thinusedpercent = models.FloatField(default=-1)
     thintotalGB = models.FloatField(default=-1)
     maxthinavlGB = models.FloatField(default=-1)
-    opf = models.FloatField(default=0.7)
-    thinusedmaxpercent = models.FloatField(default=70)
+    opf = models.FloatField(default=0.99)
+    thinusedmaxpercent = models.FloatField(default=99)
     enabled = models.BooleanField(default=True)
     CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
@@ -89,6 +91,9 @@ class Target(models.Model):
     wkbpm = models.BigIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    storageip1 = models.GenericIPAddressField(default='127.0.0.1')
+    storageip2 = models.GenericIPAddressField(default='127.0.0.1')
+
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
@@ -120,13 +125,30 @@ class ClumpGroup(models.Model):
         return self.name
 
 
+class IPRange(models.Model):
+    owner = models.ForeignKey(User)
+    iprange = models.CharField(max_length=20)
+    hosts = models.ManyToManyField(StorageHost)
+
+    def __unicode__(self):
+        return self.iprange
+
+class Interface(models.Model):
+    storagehost = models.ForeignKey(StorageHost)
+    ip = models.CharField(max_length=15)
+    iprange = models.ManyToManyField(IPRange)
+    owner=models.ForeignKey(User,null=True)
+
+    def __unicode__(self):
+        return self.ip
+
 from django.contrib.auth.models import User
 
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
     user = models.OneToOneField(User,unique=True)
-    max_target_sizeGB = models.FloatField(default=100.0)
-    max_alloc_sizeGB = models.FloatField(default=400.0)
+    max_target_sizeGB = models.FloatField(default=5)
+    max_alloc_sizeGB = models.FloatField(default=10)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
