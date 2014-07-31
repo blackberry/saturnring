@@ -210,6 +210,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     )
 }
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -225,10 +226,11 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
-#            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
-            'formatter': 'verbose'
+            'formatter': 'verbose',
+            'maxBytes': 4*1024*1024,
+            'backupCount': 10,
         },
     },
     'loggers': {
@@ -240,14 +242,22 @@ LOGGING = {
         'ssdfrontend': {
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': True,
         },
         'globalstatemanager': {
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': True,
         },
         'api': {
             'handlers': ['file'],
             'level': 'INFO',
+            'propagate': True,
+        },
+        'utils': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
         },
     }
 }
