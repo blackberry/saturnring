@@ -2,7 +2,8 @@
 
 Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring.
 
-You may also want to read the (very beta) user guide in the /doc directory: https://github.com/sachinkagarwal/saturnring/raw/master/doc/userguide.pdf.
+The best documentation is the userguide: https://github.com/sachinkagarwal/saturnring/raw/master/doc/userguide.pdf
+...and offcourse, the code itself.
 
 ## Motivation
 
