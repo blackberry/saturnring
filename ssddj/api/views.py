@@ -331,6 +331,18 @@ class Provision(APIView):
         else:
             globallock.locked=False
             globallock.save()
+            try:
+                clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
+                targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
+                if len(targets) != 0:
+                    for t in targets:
+                        iqnComponents = t.iqntar.split(':')
+                        if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
+                            logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
+                            return (1,t.iqntar)
+            except:
+                logger.warn("Something went wrong while checking for pre-existing target")
+
             logger.warn('VG filtering did not return a choice')
             return (-1, "Are Saturnservers online and adequate, contact admin")
 
