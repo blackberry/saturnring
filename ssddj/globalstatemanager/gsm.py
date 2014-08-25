@@ -173,6 +173,7 @@ class PollServer():
             existingvg.vgsize = vgs[self.vg]['VG Size']
             existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
         else:
+            logger.info("Self DNS is " + self.serverDNS)
             myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
                     vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],
                     vgtotalpe=vgs[self.vg]['Total PE'],
@@ -285,6 +286,8 @@ class PollServer():
         for addr in ipadds:
             try:
                 addr = addr.rstrip()
+                if addr=='127.0.0.1':
+                    continue;
                 socket.inet_aton(addr)
                 interfaces = Interface.objects.filter(ip=addr)
                 if len(interfaces) != 1: #If 0, then new interface
