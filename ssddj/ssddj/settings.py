@@ -226,11 +226,12 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
-            'formatter': 'verbose',
-            'maxBytes': 4*1024*1024,
-            'backupCount': 10,
+            'class': 'logging.FileHandler',
+            #'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn-master.log'),
+            'formatter': 'verbose'
+            #'maxBytes': 10247680,
+            #'backupCount': 10,
         },
     },
     'loggers': {
@@ -242,22 +243,18 @@ LOGGING = {
         'ssdfrontend': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
         },
         'globalstatemanager': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
         },
         'api': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
         },
         'utils': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
         },
     }
 }

@@ -37,11 +37,11 @@ def StatMaker():
         allocGB = 0
         for avg in vgs:
             vgCtr=vgCtr+1
-            totalGB=totalGB+avg.thintotalGB
-            allocGB=allocGB+avg.CurrentAllocGB
+            totalGB=totalGB+max(0,avg.thintotalGB)
+            allocGB=allocGB+max(0,avg.CurrentAllocGB)
             wsstorage.write(vgCtr,0,avg.vghost.dnsname)
-            wsstorage.write(vgCtr,1,avg.thintotalGB)
-            wsstorage.write(vgCtr,2,avg.CurrentAllocGB)
+            wsstorage.write(vgCtr,1,max(0,avg.thintotalGB))
+            wsstorage.write(vgCtr,2,max(0,avg.CurrentAllocGB))
         wssum.write(4,0,'Total storage (GB)')
         wssum.write(4,1,totalGB)
         wssum.write(5,0,'Used - allocated - storage (GB)')
