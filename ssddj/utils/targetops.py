@@ -108,7 +108,7 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
                             lvthinmapped=lvDict[lvName]['Mapped size'],
                             lvuuid=lvDict[lvName]['LV UUID'])
                     newLV.save()
-                    chosenVG.CurrentAllocGB=chosenVG.CurrentAllocGB+float(storageSize)
+                    chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
                     chosenVG.save()
 
             tar = Target.objects.get(iqntar=iqnTarget)
