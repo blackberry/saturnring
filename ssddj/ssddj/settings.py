@@ -133,10 +133,21 @@ ROOT_URLCONF = 'ssddj.urls'
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.sqlite3',
+#        'NAME': os.path.join(BASE_DIR, 'saturndb.sqlite3'),
+#    }
+#}
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'saturndb.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'postgres',
+        'USER': 'docker',
+        'PASSWORD':'docker',
+        'HOST': 'db_1',
+        'PORT': 5432,
     }
 }
 
@@ -150,7 +161,7 @@ DATABASES = {
 
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
+        'HOST': 'redis_1',
         'PORT': 6379,
         'DB': 0,
     },
@@ -159,7 +170,7 @@ RQ_QUEUES = {
 numqueues = config.get('saturnring','numqueues')
 for ii in range(0,int(numqueues)):
     RQ_QUEUES['queue'+str(ii)]={
-            'HOST': 'localhost',
+            'HOST': 'redis_1',
             'PORT' : 6379,
             'DB': 0,
             }
