@@ -248,7 +248,7 @@ class PollServer():
                     tar.wkb=wkb
                 tar.save()
             else:
-                logger.warn("Found target %s on %s that does not exist in the DB" % (iqntar,self.serverDNS) )
+                logger.warn("Found target %s on %s that does not exist in the DB; \nparsetarget.py returned %s" % (iqntar,self.serverDNS, exStr) )
 
     # Delete target
     def DeleteTarget(self,iqntar):

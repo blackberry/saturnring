@@ -99,6 +99,7 @@ TEMPLATE_DIRS = (
 # Application definition
 
 INSTALLED_APPS = (
+    'django_jenkins',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -114,7 +115,13 @@ INSTALLED_APPS = (
     'admin_stats',
     'django_rq',
 )
-
+#PROJECT_APPS = (
+#    'ssdfrontend',
+#    'api',
+#    'utils',
+#    'django.contrib.admin',
+#    'globalstatemanager',
+#)
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
