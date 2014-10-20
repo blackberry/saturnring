@@ -12,6 +12,9 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+'''
+Global State Manager
+'''
 import pysftp #remember to use at least 0.2.2 - the pip install doesnt give you that version.
 import os
 from os import listdir
@@ -37,14 +40,17 @@ import ipaddress
 reload (sys)
 sys.setdefaultencoding("utf-8")
 logger = logging.getLogger(__name__)
+
 class PollServer():
+    """
+    Interaction with a Saturn server
+    """
     def __init__(self,serverDNS):
         self.serverDNS = str(serverDNS)
         # Read configuration
         config = ConfigParser.RawConfigParser()
 #        config.read('/home/vagrant/saturnring/ssddj/saturn.ini')
         BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-        print str(BASE_DIR)
         config.read(os.path.join(BASE_DIR,'saturn.ini'))
         self.userName=config.get('saturnnode','user')
         self.keyFile=os.path.join(BASE_DIR,config.get('saturnring','privatekeyfile'))
