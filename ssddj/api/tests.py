@@ -29,6 +29,7 @@ class APITestCase (TestCase):
         print "Here is where we can set some state"
         
     def test_UpdateStateData(self):
+        print "TESTING UpdateStateData"
         outStr = check_output(["curl","-X","GET","http://127.0.0.1:8000/api/stateupdate/"])
         self.assertIn("Ok", outStr)
         print outStr
@@ -40,6 +41,7 @@ class APITestCase (TestCase):
             Note: needs a account to be setup in the portal
             testuser/password
         """
+        print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
@@ -55,7 +57,7 @@ class APITestCase (TestCase):
             the test has already been run
         """
         #First create a iSCSI target
-
+        print "TESTING DeletionTarget"
         outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testservicedelete1&aagroup=testgroup',
@@ -77,6 +79,15 @@ class APITestCase (TestCase):
         """
             This is the deletion call for all targets belonging to a user  on a specified StorageHost
         """
+    def test_VGScan(self):
+        print "TESTING VGScan"
+        outStr = check_output(["curl","-X","GET",
+        "http://127.0.0.1:8000/api/vgscan/",
+        "-d","saturnserver=192.168.61.21"])
+        self.assertIn('"vguuid"',outStr)
+        print outStr
+
+
     def tearDown(self):
         print "Attempting to clean up"
         print "Deleting"
