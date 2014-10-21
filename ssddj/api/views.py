@@ -358,8 +358,8 @@ class VGScanner(APIView):
         saturnserver=request.DATA[u'saturnserver']
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):
             p = PollServer(saturnserver)
-            savedvguuid = p.GetVG()
-            readVG=VG.objects.filter(vguuid=savedvguuid).values()
+            savedvguuidList = p.GetVG()
+            readVG=VG.objects.filter(vguuid__in=savedvguuidList).values()
             return Response(readVG)
         else:
             logger.warn("Unknown saturn server "+str(request.DATA))

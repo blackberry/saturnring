@@ -57,6 +57,7 @@ class PollServer():
         self.rembashpath=config.get('saturnnode','bashpath')
         self.rempypath=config.get('saturnnode','pythonpath')
         self.vg=config.get('saturnnode','volgroup')
+        self.vgs=config.get('saturnnode','volgroups').split(',')
         self.iscsiconfdir=os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
         self.remoteinstallLoc=config.get('saturnnode','install_location')
         self.localbashscripts=os.path.join(BASE_DIR,config.get('saturnring','bashscripts'))
@@ -147,46 +148,50 @@ class PollServer():
 
     # Wrapper for parseLVM (for VGs)+populating the DB
     def GetVG(self): #Unit test this again
-        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g',self.vg]))
         delimitStr = '--- Volume group ---'
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
+        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g']))
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        try:
-            cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh']))
-            logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh'])+': LVS returned '+str(cmdStr))
-            thinusedpercent = float(cmdStr[0].rstrip())
-            thintotalGB = float(cmdStr[1].rstrip())
-            maxthinavl = thintotalGB*(100-thinusedpercent)/100
-        except:
-            logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+        rtnvguuidList = []
+        for vgname in vgs:
             try:
-                vg = VG.objects.get(vguuid=vgs[self.vg]['VG UUID'])
-                vg.in_error = True
-                vg.save(update_fields=['in_error'])
+                cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname]))
+                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname])+': LVS returned '+str(cmdStr))
+                thinusedpercent = float(cmdStr[0].rstrip())
+                thintotalGB = float(cmdStr[1].rstrip())
+                maxthinavl = thintotalGB*(100-thinusedpercent)/100
             except:
-                logger.error("VG not found in DB: %s" % ( vgs[self.vg]['VG UUID'],))
-            return -1
+                logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+                try:
+                    vg = VG.objects.get(vguuid=vgs[vgname]['VG UUID'])
+                    vg.in_error = True
+                    vg.save(update_fields=['in_error'])
+                except:
+                    logger.error("VG not found in DB: %s" % ( vgs[vgname]['VG UUID'],))
+                return -1
 
-        #logger.info(vgs)
-        existingvgs = VG.objects.filter(vguuid=vgs[self.vg]['VG UUID'])
-        if len(existingvgs)==1:
-            existingvg = existingvgs[0]
-            existingvg.in_error=False
-            existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
-            existingvg.thinusedpercent=thinusedpercent
-            existingvg.thintotalGB=thintotalGB
-            existingvg.maxthinavlGB=maxthinavl
-            existingvg.vgsize = vgs[self.vg]['VG Size']
-            existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
-        else:
-            myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[self.vg]['VG Size'],
-                    vguuid=vgs[self.vg]['VG UUID'],vgpesize=vgs[self.vg]['PE Size'],
-                    vgtotalpe=vgs[self.vg]['Total PE'],
-                    vgfreepe=vgs[self.vg]['Free  PE / Size'],
-                    thinusedpercent=thinusedpercent,
-                    thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
-            myvg.save()#force_update=True)
-        return vgs[self.vg]['VG UUID']
+            #logger.info(vgs)
+            existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
+            if len(existingvgs)==1:
+                existingvg = existingvgs[0]
+                existingvg.in_error=False
+                existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
+                existingvg.thinusedpercent=thinusedpercent
+                existingvg.thintotalGB=thintotalGB
+                existingvg.maxthinavlGB=maxthinavl
+                existingvg.vgsize = vgs[vgname]['VG Size']
+                existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
+            else:
+                myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[vgname]['VG Size'],
+                        vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
+                        vgtotalpe=vgs[vgname]['Total PE'],
+                        vgfreepe=vgs[vgname]['Free  PE / Size'],
+                        thinusedpercent=thinusedpercent,
+                        thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
+                myvg.save()#force_update=True)
+            rtnvguuidList.append(vgs[vgname]['VG UUID'])
+        logger.info("GETVG returning" + str(rtnvguuidList))
+        return rtnvguuidList
 
     #Check in changes to config files into git repository
     def GitSave(self,commentStr):
@@ -228,7 +233,7 @@ class PollServer():
         cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
         exStr = self.Exec(cmdStr)
         for eachLine in exStr:
-            iqntar=eachLine.split()[0]
+            iqntar = eachLine.split()[0]
             tar = Target.objects.filter(iqntar=iqntar)
             #logger.info("Matching targets for %s are: %s" % (iqntar,tar))
             if len(tar)==1:

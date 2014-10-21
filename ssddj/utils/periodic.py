@@ -30,16 +30,18 @@ def UpdateState():
     allhosts=StorageHost.objects.filter(enabled=True)
     for eachhost in allhosts:
         p = PollServer(eachhost)
-        vguuid = p.GetVG()
-        if vguuid <> -1:
-            p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+        vguuidList = p.GetVG()
+        if vguuidList <> -1:
+            for vguuid in vguuidList:
+                p.UpdateLVs(VG.objects.get(vguuid=vguuid))
         p.GetTargetsState()
         p.GetInterfaces()
 
 def UpdateOneState(host):
     p = PollServer(host)
-    vguuid = p.GetVG()
-    if vguuid <> -1:
-        p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+    vguuidList = p.GetVG()
+    if vguuidList <> -1:
+        for vguuid in vguuidList:
+            p.UpdateLVs(VG.objects.get(vguuid=vguuid))
     p.GetTargetsState()
     p.GetInterfaces()
