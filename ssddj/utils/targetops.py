@@ -48,8 +48,8 @@ def CheckUserQuotas(storageSize,owner):
         return (-1,rtnStr)
     return (1, "Quota checks ok, proceeding")
 
-def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
-    chosenVG=VG.objects.get(vghost=targetHost)
+def ExecMakeTarget(targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
+    chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
     try:

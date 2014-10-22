@@ -152,7 +152,7 @@ class PollServer():
         paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
         vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g']))
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        rtnvguuidList = []
+        rtnvguuidList = ""
         for vgname in vgs:
             try:
                 cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname]))
@@ -189,9 +189,9 @@ class PollServer():
                         thinusedpercent=thinusedpercent,
                         thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
                 myvg.save()#force_update=True)
-            rtnvguuidList.append(vgs[vgname]['VG UUID'])
-        logger.info("GETVG returning" + str(rtnvguuidList))
-        return rtnvguuidList
+            rtnvguuidList = rtnvguuidList+ ','+ vgs[vgname]['VG UUID']
+#        logger.info("GETVG returning" + rtnvguuidList[1:])
+        return rtnvguuidList[1:]
 
     #Check in changes to config files into git repository
     def GitSave(self,commentStr):

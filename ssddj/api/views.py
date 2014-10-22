@@ -59,6 +59,7 @@ import mimetypes
 from django.core.servers.basehttp import FileWrapper
 from django.http import HttpResponse
 import traceback
+import json
 def ValuesQuerySetToDict(vqs):
     return [item for item in vqs]
 
@@ -255,7 +256,7 @@ class Provision(APIView):
                         qualvgs[ii]= (vg,vg.vghost.aagroup_set.all().filter(name=aagroup).count())
                     logger.info('No other clump peer found, falling back to AAgroup')
                 else:
-                    logger.info('Clump group %s chose Saturn server %s with an overlap of %d.'%(clumpgroup,chosenVG.vghost,overlap)) 
+                    logger.info('Clump group %s chose Saturn server %s, VG %s, with an overlap of %d.'%(clumpgroup,chosenVG.vghost,chosenVG.vguuid,overlap)) 
                     return chosenVG
 
             if len(qualvgs) > 0:
@@ -317,6 +318,7 @@ class Provision(APIView):
             globallock.locked=False
             globallock.save()
             targetHost=str(chosenVG.vghost)
+            targetvguuid=str(chosenVG.vguuid)
             BASE_DIR = os.path.dirname(os.path.dirname(__file__)) 
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -324,7 +326,7 @@ class Provision(APIView):
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
             logger.info("Launching create target job into queue %s" %(queuename,) )
-            job = queue.enqueue(ExecMakeTarget,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
+            job = queue.enqueue(ExecMakeTarget,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
             while 1:
                 if job.result:
                     chosenVG.is_locked = False
@@ -358,9 +360,12 @@ class VGScanner(APIView):
         saturnserver=request.DATA[u'saturnserver']
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):
             p = PollServer(saturnserver)
-            savedvguuidList = p.GetVG()
-            readVG=VG.objects.filter(vguuid__in=savedvguuidList).values()
+            savedvguuidStr = p.GetVG()
+            listvguuid = savedvguuidStr.split(',')
+            readVG = VG.objects.filter(vguuid__in=listvguuid).values('vguuid','vghost')
             return Response(readVG)
+#            logger.info("RETURNING THIS "+str(readVG))a
+            #return savedvguuidStr
         else:
             logger.warn("Unknown saturn server "+str(request.DATA))
             return Response("Unregistered or uknown Saturn server "+str(request.DATA), status=status.HTTP_400_BAD_REQUEST)

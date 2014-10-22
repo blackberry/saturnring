@@ -84,8 +84,8 @@ class APITestCase (TestCase):
         outStr = check_output(["curl","-X","GET",
         "http://127.0.0.1:8000/api/vgscan/",
         "-d","saturnserver=192.168.61.21"])
-        self.assertIn('"vguuid"',outStr)
         print outStr
+        self.assertIn('vguuid',outStr)
 
 
     def tearDown(self):

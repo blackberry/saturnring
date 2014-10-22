@@ -32,7 +32,7 @@ def UpdateState():
         p = PollServer(eachhost)
         vguuidList = p.GetVG()
         if vguuidList <> -1:
-            for vguuid in vguuidList:
+            for vguuid in vguuidList.split(','):
                 p.UpdateLVs(VG.objects.get(vguuid=vguuid))
         p.GetTargetsState()
         p.GetInterfaces()
@@ -41,7 +41,7 @@ def UpdateOneState(host):
     p = PollServer(host)
     vguuidList = p.GetVG()
     if vguuidList <> -1:
-        for vguuid in vguuidList:
+        for vguuid in vguuidList.split(','):
             p.UpdateLVs(VG.objects.get(vguuid=vguuid))
     p.GetTargetsState()
     p.GetInterfaces()
