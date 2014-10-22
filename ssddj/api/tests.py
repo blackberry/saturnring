@@ -31,6 +31,14 @@ class APITestCase (TestCase):
     def test_UpdateStateData(self):
         print "TESTING UpdateStateData"
         outStr = check_output(["curl","-X","GET","http://127.0.0.1:8000/api/stateupdate/"])
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient1&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+            "-u","testuser:password",])
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient2&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+            "-u","testuser:password",])
         self.assertIn("Ok", outStr)
         print outStr
     
