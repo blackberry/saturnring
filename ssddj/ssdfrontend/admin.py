@@ -115,6 +115,12 @@ class TargetHistoryAdmin(StatsAdmin):
             return False
         return True
 
+    def has_add_permission(self, request):
+        return False
+    
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+                return False
+    
     def queryset(self, request):
         if request.user.is_superuser:
             return TargetHistory.objects.all()
@@ -139,8 +145,8 @@ class TargetAdmin(StatsAdmin):
         mylv = LV.objects.get(target=obj)
         return mylv.vg.storemedia
 
-#    def has_delete_permission(self, request, obj=None): # note the obj=None
-#                return False
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+                return False
 
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
@@ -192,6 +198,8 @@ class LVAdmin(StatsAdmin):
                 return instance.target.owner
     owner_name.admin_order_field  = 'target__owner'
 
+    def has_add_permission(self, request):
+        return False
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False
     def has_change_permission(self, request, obj=None):
