@@ -61,6 +61,7 @@ class VG (models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
+    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('pciessd','pciessd'),('diskssd','diskssd')])
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 

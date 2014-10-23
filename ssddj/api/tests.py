@@ -57,6 +57,36 @@ class APITestCase (TestCase):
         self.assertIn('"error": 0',outStr)
         print outStr
 
+    def test_Provisioner_pciessd(self):
+        """
+            Test the provisioning call
+
+            Note: needs a account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner"
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pciessd',
+            "-u","testuser:password",])
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_Provisioner_diskssd(self):
+        """
+            Test the provisioning call
+
+            Note: needs a account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner"
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondiskssd&aagroup=testgroup&storemedia=diskssd',
+            "-u","testuser:password",])
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
     def test_DeletionTarget(self):
         """
             Test the deletion call for 1 target

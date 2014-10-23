@@ -44,7 +44,7 @@ admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
-    list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
+    list_display = ['vghost','storemedia','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
@@ -129,12 +129,16 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
     actions = [delete_iscsi_target]
-    search_fields = ['iqntar','iqnini']
+    search_fields = ['iqntar','iqnini','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
         return False
+    def storemedia(self,obj):
+        mylv = LV.objects.get(target=obj)
+        return mylv.vg.storemedia
+
 #    def has_delete_permission(self, request, obj=None): # note the obj=None
 #                return False
 

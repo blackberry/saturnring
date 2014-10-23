@@ -209,7 +209,7 @@ class Provision(APIView):
            lvalloc=lvalloc+eachlv.lvsize
     	return lvalloc
 
-    def VGFilter(self,storageSize, aagroup,owner,clumpgroup="noclump",subnet="public"):
+    def VGFilter(self,storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",storemedia='pciessd'):
         # Check if StorageHost is enabled
         # Check if VG is enabled
         # Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
@@ -219,7 +219,7 @@ class Provision(APIView):
         storagehosts = StorageHost.objects.filter(enabled=True)
         logger.info("Found %d storagehosts" %(len(storagehosts),))
         qualvgs = []
-        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent')).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'),storemedia=storemedia).order_by('?')#Random ordering here
         if len(vgchoices) > 0:
             numDel=0
             chosenVG = -1
@@ -295,6 +295,10 @@ class Provision(APIView):
             subnet = requestDic['subnet']
         else:
             subnet = "public"
+        if 'storemedia' in requestDic:
+            storemedia = requestDic['storemedia']
+        else:
+            storemedia = 'pciessd'
 
         logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet))
         try:
@@ -309,7 +313,7 @@ class Provision(APIView):
         except:
             globallock = Lock(lockname='allvglock',locked=True)
             globallock.save()
-        chosenVG = self.VGFilter(storageSize,aagroup,owner,clumpgroup,subnet)
+        chosenVG = self.VGFilter(storageSize,aagroup,owner,clumpgroup,subnet,storemedia)
         globallock = Lock.objects.get(lockname='allvglock')
         if chosenVG != -1:
             chosenVG.is_locked = True
