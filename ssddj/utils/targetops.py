@@ -48,7 +48,7 @@ def CheckUserQuotas(storageSize,owner):
         return (-1,rtnStr)
     return (1, "Quota checks ok, proceeding")
 
-def ExecMakeTarget(targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
+def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
     chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
@@ -60,7 +60,13 @@ def ExecMakeTarget(targetvguuid,targetHost,clientiqn,serviceName,storageSize,aag
             iqnComponents = t.iqntar.split(':')
             if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
                 logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                return (1,t.iqntar)
+                existingTargetstoremedia = LV.objects.get(target=t).vg.storemedia
+                if (existingTargetstoremedia == storemedia):
+                    return (1,t.iqntar)
+                else:
+                    errorStr = "Target %s on DIFFERENT storemedia %s already exists." % (t.iqntar,existingTargetstoremedia)
+                    logger.info(errorStr)
+                    return(-1,errorStr)
             else:
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:

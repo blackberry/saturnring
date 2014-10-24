@@ -39,7 +39,7 @@ class APITestCase (TestCase):
             "http://127.0.0.1:8000/api/provisioner/",
             "-d",'clientiqn=testclient2&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
-        self.assertIn("Ok", outStr)
+        self.assertIn('"error": 0', outStr)
         print outStr
     
     def test_Provisioner(self):
@@ -85,6 +85,28 @@ class APITestCase (TestCase):
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondiskssd&aagroup=testgroup&storemedia=diskssd',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_Provisioner_diskssd_sameservicename(self):
+        """
+            Test the provisioning call, should fail to provision
+            because it tries to create 2 identical targetnames on different media
+
+            Note: needs a account to be setup in the portal
+            testuser/password
+            Needs 2 media types - diskssd and pciessd (basically 2 VGs in the iscsiserver, 
+            and then assigned to the media types)
+        """
+        print "TESTING Provisioner"
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=diskssd',
+            "-u","testuser:password",])
+        outStr = check_output(["curl","-X","GET",
+            "http://127.0.0.1:8000/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=pciessd',
+            "-u","testuser:password",])
+        self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
 
     def test_DeletionTarget(self):

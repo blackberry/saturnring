@@ -330,7 +330,7 @@ class Provision(APIView):
             queuename = 'queue'+str(hash(targetHost)%int(numqueues))
             queue = django_rq.get_queue(queuename)
             logger.info("Launching create target job into queue %s" %(queuename,) )
-            job = queue.enqueue(ExecMakeTarget,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
+            job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
             while 1:
                 if job.result:
                     chosenVG.is_locked = False
