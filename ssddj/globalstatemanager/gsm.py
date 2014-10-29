@@ -120,7 +120,8 @@ class PollServer():
 
     # Update LV information, called to monitor and update capacity.
     def UpdateLVs(self,vgObject):
-        lvdict = self.GetLVs()
+        
+        lvdict = self.GetLVs(vgObject.vguuid)
         lvs = LV.objects.filter(vg=vgObject)
 #        for eachLV in lvs:
 #    	    if eachLV.lvname in lvdict:
@@ -134,16 +135,17 @@ class PollServer():
             	preexistLV.lvthinmapped=lvinfo['Mapped size']
             	preexistLV.save(update_fields=['lvsize','lvthinmapped'])
             else:
-                logger.warn("Found orphan LV %s in VG %s on host %s" %(lvName,self.vg,self.serverDNS))
+                logger.warn("Found orphan LV %s in VG %s on host %s" %(lvName,vgObject.vguuid,self.serverDNS))
 
     # Wrapper for parselvm (for LVs), actually populating the DB is done by the UpdateLV function
-    def GetLVs(self,vguuid=None):
-        if vguuid is None: 
-            vguuid=self.vg  #kind of hack on the default arg - this is a vg uuid not a name in reality
-        lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vguuid]))
+    def GetLVs(self,vguuid):
+        vgname = self.Exec(" ".join(['sudo','vgdisplay', '-c','|','grep',vguuid,'|','cut -d: -f1']))[0].strip()
+        lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
+        logger.info(lvStrList)
+        logger.info(lvs)
         return lvs
 
     # Wrapper for parseLVM (for VGs)+populating the DB
@@ -194,11 +196,11 @@ class PollServer():
         return rtnvguuidList[1:]
 
     #Check in changes to config files into git repository
-    def GitSave(self,commentStr):
+    def GitSave(self,vguuid,commentStr):
         try:
             srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
             srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            srv.get('/temp/'+self.vg,self.iscsiconfdir+self.serverDNS+'.lvm')
+            srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.lvm')
             try:
                 repo = Repo(self.iscsiconfdir)
                 filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
@@ -212,14 +214,15 @@ class PollServer():
             logger.warn("%s: PYSFTP download error: %s" % (commentStr,var))
 
     # Create iSCSI target by running the createtarget script; and save latest scst.conf from the remote server (overwrite)
-    def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2):
+    def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid):
         srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
-        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,self.vg])
+        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         srv.close()
         #exStr = srv.execute(cmdStr)
         exStr=self.Exec(cmdStr)
         commentStr = "Trying to create target %s " %( iqnTarget, )
-        self.GitSave(commentStr)
+
+        self.GitSave(vguuid,commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
@@ -262,7 +265,7 @@ class PollServer():
                 logger.warn("Found target %s on %s that does not exist in the DB; \nparsetarget.py returned %s" % (iqntar,self.serverDNS, exStr) )
 
     # Delete target
-    def DeleteTarget(self,iqntar):
+    def DeleteTarget(self,iqntar,vguuid):
         self.GetTargetsState()
         try:
             tar = Target.objects.get(iqntar=iqntar)
@@ -270,9 +273,9 @@ class PollServer():
             logger.warn("Could not find deletion target in DB, exiting. "+iqntar)
             return -1
         if not tar.sessionup:
-            cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,self.vg])
+            cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,vguuid])
             exStr = self.Exec(cmdStr)
-            self.GitSave("Trying to delete  target %s " %( iqntar,))
+            self.GitSave(vguuid,"Trying to delete  target %s " %( iqntar,))
             success1 = False
             success2 = False
             for eachLine in exStr:

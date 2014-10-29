@@ -19,18 +19,19 @@ then
         yes | scstadmin -rem_target $1 -driver iscsi
         TARGETMD5=`echo $1 | md5sum | cut -f1 -d" "`
         lvolName=lvol-${TARGETMD5:0:8}
-        lvu=`lvdisplay $2/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
+        VG=`vgdisplay -c | grep $2 | cut -d: -f1`
+        lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
         yes | scstadmin -close_dev disk-${lvu:0:8} -handler vdisk_blockio
         echo "Trying to remove LV "$lvolName
-        yes | lvremove -f $2/$lvolName
+        yes | lvremove -f $VG/$lvolName
         scstadmin -write_config /etc/scst.conf
+        sudo mkdir -p /temp
+        sudo cp /etc/scst.conf /temp
+        sudo cp /etc/lvm/backup/$VG /temp
+        sudo chmod  666 /temp/scst.conf
+        sudo chmod 666 /temp/$VG
 else
         echo "Error deleting "$1" , doing nothing (check if target exists, is the session down?)"
 fi
 
-sudo mkdir -p /temp
-sudo cp /etc/scst.conf /temp
-sudo cp /etc/lvm/backup/$2 /temp
-sudo chmod  666 /temp/scst.conf
-sudo chmod 666 /temp/$2
 

@@ -96,7 +96,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 logger.error('Chosen host %s is missing IP addresses in requested subnet' % ( targethost, ) )
                 return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
 
-        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2)):
+        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid)):
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -105,7 +105,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)
                 newTarget.save()
-                lvDict=p.GetLVs()
+                lvDict=p.GetLVs(targetvguuid)
                 lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
                 if lvName in lvDict:
                     newLV = LV(target=newTarget,vg=chosenVG,
@@ -139,7 +139,8 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
 
 def DeleteTargetObject(obj):
     p = PollServer(obj.targethost)
-    if p.DeleteTarget(obj.iqntar)==1:
+    lv = LV.objects.get(target=obj)
+    if p.DeleteTarget(obj.iqntar,lv.vg.vguuid)==1:
         newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
         newth.save()
         obj.delete()
