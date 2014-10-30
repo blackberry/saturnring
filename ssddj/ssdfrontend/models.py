@@ -65,6 +65,7 @@ class VG (models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.vguuid
 
+
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=200,primary_key=True)
     ipaddress = models.GenericIPAddressField(default='127.0.0.1')
@@ -75,8 +76,6 @@ class StorageHost(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.dnsname
-
-
 
 
 class Target(models.Model):
@@ -98,6 +97,7 @@ class Target(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
+
 class TargetHistory(models.Model):
     owner = models.ForeignKey(User)
     iqntar=models.CharField(max_length=200)
@@ -117,6 +117,7 @@ class AAGroup(models.Model):
     def __unicode__(self):
         return self.name
 
+
 class ClumpGroup(models.Model):
     name = models.CharField(max_length=200)
     hosts = models.ManyToManyField(StorageHost)
@@ -133,6 +134,7 @@ class IPRange(models.Model):
 
     def __unicode__(self):
         return self.iprange
+
 
 class Interface(models.Model):
     storagehost = models.ForeignKey(StorageHost)

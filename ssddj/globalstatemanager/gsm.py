@@ -144,8 +144,8 @@ class PollServer():
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
-        logger.info(lvStrList)
-        logger.info(lvs)
+        #logger.info(lvStrList)
+        #logger.info(lvs)
         return lvs
 
     # Wrapper for parseLVM (for VGs)+populating the DB
@@ -172,7 +172,7 @@ class PollServer():
                     logger.error("VG not found in DB: %s" % ( vgs[vgname]['VG UUID'],))
                 return -1
 
-            #logger.info(vgs)
+            logger.info(vgs)
             existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
             if len(existingvgs)==1:
                 existingvg = existingvgs[0]
@@ -183,7 +183,9 @@ class PollServer():
                 existingvg.maxthinavlGB=maxthinavl
                 existingvg.vgsize = vgs[vgname]['VG Size']
                 existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
+                logger.info( "Ran in existingVG loop")
             else:
+                logger.info("Found new VG, adding\n" + str(vgs[vgname]))
                 myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[vgname]['VG Size'],
                         vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                         vgtotalpe=vgs[vgname]['Total PE'],

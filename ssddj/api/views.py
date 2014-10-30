@@ -368,7 +368,7 @@ class VGScanner(APIView):
             listvguuid = savedvguuidStr.split(',')
             readVG = VG.objects.filter(vguuid__in=listvguuid).values('vguuid','vghost')
             return Response(readVG)
-#            logger.info("RETURNING THIS "+str(readVG))a
+            logger.info("RETURNING THIS "+str(readVG))
             #return savedvguuidStr
         else:
             logger.warn("Unknown saturn server "+str(request.DATA))
