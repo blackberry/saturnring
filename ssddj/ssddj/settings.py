@@ -33,7 +33,7 @@ import sys
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+#DEBUG = False
 config = ConfigParser.RawConfigParser()
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -130,6 +130,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.exceptions.PlainExceptionsMiddleware',
 )
 
 ROOT_URLCONF = 'ssddj.urls'

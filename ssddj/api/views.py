@@ -165,6 +165,9 @@ class Delete(APIView):
         return (rtnFlag,str(rtnStatus))
 
 class Provision(APIView):
+    """
+    Provision API call 
+    """
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
@@ -365,6 +368,9 @@ class VGScanner(APIView):
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):
             p = PollServer(saturnserver)
             savedvguuidStr = p.GetVG()
+            if type(savedvguuidStr) is not str:
+                logger.warn('GetVG returned error integer: ' + str(savedvguuidStr))
+                return Response('Error scanning VG, contact admin:')
             listvguuid = savedvguuidStr.split(',')
             readVG = VG.objects.filter(vguuid__in=listvguuid).values('vguuid','vghost')
             return Response(readVG)

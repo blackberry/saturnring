@@ -16,7 +16,7 @@
 set -e
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
-VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' '`
+VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`
 if sudo lvs | egrep -q "$lvolName"; then
    echo "Warning: Using previously-created LV "$lvolName
 else

@@ -107,6 +107,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 newTarget.save()
                 lvDict=p.GetLVs(targetvguuid)
                 lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
+                logger.info("Looking for %s in lvDict %s" %(lvName, str(lvDict)))
                 if lvName in lvDict:
                     newLV = LV(target=newTarget,vg=chosenVG,
                             lvname=lvName,

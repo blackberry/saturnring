@@ -62,7 +62,11 @@ class GSMTestCase (TestCase):
         vguuid = VG.objects.all()[0].vguuid
         ps = PollServer(shost.dnsname)
         lvs = ps.GetLVs(vguuid)
-        print lvs
+        pprint(lvs)
         self.assertNotEqual(len(lvs),0)
+        
+    def test_UpdateLVs(self):
+
+
 
 

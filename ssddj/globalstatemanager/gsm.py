@@ -56,8 +56,8 @@ class PollServer():
         self.keyFile=os.path.join(BASE_DIR,config.get('saturnring','privatekeyfile'))
         self.rembashpath=config.get('saturnnode','bashpath')
         self.rempypath=config.get('saturnnode','pythonpath')
-        self.vg=config.get('saturnnode','volgroup')
-        self.vgs=config.get('saturnnode','volgroups').split(',')
+#        self.vg=config.get('saturnnode','volgroup')
+#        self.vgs=config.get('saturnnode','volgroups').split(',')
         self.iscsiconfdir=os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
         self.remoteinstallLoc=config.get('saturnnode','install_location')
         self.localbashscripts=os.path.join(BASE_DIR,config.get('saturnring','bashscripts'))
@@ -170,7 +170,7 @@ class PollServer():
                     vg.save(update_fields=['in_error'])
                 except:
                     logger.error("VG not found in DB: %s" % ( vgs[vgname]['VG UUID'],))
-                return -1
+                return 3
 
             logger.info(vgs)
             existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
@@ -202,7 +202,7 @@ class PollServer():
         try:
             srv = pysftp.Connection(self.serverDNS,self.userName,self.keyFile)
             srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.lvm')
+            srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
             try:
                 repo = Repo(self.iscsiconfdir)
                 filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
@@ -264,7 +264,7 @@ class PollServer():
                     tar.wkb=wkb
                 tar.save()
             else:
-                logger.warn("Found target %s on %s that does not exist in the DB; \nparsetarget.py returned %s" % (iqntar,self.serverDNS, exStr) )
+                logger.warn("Found target %s on %s that does not exist in the DB" % (iqntar,self.serverDNS) )
 
     # Delete target
     def DeleteTarget(self,iqntar,vguuid):

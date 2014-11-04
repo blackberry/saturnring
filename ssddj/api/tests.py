@@ -31,15 +31,15 @@ class APITestCase (TestCase):
     def test_UpdateStateData(self):
         print "TESTING UpdateStateData"
         outStr = check_output(["curl","-X","GET","http://127.0.0.1:8000/api/stateupdate/"])
-        outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient1&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
-            "-u","testuser:password",])
-        outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient2&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
-            "-u","testuser:password",])
-        self.assertIn('"error": 0', outStr)
+#        outStr = check_output(["curl","-X","GET",
+#            "http://127.0.0.1:8000/api/provisioner/",
+#            "-d",'clientiqn=testclient1&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+#            "-u","testuser:password",])
+#        outStr = check_output(["curl","-X","GET",
+#            "http://127.0.0.1:8000/api/provisioner/",
+#            "-d",'clientiqn=testclient2&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+#            "-u","testuser:password",])
+        self.assertIn('Ok, enqueued state update request', outStr)
         print outStr
     
     def test_Provisioner(self):
@@ -52,7 +52,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision10&aagroup=testgroup',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision13&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -82,7 +82,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondiskssd&aagroup=testgroup&storemedia=diskssd',
+            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=diskssd',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
