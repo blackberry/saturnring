@@ -114,6 +114,7 @@ INSTALLED_APPS = (
     'utils',
     'admin_stats',
     'django_rq',
+    'snapbackup'
 )
 #PROJECT_APPS = (
 #    'ssdfrontend',

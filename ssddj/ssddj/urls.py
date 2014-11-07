@@ -22,6 +22,8 @@ urlpatterns = patterns(
     url(r'^api/', include('api.urls')),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^portal/',include('ssdfrontend.urls')),
+    url(r'^snapbackup/',include('snapbackup.urls',namespace="snapbackup")),
+
 )
 urlpatterns += patterns('',
     (r'^django-rq/', include('django_rq.urls')),

@@ -14,6 +14,8 @@
 
 from django.contrib import admin
 from django import forms
+from django.shortcuts import redirect
+from django.core.urlresolvers import reverse
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -40,7 +42,7 @@ import ConfigParser
 
 
 logger = logging.getLogger(__name__)
-admin.site.disable_action('delete_selected')
+#admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
     readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
@@ -54,6 +56,14 @@ admin.site.register(VG,VGAdmin)
 class InterfaceAdmin(StatsAdmin):	
     list_display = ['ip','storagehost']
 admin.site.register(Interface,InterfaceAdmin)
+
+
+def config_snapshots(StatsAdmin,request,queryset):
+    targetList = []
+    for obj in queryset:
+        targetList.append(obj.iqntar)
+    return redirect('snapbackup:snapconfig',targets=obj)
+#    return redirect('snapconfig')
 
 def delete_iscsi_target(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -136,7 +146,7 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
     list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-    actions = [delete_iscsi_target]
+    actions = [delete_iscsi_target,config_snapshots]
     search_fields = ['iqntar','iqnini','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
