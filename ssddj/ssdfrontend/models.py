@@ -136,6 +136,17 @@ class IPRange(models.Model):
     def __unicode__(self):
         return self.iprange
 
+class SnapJob(models.Model):
+    numsnaps = models.IntegerField(default=1)
+    iqntar = models.ForeignKey(Target)
+    cronstring = models.CharField(max_length=100)
+    lastrun = models.DateTimeField(blank=True)
+    nextrun = models.DateTimeField(blank=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+    deleted_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    enqueued = models.BooleanField(blank=False,default=False)
+    run_now = models.BooleanField(blank=False,default=False)
+    
 
 class Interface(models.Model):
     storagehost = models.ForeignKey(StorageHost)

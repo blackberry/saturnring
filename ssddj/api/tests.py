@@ -42,7 +42,7 @@ class APITestCase (TestCase):
         self.assertIn('Ok, enqueued state update request', outStr)
         print outStr
     
-    def test_Provisioner(self):
+    def test_ProvisionerPlain(self):
         """
             Test the provisioning call
 
@@ -52,7 +52,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision13&aagroup=testgroup',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -109,22 +109,17 @@ class APITestCase (TestCase):
         self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
 
-    def test_DeletionTarget(self):
+    def test_DeletionTargetPlain(self):
         """
             Test the deletion call for 1 target
 
             Note: needs the test_Provisioner test to be run so that 
-            the test has already been run
+            the target has already been created
         """
-        #First create a iSCSI target
         print "TESTING DeletionTarget"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testservicedelete1&aagroup=testgroup',
-            "-u","testuser:password",])
-        outStr = check_output(["curl","-X","GET",
             "http://127.0.0.1:8000/api/delete/",
-            "-d","iqntar=iqn.2014.01.192.168.61.21:testservicedelete1:aa59eb0a",
+            "-d","iqntar=iqn.2014.01.192.168.61.21:testserviceprovision:aa59eb0a",
             "-u","testuser:password"])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -150,10 +145,10 @@ class APITestCase (TestCase):
 
     def tearDown(self):
         print "Attempting to clean up"
-        print "Deleting"
-        outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/delete/",
-            "-d","iqntar=iqn.2014.01.192.168.61.21:testserviceprovision:aa59eb0a",
-            "-u","testuser:password"])
+        #print "Deleting"
+        #outStr = check_output(["curl","-X","GET",
+        #    "http://127.0.0.1:8000/api/delete/",
+        #    "-d","iqntar=iqn.2014.01.192.168.61.21:testserviceprovision:aa59eb0a",
+        #    "-u","testuser:password"])
 
 
