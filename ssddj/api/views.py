@@ -12,12 +12,9 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-from ssdfrontend.models import Target
-from ssdfrontend.models import StorageHost
-#from ssdfrontend.models import Provisioner
+#api/views.py
+
 from django.contrib.auth.models import User
-#from ssdfrontend.models import HostGroup
-from globalstatemanager.gsm import PollServer
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
 from serializers import VGSerializer
@@ -32,63 +29,82 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
-import logging
+from logging import getLogger
 from django.core import serializers
-logger = logging.getLogger(__name__)
+from utils.periodic import UpdateState
+from utils.periodic import UpdateOneState
+from django_rq import get_queue
+from ConfigParser import RawConfigParser
+from os.path import dirname,join,basename,getsize
+from time import strftime
+from traceback import format_exc
+from utils.reportmaker import StatMaker
+from mimetypes import guess_type
+from django.core.servers.basehttp import FileWrapper
+from django.http import HttpResponse
+from ssdfrontend.models import Target
+from ssdfrontend.models import StorageHost
+from globalstatemanager.gsm import PollServer
 from .viewhelper import DeleteTarget
 from .viewhelper import VGFilter
 from .viewhelper import MakeTarget
-from utils.periodic import UpdateState
-from utils.periodic import UpdateOneState
-import django_rq
-import ConfigParser
-import os
-import time
-import traceback
-from utils.reportmaker import StatMaker
-import mimetypes
-from django.core.servers.basehttp import FileWrapper
-from django.http import HttpResponse
-import traceback
-import json
+
+logger = getLogger(__name__)
+
 def ValuesQuerySetToDict(vqs):
+    """
+    Helper to convert queryset to dictionary
+    """
     return [item for item in vqs]
 
 class ReturnStats(APIView):
+    """
+    CBV for returning an excel-file containing the statistics of the Saturn cluster
+    /api/stats
+    Does not require authenticated user
+    """
     def get(self, request):
         try:
             error = StatMaker()
-            BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-            config = ConfigParser.RawConfigParser()
-            config.read(os.path.join(BASE_DIR,'saturn.ini'))
-            thefile = os.path.join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
-            filename = os.path.basename(thefile)
-            response = HttpResponse(FileWrapper(open(thefile)),content_type=mimetypes.guess_type(thefile)[0])
-            response['Content-Length'] = os.path.getsize(thefile)
+            BASE_DIR = dirname(dirname(__file__))
+            config = RawConfigParser()
+            config.read(join(BASE_DIR,'saturn.ini'))
+            thefile = join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
+            filename = basename(thefile)
+            response = HttpResponse(FileWrapper(open(thefile)),content_type=guess_type(thefile)[0])
+            response['Content-Length'] = getsize(thefile)
             response['Content-Disposition'] = "attachment; filename=%s" % filename
             return response
         except:
-            var = traceback.format_exc()
+            var = format_exc()
             logger.warn("Stat error: %s" % (var,))
-            return Response(time.strftime('%c')+": Stat creation error: contact administrator")
+            return Response(strftime('%c')+": Stat creation error: contact administrator")
 
 
 class UpdateStateData(APIView):
-#    authentication_classes = (SessionAuthentication, BasicAuthentication)
-#    permission_classes = (IsAuthenticated,)
+    """
+    Runs a stateupdate script on all the saturn servers in the cluster
+    Does not require authenticated user
+    /api/stateupdate
+    """
     def get(self, request):
-        BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-        config = ConfigParser.RawConfigParser()
-        config.read(os.path.join(BASE_DIR,'saturn.ini'))
+        BASE_DIR = dirname(dirname(__file__))
+        config = RawConfigParser()
+        config.read(join(BASE_DIR,'saturn.ini'))
         numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
-            queue = django_rq.get_queue(queuename)
+            queue = get_queue(queuename)
             queue.enqueue(UpdateOneState,eachhost)
         return Response("Ok, enqueued state update request")
 
 class Delete(APIView):
+    """
+    Delete a target, all targets on a saturn server, or all targets corresponding to
+    a specific initiator
+    /api/delete
+    """
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
@@ -109,7 +125,8 @@ class Delete(APIView):
 
 class Provision(APIView):
     """
-    Provision API call 
+    Provision API call
+    /api/provisioner
     """
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
@@ -149,8 +166,10 @@ class Provision(APIView):
 
 
 class VGScanner(APIView):
-#    authentication_classes = (SessionAuthentication, BasicAuthentication)
-#    permission_classes = (IsAuthenticated,)
+    """
+    Create or update models for all VGs on a Saturn server
+    /api/vgscanner
+    """
     def get(self, request):
         logger.info("VG scan request received: %s " %(request.DATA,))
         saturnserver=request.DATA[u'saturnserver']

@@ -102,6 +102,9 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
     return -1
 
 def MakeTarget(requestDic,owner):
+    """
+    Actual maketarget orchestrator
+    """
     logger = getLogger(__name__)
     clientiqn = requestDic['clientiqn']
     serviceName = requestDic['serviceName']
