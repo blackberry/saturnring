@@ -20,7 +20,8 @@ from subprocess import check_output
 from traceback import format_exc
 from pprint import pprint
 from utils.configreader import ConfigReader
-
+from os import remove
+from os.path import join, dirname
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -33,7 +34,6 @@ class GSMTestCase (TestCase):
             Test GetLVs
             Test GetVGs
     """
-
     def setUp(self):
         """
         Setup the test saturn host (where the storage is provisioned)
@@ -42,10 +42,10 @@ class GSMTestCase (TestCase):
         """
         print "Here is where we can set some state"
         #Dummy super user for interfaces test
-        config = ConfigReader('saturn.ini')
-        self.saturnringip = config.get('tests','saturnringip')
-        self.saturnringport = config.get('tests','saturnringport')
-        self.iscsiserver = config.get('tests','saturniscsiserver')
+        self.config = ConfigReader('saturn.ini')
+        self.saturnringip = self.config.get('tests','saturnringip')
+        self.saturnringport = self.config.get('tests','saturnringport')
+        self.iscsiserver = self.config.get('tests','saturniscsiserver')
         my_admin = User.objects.create_superuser('myuser', 'myemail@test.com', 'password')
         testhost = StorageHost(dnsname = self.iscsiserver,
                 ipaddress=self.iscsiserver,
@@ -61,53 +61,61 @@ class GSMTestCase (TestCase):
                 vgsize = 1.0)
         vg.save()
         outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.iscsiserver])
+        self.host = StorageHost.objects.all()[0]
+        self.psrvr = PollServer(self.host.dnsname)
 
     def test_GetLVs(self):
         """
         Test if LVs are being read off the test server
         """
-        shost = StorageHost.objects.all()[0]
         vguuid = VG.objects.all()[0].vguuid
-        ps = PollServer(shost.dnsname)
-        lvs = ps.GetLVs(vguuid)
+        lvs = self.psrvr.GetLVs(vguuid)
         pprint(lvs)
         self.assertNotEqual(len(lvs),0)
 
+    def test_InstallScripts(self):
+        """
+        Test if SCP installation of scripts works
+        Tests via comparing directory listing of the
+        remote install directory before and after InstallScripts
+        """
+        installLoc = join(self.config.get('saturnnode','install_location'),'saturn-bashscripts')
+        BASE_DIR = dirname(dirname(__file__))
+        localLoc = join(BASE_DIR,self.config.get('saturnring','bashscripts'))
+        fH = open(join(localLoc,'test_InstallScript.txt'),'w')
+        fH.write('Test started'  )
+        fH.close()
+        dirlistcmd = 'ls -al '+installLoc
+        b4installdirout = self.psrvr.Exec(dirlistcmd)
+        print "BEFORE"
+        pprint (b4installdirout)
+        self.psrvr.InstallScripts()
+        afterinstalldirout = self.psrvr.Exec(dirlistcmd)
+        print "AFTER"
+        pprint (afterinstalldirout)
+        self.assertNotEqual(str(b4installdirout),str(afterinstalldirout))
+        remove(join(localLoc,'test_InstallScript.txt'))
+        rmfilecmd = 'rm '+join(installLoc,'test_InstallScript.txt')
+        self.psrvr.Exec(rmfilecmd)
 
     def test_Exec(self):
         """
         Test if SSH/Exec works
         """
-        shost = StorageHost.objects.all()[0]
-        ps = PollServer(shost.dnsname)
-        rtnStr = ps.Exec("uptime")
+        rtnStr = self.psrvr.Exec("uptime")
         self.assertIn("load average",str(rtnStr))
 
     def test_GetInterfaces(self):
         """
         Test if the interface scanning works
         """
-        shost = StorageHost.objects.all()[0]
-        ps = PollServer(shost.dnsname)
         oldEntries = Interface.objects.all()
         oldEntries.delete()
-        ps.GetInterfaces()
+        self.psrvr.GetInterfaces()
         interfaces = Interface.objects.all()
         for eachInterface in interfaces:
             print eachInterface.ip
 
         self.assertNotEqual(len(interfaces), 0)
-
-    def test_InstallScripts(self):
-        """
-        Test the installation of scripts
-        Also a good test for SSH keys etc.
-        """
-
-
-
-
-
-
 
 
