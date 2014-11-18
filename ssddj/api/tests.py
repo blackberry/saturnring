@@ -15,6 +15,7 @@
 from django.test import TestCase
 from subprocess import check_output
 import traceback
+from utils.configreader import ConfigReader
 
 # Create your tests here.
 class APITestCase (TestCase):
@@ -27,18 +28,14 @@ class APITestCase (TestCase):
 
     def setUp(self):
         print "Here is where we can set some state"
+        config = ConfigReader('saturn.ini')
+        self.saturnringip = config.get('tests','saturnringip')
+        self.saturnringport = config.get('tests','saturnringport')
+        self.iscsiserver = config.get('tests','saturniscsiserver')
         
     def test_UpdateStateData(self):
         print "TESTING UpdateStateData"
-        outStr = check_output(["curl","-X","GET","http://127.0.0.1:8000/api/stateupdate/"])
-#        outStr = check_output(["curl","-X","GET",
-#            "http://127.0.0.1:8000/api/provisioner/",
-#            "-d",'clientiqn=testclient1&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
-#            "-u","testuser:password",])
-#        outStr = check_output(["curl","-X","GET",
-#            "http://127.0.0.1:8000/api/provisioner/",
-#            "-d",'clientiqn=testclient2&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
-#            "-u","testuser:password",])
+        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/stateupdate/"])
         self.assertIn('Ok, enqueued state update request', outStr)
         print outStr
     
@@ -51,7 +48,7 @@ class APITestCase (TestCase):
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
@@ -66,7 +63,7 @@ class APITestCase (TestCase):
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pciessd',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
@@ -81,7 +78,7 @@ class APITestCase (TestCase):
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=diskssd',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
@@ -99,11 +96,11 @@ class APITestCase (TestCase):
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=diskssd',
             "-u","testuser:password",])
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/provisioner/",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
             "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=pciessd',
             "-u","testuser:password",])
         self.assertIn('DIFFERENT storemedia',outStr)
@@ -118,8 +115,8 @@ class APITestCase (TestCase):
         """
         print "TESTING DeletionTarget"
         outStr = check_output(["curl","-X","GET",
-            "http://127.0.0.1:8000/api/delete/",
-            "-d","iqntar=iqn.2014.01.192.168.61.21:testserviceprovision:aa59eb0a",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovision:aa59eb0a",
             "-u","testuser:password"])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -137,8 +134,8 @@ class APITestCase (TestCase):
     def test_VGScan(self):
         print "TESTING VGScan"
         outStr = check_output(["curl","-X","GET",
-        "http://127.0.0.1:8000/api/vgscan/",
-        "-d","saturnserver=192.168.61.21"])
+        "http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/",
+        "-d","saturnserver="+self.iscsiserver])
         print outStr
         self.assertIn('vguuid',outStr)
 
@@ -147,8 +144,8 @@ class APITestCase (TestCase):
         print "Attempting to clean up"
         #print "Deleting"
         #outStr = check_output(["curl","-X","GET",
-        #    "http://127.0.0.1:8000/api/delete/",
-        #    "-d","iqntar=iqn.2014.01.192.168.61.21:testserviceprovision:aa59eb0a",
+        #    "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+        #    "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovision:aa59eb0a",
         #    "-u","testuser:password"])
 
 

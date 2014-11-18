@@ -44,11 +44,12 @@ from django.core.servers.basehttp import FileWrapper
 from django.http import HttpResponse
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
+from ssdfrontend.models import VG
 from globalstatemanager.gsm import PollServer
 from .viewhelper import DeleteTarget
 from .viewhelper import VGFilter
 from .viewhelper import MakeTarget
-
+from utils.configreader import ConfigReader
 logger = getLogger(__name__)
 
 def ValuesQuerySetToDict(vqs):
@@ -66,9 +67,7 @@ class ReturnStats(APIView):
     def get(self, request):
         try:
             error = StatMaker()
-            BASE_DIR = dirname(dirname(__file__))
-            config = RawConfigParser()
-            config.read(join(BASE_DIR,'saturn.ini'))
+            config = ConfigReader()
             thefile = join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
             filename = basename(thefile)
             response = HttpResponse(FileWrapper(open(thefile)),content_type=guess_type(thefile)[0])
@@ -88,9 +87,7 @@ class UpdateStateData(APIView):
     /api/stateupdate
     """
     def get(self, request):
-        BASE_DIR = dirname(dirname(__file__))
-        config = RawConfigParser()
-        config.read(join(BASE_DIR,'saturn.ini'))
+        config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
         allhosts=StorageHost.objects.filter(enabled=True)
         for eachhost in allhosts:

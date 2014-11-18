@@ -12,15 +12,20 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+#globalstatemanager/tests.py
+
 from django.test import TestCase
+from django.contrib.auth.models import User
 from subprocess import check_output
-import traceback
+from traceback import format_exc
 from pprint import pprint
+from utils.configreader import ConfigReader
 
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
 from ssdfrontend.models import Target
+from ssdfrontend.models import Interface
 from globalstatemanager.gsm import PollServer
 # Create your tests here.
 class GSMTestCase (TestCase):
@@ -36,16 +41,18 @@ class GSMTestCase (TestCase):
         This means that the SSH key should be on that host already
         """
         print "Here is where we can set some state"
-        self.saturnringip = "127.0.0.1"
-        self.saturnringport = "8000"
-        self.testip = "192.168.61.21"
-        testhost = StorageHost(dnsname = self.testip,
-                ipaddress=self.testip,
-                storageip1=self.testip
+        #Dummy super user for interfaces test
+        config = ConfigReader('saturn.ini')
+        self.saturnringip = config.get('tests','saturnringip')
+        self.saturnringport = config.get('tests','saturnringport')
+        self.iscsiserver = config.get('tests','saturniscsiserver')
+        my_admin = User.objects.create_superuser('myuser', 'myemail@test.com', 'password')
+        testhost = StorageHost(dnsname = self.iscsiserver,
+                ipaddress=self.iscsiserver,
+                storageip1=self.iscsiserver
                 )
         testhost.save()
-        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.testip])
-        print outStr
+        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.iscsiserver])
         vguuid = outStr.split('"')[3]
         vg = VG(vghost=testhost,
                 vguuid = vguuid,
@@ -53,10 +60,11 @@ class GSMTestCase (TestCase):
                 vgtotalpe = 10.0,
                 vgsize = 1.0)
         vg.save()
-        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.testip])
+        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.iscsiserver])
 
     def test_GetLVs(self):
         """
+        Test if LVs are being read off the test server
         """
         shost = StorageHost.objects.all()[0]
         vguuid = VG.objects.all()[0].vguuid
@@ -64,8 +72,41 @@ class GSMTestCase (TestCase):
         lvs = ps.GetLVs(vguuid)
         pprint(lvs)
         self.assertNotEqual(len(lvs),0)
-        
-    def test_UpdateLVs(self):
+
+
+    def test_Exec(self):
+        """
+        Test if SSH/Exec works
+        """
+        shost = StorageHost.objects.all()[0]
+        ps = PollServer(shost.dnsname)
+        rtnStr = ps.Exec("uptime")
+        self.assertIn("load average",str(rtnStr))
+
+    def test_GetInterfaces(self):
+        """
+        Test if the interface scanning works
+        """
+        shost = StorageHost.objects.all()[0]
+        ps = PollServer(shost.dnsname)
+        oldEntries = Interface.objects.all()
+        oldEntries.delete()
+        ps.GetInterfaces()
+        interfaces = Interface.objects.all()
+        for eachInterface in interfaces:
+            print eachInterface.ip
+
+        self.assertNotEqual(len(interfaces), 0)
+
+    def test_InstallScripts(self):
+        """
+        Test the installation of scripts
+        Also a good test for SSH keys etc.
+        """
+
+
+
+
 
 
 

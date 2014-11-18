@@ -1,3 +1,19 @@
+#Copyright 2014 Blackberry Limited
+#
+#Licensed under the Apache License, Version 2.0 (the "License");
+#you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
+
+#api/viewhelper.py
+
 from os.path import dirname,join
 from ConfigParser import RawConfigParser
 from time import sleep 
@@ -20,7 +36,7 @@ from utils.scstconf import ParseSCSTConf
 from utils.targetops import ExecMakeTarget
 from hashlib import sha1
 from traceback import format_exc
-
+from utils.configreader import ConfigReader
 def LVAllocSumVG(vg):
     '''
     Simple function to return sum of LV sizes in a specified VG
@@ -153,9 +169,7 @@ def MakeTarget(requestDic,owner):
         globallock.save()
         targetHost=str(chosenVG.vghost)
         targetvguuid=str(chosenVG.vguuid)
-        BASE_DIR = dirname(dirname(__file__)) 
-        config = RawConfigParser()
-        config.read(join(BASE_DIR,'saturn.ini'))
+        config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
         queuename = 'queue'+str(hash(targetHost)%int(numqueues))
         queue = get_queue(queuename)
@@ -214,9 +228,7 @@ def DeleteTarget(requestDic,owner):
             queryset=queryset.objects.filter(targethost=requestDic['targethost'])
     if queryset is None:
         return (1,"No targets to delete, or check delete API call")
-    BASE_DIR = dirname(dirname(__file__))
-    config = RawConfigParser()
-    config.read(join(BASE_DIR,'saturn.ini'))
+    config = ConfigReader()
     numqueues = config.get('saturnring','numqueues')
     jobs =[]
     logger.info("DeleteTarget has %d targets to delete" % (queryset.count()))
