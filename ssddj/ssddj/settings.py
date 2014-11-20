@@ -182,6 +182,7 @@ for ii in range(0,int(numqueues)):
             'HOST': 'redis_1',
             'PORT' : 6379,
             'DB': 0,
+            'DEFAULT_TIMEOUT': 20,
             }
 
 

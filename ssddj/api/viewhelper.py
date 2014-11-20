@@ -176,9 +176,11 @@ def MakeTarget(requestDic,owner):
         logger.info("Launching create target job into queue %s" %(queuename,) )
         job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
         while 1:
-            if job.result:
+            if job.result or job.is_failed:
                 chosenVG.is_locked = False
                 chosenVG.save(update_fields=['is_locked'])
+                if job.is_failed:
+                    return (-1,"Provisioner failed, check syntax or contact admin")
                 return job.result
             else:
                 sleep(0.25)

@@ -118,4 +118,3 @@ class GSMTestCase (TestCase):
 
         self.assertNotEqual(len(interfaces), 0)
 
-
