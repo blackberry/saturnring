@@ -156,15 +156,22 @@ def MakeTarget(requestDic,owner):
                 break
             else:
                 sleep(0.2)
-    except:
+    except: #This is to create the lock the first time
         globallock = Lock(lockname='allvglock',locked=True)
         globallock.save()
-    chosenVG = VGFilter(storageSize,aagroup,owner,clumpgroup,subnet,storemedia)
+
     globallock = Lock.objects.get(lockname='allvglock')
+    try:
+        chosenVG = VGFilter(storageSize,aagroup,owner,clumpgroup,subnet,storemedia)
+    except:
+        logger.error("VGFilter broke")
+        logger.error(format_exc())
+        chosenVG = -1
+
     if chosenVG != -1:
         chosenVG.is_locked = True
         chosenVG.save(update_fields=['is_locked'])
-        sleep(0.1) #Safety net to make sure the save did complete on the DB end
+        sleep(0.1) #Safety net to make sure the save did complete on the DB
         globallock.locked=False
         globallock.save()
         targetHost = str(chosenVG.vghost)
@@ -251,11 +258,11 @@ def DeleteTarget(requestDic,owner):
             if jobs[ii] == 0:
                 continue
             (job,target) = jobs[ii]
-            if (job.result == 0) or (job.result == 1):
-                if job.result==1:
-                    logger.error('Failed deletion of '+target)
-                rtnStatus[target]="Error "+str(job.result)
-                rtnFlag=rtnFlag + job.result
+            if (job.result == 0) or (job.result == 1) or job.is_failed:
+                if job.result==1 or job.is_failed:
+                    logger.error("Failed deletion of " + target)
+                    rtnStatus[target] = "Failed deletion of " + target
+                rtnFlag=rtnFlag + job.result + int(job.is_failed)
                 jobs[ii]=0
                 numDone=numDone+1
             else:

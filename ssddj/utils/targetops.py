@@ -96,7 +96,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 logger.error('Chosen host %s is missing IP addresses in requested subnet' % ( targethost, ) )
                 return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
 
-        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid)):
+        if p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid) == 1:
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
