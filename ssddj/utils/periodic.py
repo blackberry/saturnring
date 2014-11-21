@@ -12,6 +12,7 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+from logging import getLogger
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
@@ -26,12 +27,14 @@ from globalstatemanager.gsm import PollServer
 #        p.UpdateLVs(eachvg)
 
 
+logger = getLogger(__name__)
 def UpdateState():
     allhosts=StorageHost.objects.filter(enabled=True)
     for eachhost in allhosts:
         p = PollServer(eachhost)
         vguuidList = p.GetVG()
-        if vguuidList <> -1:
+        logger.info("getvg returns "+str(vguuidList))
+        if type(vguuidList) is str:
             for vguuid in vguuidList.split(','):
                 p.UpdateLVs(VG.objects.get(vguuid=vguuid))
         p.GetTargetsState()
@@ -40,7 +43,8 @@ def UpdateState():
 def UpdateOneState(host):
     p = PollServer(host)
     vguuidList = p.GetVG()
-    if vguuidList <> -1:
+    logger.info("getvg returns "+str(vguuidList))
+    if type(vguuidList) is str:
         for vguuid in vguuidList.split(','):
             p.UpdateLVs(VG.objects.get(vguuid=vguuid))
     p.GetTargetsState()

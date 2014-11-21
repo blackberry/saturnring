@@ -167,8 +167,8 @@ def MakeTarget(requestDic,owner):
         sleep(0.1) #Safety net to make sure the save did complete on the DB end
         globallock.locked=False
         globallock.save()
-        targetHost=str(chosenVG.vghost)
-        targetvguuid=str(chosenVG.vguuid)
+        targetHost = str(chosenVG.vghost)
+        targetvguuid = str(chosenVG.vguuid)
         config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
         queuename = 'queue'+str(hash(targetHost)%int(numqueues))

@@ -80,12 +80,14 @@ class PollServer():
         """
         Helper function for executing a remote command over an SSH tunnel
         """
+        rtncmd = -1
         try:
             srv = Connection(self.serverDNS,self.userName,self.keyFile)
             rtncmd=srv.execute(command)
             srv.close()
         except:
-            logger.info("Failed SSH-exec command: %s on Saturn server " % (command, self.serverDNS))
+            logger.error("Failed SSH-exec command: %s on Saturn server %s" % (command, self.serverDNS))
+            logger.error(format_exc())
         return rtncmd
 
     def ParseLVM(self,strList,delimitStr,paraList):
@@ -127,6 +129,9 @@ class PollServer():
         Update LV information, called to monitor and update capacity.
         """
         lvdict = self.GetLVs(vgObject.vguuid)
+        if lvdict == -1:
+            logger.error ("Could not run GetLVs")
+            return -1
         lvs = LV.objects.filter(vg=vgObject)
         for lvName,lvinfo in lvdict.iteritems():
             if len(lvs.filter(lvname=lvName)):
@@ -142,32 +147,44 @@ class PollServer():
         """
         Wrapper for parselvm (for LVs), actually populating the DB is done by the UpdateLV function  
         """
-        vgname = self.Exec(" ".join(['sudo','vgdisplay', '-c','|','grep',vguuid,'|','cut -d: -f1']))[0].strip()
-        lvStrList = self.Exec(" ".join(['sudo','lvdisplay',vgname]))
+        execCmd = " ".join(['sudo','vgdisplay', '-c','|','grep',vguuid,'|','cut -d: -f1'])
+        vgname = self.Exec(execCmd)[0].strip()
+        if vgname == -1:
+            logger.error("Could not execute %s on %s " % (execCmd,self.serverDNS))
+            return -1
+        execCmd=" ".join(['sudo','lvdisplay',vgname])
+        lvStrList = self.Exec(execCmd)
+        if lvStrList == -1:
+            logger.error("Could not execute %s on %s " % (execCmd,self.serverDNS))
+            return -1
         delimitStr = '--- Logical volume ---'
         paraList=['LV Name','LV UUID','LV Size','Mapped size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
         return lvs
 
-   
     def GetVG(self): #Unit test this again
         """
         Wrapper for parseLVM (for VGs)+populating the DB
         """
         delimitStr = '--- Volume group ---'
-        paraList=['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
-        vgStrList = self.Exec(" ".join(['sudo','vgdisplay','--units g']))
+        paraList = ['VG Name','VG Size','PE Size','Total PE', 'Free  PE / Size', 'VG UUID']
+        execCmd = " ".join(['sudo','vgdisplay','--units g'])
+        vgStrList = self.Exec(execCmd)
+        if vgStrList == -1:
+            return -1
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         rtnvguuidList = ""
         for vgname in vgs:
             try:
-                cmdStr = self.Exec(" ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname]))
+                execCmd = " ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname])
+                cmdStr = self.Exec(execCmd)
                 logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname])+': LVS returned '+str(cmdStr))
                 thinusedpercent = float(cmdStr[0].rstrip())
                 thintotalGB = float(cmdStr[1].rstrip())
                 maxthinavl = thintotalGB*(100-thinusedpercent)/100
             except:
                 logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+                logger.warn(format_exc())
                 try:
                     vg = VG.objects.get(vguuid=vgs[vgname]['VG UUID'])
                     vg.in_error = True
@@ -231,6 +248,9 @@ class PollServer():
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         srv.close()
         exStr=self.Exec(cmdStr)
+        if exStr == -1:
+            return -1
+
         commentStr = "Trying to create target %s " %( iqnTarget, )
 
         self.GitSave(vguuid,commentStr)
@@ -249,6 +269,8 @@ class PollServer():
         """
         cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
         exStr = self.Exec(cmdStr)
+        if exStr == -1:
+            return -1
         for eachLine in exStr:
             iqntar = eachLine.split()[0]
             tar = Target.objects.filter(iqntar=iqntar)
@@ -275,7 +297,9 @@ class PollServer():
         """
         Delete target
         """
-        self.GetTargetsState()
+        if self.GetTargetsState() == -1:
+            logger.error("Could not GetTargetsState while deleting %s" %(iqntar,))
+            return -1
         try:
             tar = Target.objects.get(iqntar=iqntar)
         except:
@@ -284,6 +308,8 @@ class PollServer():
         if not tar.sessionup:
             cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,vguuid])
             exStr = self.Exec(cmdStr)
+            if exStr == -1:
+                return -1
             self.GitSave(vguuid,"Trying to delete  target %s " %( iqntar,))
             success1 = False
             success2 = False
@@ -306,6 +332,9 @@ class PollServer():
         """
         cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
         ipadds=self.Exec(cmdStr)
+        if ipadds == -1:
+            return -1
+
         sh = StorageHost.objects.get(dnsname=self.serverDNS)
         superuser=User.objects.filter(is_superuser=True).order_by('username')[0]
         for addr in ipadds:
