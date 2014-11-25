@@ -156,7 +156,7 @@ class TargetAdmin(StatsAdmin):
         return mylv.vg.storemedia
 
     def has_delete_permission(self, request, obj=None): # note the obj=None
-                return False
+        return False
 
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
@@ -196,6 +196,11 @@ class TargetAdmin(StatsAdmin):
             obj.owner = request.user
         obj.save()
 
+    def get_actions(self, request):
+    #Disable delete
+        actions = super(TargetAdmin, self).get_actions(request)
+        del actions['delete_selected']
+        return actions
 
 
 
