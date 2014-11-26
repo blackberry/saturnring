@@ -146,7 +146,6 @@ class SnapJob(models.Model):
     deleted_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     enqueued = models.BooleanField(blank=False,default=False)
     run_now = models.BooleanField(blank=False,default=False)
-    
 
 class Interface(models.Model):
     storagehost = models.ForeignKey(StorageHost)

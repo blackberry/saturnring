@@ -65,7 +65,7 @@ def config_snapshots(StatsAdmin,request,queryset):
     return redirect('snapbackup:snapconfig',targets=obj)
 #    return redirect('snapconfig')
 
-def delete_iscsi_target(StatsAdmin,request,queryset):
+def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -146,7 +146,8 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
     list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-    actions = [delete_iscsi_target,config_snapshots]
+#    actions = [delete_selected_iscsi_targets,config_snapshots]
+    actions = [delete_selected_iscsi_targets]
     search_fields = ['iqntar','iqnini','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
