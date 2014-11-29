@@ -146,8 +146,8 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
     list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-#    actions = [delete_selected_iscsi_targets,config_snapshots]
-    actions = [delete_selected_iscsi_targets]
+    actions = [delete_selected_iscsi_targets,config_snapshots]
+    #actions = [delete_selected_iscsi_targets]
     search_fields = ['iqntar','iqnini','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):

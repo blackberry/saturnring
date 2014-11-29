@@ -95,7 +95,7 @@ ALLOWED_HOSTS = ['*']
 TEMPLATE_DIRS = (
             os.path.join(BASE_DIR,  'templates'),
             )
-
+CRISPY_TEMPLATE_PACK = 'bootstrap'
 # Application definition
 
 INSTALLED_APPS = (
@@ -106,6 +106,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'crispy_forms',
     'ssdfrontend',
     'south',
     'rest_framework',
@@ -114,7 +115,7 @@ INSTALLED_APPS = (
     'utils',
     'admin_stats',
     'django_rq',
-    'snapbackup'
+    'snapbackup',
 )
 #PROJECT_APPS = (
 #    'ssdfrontend',
