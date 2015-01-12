@@ -20,7 +20,7 @@ VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`
 if sudo lvs | egrep -q "$lvolName"; then
    echo "Warning: Using previously-created LV "$lvolName
 else
-  LVCOUTPUT=`lvcreate -V$1G -T $VG/thinpool -n $lvolName`
+  LVCOUTPUT=`lvcreate -L$1G $VG -n $lvolName`
   echo $LVCOUTPUT
 fi
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
@@ -29,7 +29,7 @@ dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
 echo $dmp
 
 #Please use the below line, the other one is a place holder for older saturn server testing on VMs
-scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
+scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=0,rotational=0,write_through=1,blocksize=4096
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt

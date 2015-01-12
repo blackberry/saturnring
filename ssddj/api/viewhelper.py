@@ -47,13 +47,12 @@ def LVAllocSumVG(vg):
        lvalloc=lvalloc+eachlv.lvsize
     return lvalloc
 
-def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",storemedia='pciessd'):
+def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",storemedia='randommedia'):
     '''
     The key filtering and "anti-affinity logic" function
     Check if StorageHost is enabled
     Check if VG is enabled
-    Find all VGs where SUM(Alloc_LVs) + storageSize < opf*thintotalGB
-    Further filter on whether thinusedpercent < thinusedmaxpercent
+    Find all VGs where SUM(Alloc_LVs) + storageSize < totalGB
     Return a random choice from these
     Or do AAG logic
     '''
@@ -61,7 +60,12 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
     storagehosts = StorageHost.objects.filter(enabled=True)
     logger.info("Found %d storagehosts" %(len(storagehosts),))
     qualvgs = []
-    vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,thinusedpercent__lt=F('thinusedmaxpercent'),storemedia=storemedia).order_by('?')#Random ordering here
+    if storemedia=='randommedia':
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('?')#Random ordering here
+        logger.info('vg-choices are: '+str(vgchoices))
+    else:
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('?')#Random ordering here
+        logger.info('vg-choices are: '+str(vgchoices))
     if len(vgchoices) > 0:
         numDel=0
         chosenVG = -1
@@ -78,8 +82,8 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
             lvalloc = LVAllocSumVG(eachvg)
             eachvg.CurrentAllocGB=lvalloc
             eachvg.save()
-            if (lvalloc + float(storageSize)) > (eachvg.thintotalGB*eachvg.opf):
-               logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.thintotalGB*eachvg.opf))
+            if (lvalloc + float(storageSize)) > (eachvg.totalGB):
+               logger.info("Disqualified %s/%s, because %f > %f" %(eachvg.vghost,eachvg.vguuid,lvalloc+float(storageSize),eachvg.totalGB))
                numDel=numDel+1
             else:
                 logger.info("A qualified choice for Host/VG is %s/%s" %(eachvg.vghost,eachvg.vguuid))
@@ -144,7 +148,7 @@ def MakeTarget(requestDic,owner):
     if 'storemedia' in requestDic:
         storemedia = requestDic['storemedia']
     else:
-        storemedia = 'pciessd'
+        storemedia = 'randommedia'
 
     logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet))
     try:
@@ -181,6 +185,7 @@ def MakeTarget(requestDic,owner):
         queuename = 'queue'+str(hash(targetHost)%int(numqueues))
         queue = get_queue(queuename)
         logger.info("Launching create target job into queue %s" %(queuename,) )
+        storemedia = chosenVG.storemedia
         job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
         while 1:
             if job.result or job.is_failed:

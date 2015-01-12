@@ -30,7 +30,6 @@ class LV(models.Model):
     lvname = models.CharField(max_length=200,default='Not found')
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=200,primary_key=True)
-    lvthinmapped = models.FloatField(default=-1)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -50,20 +49,17 @@ class VG (models.Model):
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField(default=-1)
-    thinusedpercent = models.FloatField(default=-1)
-    thintotalGB = models.FloatField(default=-1)
-    maxthinavlGB = models.FloatField(default=-1)
-    opf = models.FloatField(default=0.99)
-    thinusedmaxpercent = models.FloatField(default=99)
+    totalGB = models.FloatField(default=-1)
+    maxavlGB = models.FloatField(default=-1)
     enabled = models.BooleanField(default=True)
     CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
-    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('pciessd','pciessd'),('diskssd','diskssd')])
+    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
     def __unicode__(self):              # __unicode__ on Python 2
-        return self.vguuid
+        return str(self.vghost)+'::'+str(self.storemedia)+'::'+str(self.vguuid)
 
 
 class StorageHost(models.Model):

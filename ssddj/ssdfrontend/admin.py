@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 #admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
-    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
-    list_display = ['vghost','storemedia','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
+    readonly_fields = ('vghost','totalGB','maxavlGB','CurrentAllocGB')
+    list_display = ['vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
@@ -206,9 +206,9 @@ class TargetAdmin(StatsAdmin):
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','lvthinmapped','created_at')
-    list_display = ['target', 'owner_name', 'lvsize','lvthinmapped']
-    stats = (Sum('lvsize'),Sum('lvthinmapped'),)
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
+    list_display = ['target', 'owner_name', 'lvsize']
+    stats = (Sum('lvsize'),)
     search_fields = ['target__iqntar','target__owner__username']
     def owner_name(self, instance):
                 return instance.target.owner

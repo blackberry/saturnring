@@ -54,7 +54,7 @@ class APITestCase (TestCase):
         self.assertIn('"error": 0',outStr)
         print outStr
 
-    def test_Provisioner_pciessd(self):
+    def test_Provisioner_pcie1(self):
         """
             Test the provisioning call
 
@@ -64,12 +64,12 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pciessd',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pcie1',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
 
-    def test_Provisioner_diskssd(self):
+    def test_Provisioner_pcie2(self):
         """
             Test the provisioning call
 
@@ -79,7 +79,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=diskssd',
+            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=pcie2',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr

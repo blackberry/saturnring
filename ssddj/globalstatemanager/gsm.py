@@ -137,8 +137,7 @@ class PollServer():
             if len(lvs.filter(lvname=lvName)):
                 preexistLV=lvs.filter(lvname=lvName)[0]
             	preexistLV.lvsize=lvinfo['LV Size']
-            	preexistLV.lvthinmapped=lvinfo['Mapped size']
-            	preexistLV.save(update_fields=['lvsize','lvthinmapped'])
+            	preexistLV.save(update_fields=['lvsize'])
             else:
                 logger.warn("Found orphan LV %s in VG %s on host %s" %(lvName,vgObject.vguuid,self.serverDNS))
 
@@ -158,7 +157,7 @@ class PollServer():
             logger.error("Could not execute %s on %s " % (execCmd,self.serverDNS))
             return -1
         delimitStr = '--- Logical volume ---'
-        paraList=['LV Name','LV UUID','LV Size','Mapped size']
+        paraList=['LV Name','LV UUID','LV Size']
         lvs = self.ParseLVM(lvStrList,delimitStr,paraList)
         return lvs
 
@@ -176,14 +175,13 @@ class PollServer():
         rtnvguuidList = ""
         for vgname in vgs:
             try:
-                execCmd = " ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname])
+                execCmd = " ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])
                 cmdStr = self.Exec(execCmd)
-                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/thinlvstats.sh',vgname])+': LVS returned '+str(cmdStr))
-                thinusedpercent = float(cmdStr[0].rstrip())
-                thintotalGB = float(cmdStr[1].rstrip())
-                maxthinavl = thintotalGB*(100-thinusedpercent)/100
+                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/ivgstats.sh',vgname])+': LVS returned '+str(cmdStr))
+                maxavl = float(cmdStr[0].rstrip())
+                totalGB = float(cmdStr[1].rstrip())
             except:
-                logger.warn("Unable to run LVScan, disabling VG on "+self.serverDNS)
+                logger.warn("Unable to run VGscan, disabling VG on "+self.serverDNS)
                 logger.warn(format_exc())
                 try:
                     vg = VG.objects.get(vguuid=vgs[vgname]['VG UUID'])
@@ -199,11 +197,10 @@ class PollServer():
                 existingvg = existingvgs[0]
                 existingvg.in_error=False
                 existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
-                existingvg.thinusedpercent=thinusedpercent
-                existingvg.thintotalGB=thintotalGB
-                existingvg.maxthinavlGB=maxthinavl
+                existingvg.totalGB=totalGB
+                existingvg.avlGB=maxavl
                 existingvg.vgsize = vgs[vgname]['VG Size']
-                existingvg.save(update_fields=['thinusedpercent','thintotalGB','maxthinavlGB','vgsize','CurrentAllocGB','in_error'])
+                existingvg.save(update_fields=['totalGB','maxavlGB','vgsize','CurrentAllocGB','in_error'])
                 logger.info( "Ran in existingVG loop")
             else:
                 logger.info("Found new VG, adding\n" + str(vgs[vgname]))
@@ -211,8 +208,7 @@ class PollServer():
                         vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                         vgtotalpe=vgs[vgname]['Total PE'],
                         vgfreepe=vgs[vgname]['Free  PE / Size'],
-                        thinusedpercent=thinusedpercent,
-                        thintotalGB=thintotalGB,maxthinavlGB=maxthinavl)
+                        totalGB=totalGB,maxavlGB=maxnavl)
                 myvg.save()#force_update=True)
             rtnvguuidList = rtnvguuidList+ ','+ vgs[vgname]['VG UUID']
         return rtnvguuidList[1:]
