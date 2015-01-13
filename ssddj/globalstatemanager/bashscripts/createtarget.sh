@@ -13,14 +13,29 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-set -e
+function VGisThin () {
+        VGSTR=`lvs --noheadings --units g --separator , | grep thinpool`
+        if grep -q $1 <<<$VGSTR; then
+                return 1
+        else
+                return 0
+        fi
+}
+
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
 VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`
 if sudo lvs | egrep -q "$lvolName"; then
    echo "Warning: Using previously-created LV "$lvolName
 else
-  LVCOUTPUT=`lvcreate -L$1G $VG -n $lvolName`
+  VGisThin $VG
+  if [ $? -eq 1 ]; then
+    echo "Trying to provision thinpool LV on $VG"
+    LVCOUTPUT=`lvcreate -V$1G -T $VG/thinpool -n $lvolName`
+  else
+    echo "Trying to provision non-thin LV on $VG"
+    LVCOUTPUT=`lvcreate -L$1G $VG -n $lvolName`
+  fi
   echo $LVCOUTPUT
 fi
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
