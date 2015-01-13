@@ -177,7 +177,7 @@ class PollServer():
             try:
                 execCmd = " ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])
                 cmdStr = self.Exec(execCmd)
-                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/ivgstats.sh',vgname])+': LVS returned '+str(cmdStr))
+                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])+': returned '+str(cmdStr))
                 maxavl = float(cmdStr[0].rstrip())
                 totalGB = float(cmdStr[1].rstrip())
             except:
