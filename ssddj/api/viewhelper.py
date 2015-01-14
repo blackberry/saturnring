@@ -47,7 +47,7 @@ def LVAllocSumVG(vg):
        lvalloc=lvalloc+eachlv.lvsize
     return lvalloc
 
-def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",storemedia='randommedia'):
+def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",storemedia='randommedia',provisiontype='any'):
     '''
     The key filtering and "anti-affinity logic" function
     Check if StorageHost is enabled
@@ -61,10 +61,17 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
     logger.info("Found %d storagehosts" %(len(storagehosts),))
     qualvgs = []
     if storemedia=='randommedia':
-        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
+        if provisiontype != 'any':
+            vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,is_Thin=provisiontype).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
+        else:
+            vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
         logger.info('vg-choices are: '+str(vgchoices))
     else:
-        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('-maxavlGB')#randomaag goes to least used VG
+        if provisiontype != 'any':
+            vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia,is_Thin=provisiontype).order_by('-maxavlGB')#randomaag goes to least used VG
+        else:
+            vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('-maxavlGB')#randomaag goes to least used VG
+
         logger.info('vg-choices are: '+str(vgchoices))
     if len(vgchoices) > 0:
         numDel=0
@@ -151,8 +158,12 @@ def MakeTarget(requestDic,owner):
         storemedia = requestDic['storemedia']
     else:
         storemedia = 'randommedia'
+    if 'provisiontype' in requestDic:
+        provisiontype = requestDic['provisiontype']
+    else:
+        provisiontype = 'any'
 
-    logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet))
+    logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype))
     try:
         while 1:
             globallock = Lock.objects.get(lockname='allvglock')
@@ -168,7 +179,7 @@ def MakeTarget(requestDic,owner):
 
     globallock = Lock.objects.get(lockname='allvglock')
     try:
-        chosenVG = VGFilter(storageSize,aagroup,owner,clumpgroup,subnet,storemedia)
+        chosenVG = VGFilter(storageSize,aagroup,owner,clumpgroup,subnet,storemedia,provisiontype)
     except:
         logger.error("VGFilter broke")
         logger.error(format_exc())

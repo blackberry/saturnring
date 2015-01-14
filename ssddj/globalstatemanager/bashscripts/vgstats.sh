@@ -42,4 +42,4 @@ else
   #Vsize
   sudo vgs --noheadings --units g --separator , | grep $1 | cut -d, -f6 | cut -d"g" -f1
 fi
-
+echo `VGisThin $1` #Also return if the VG has a thinpool or not

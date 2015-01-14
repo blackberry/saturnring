@@ -58,8 +58,9 @@ class VG (models.Model):
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
     storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
+    is_thin = models.BooleanField(default=True)
     def __unicode__(self):              # __unicode__ on Python 2
-        return str(self.vghost)+'::'+str(self.storemedia)+'::'+str(self.vguuid)
+        return str(self.vghost)+'::'+str(self.storemedia)+'::'+str(self.vguuid)+'::Thin='+str(self.is_thin)
 
 
 class StorageHost(models.Model):
