@@ -180,6 +180,7 @@ class PollServer():
                 logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])+': returned '+str(cmdStr))
                 maxavl = float(cmdStr[0].rstrip())
                 totalGB = float(cmdStr[1].rstrip())
+                isThin = float(cmdStr[2].rstrip())
             except:
                 logger.warn("Unable to run VGscan, disabling VG on "+self.serverDNS)
                 logger.warn(format_exc())
@@ -365,10 +366,10 @@ class PollServer():
                 logger.warn(var)
 
 
-
-if __name__=="__main__":
-    pollserver = PollServer('saturnserver0.store.altus.bblabs')
-    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
-    print cmdStr
+#Commented out because there are formal unit tests.
+#if __name__=="__main__":
+#    pollserver = PollServer('saturnserver0.store.altus.bblabs')
+#    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
+#    print cmdStr
 
 

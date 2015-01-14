@@ -61,10 +61,10 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
     logger.info("Found %d storagehosts" %(len(storagehosts),))
     qualvgs = []
     if storemedia=='randommedia':
-        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
         logger.info('vg-choices are: '+str(vgchoices))
     else:
-        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('?')#Random ordering here
+        vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('-maxavlGB')#randomaag goes to least used VG
         logger.info('vg-choices are: '+str(vgchoices))
     if len(vgchoices) > 0:
         numDel=0
@@ -91,11 +91,12 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
                     if aagroup=="random":
                         return eachvg
                     else:
-                        qualvgs.append((eachvg,eachvg.vghost.aagroup_set.all().filter(name=aagroup).count()))
+                        qualvgs.append((eachvg,(eachvg.vghost.aagroup_set.all().filter(name=aagroup).count(),eachvg.maxavlGB)))
                 else:
                     qualvgs.append((eachvg,eachvg.vghost.clumpgroup_set.all().filter(name=clumpgroup).count()))
         if ( len(qualvgs) > 0 ) and (clumpgroup != "noclump"):
-            chosenVG,overlap = sorted(qualvgs,key=itemgetter(1))[-1] #Chose host with maximum clump peers
+            s = sorted(qualvgs,key=itemgetter(2),reverse=True) #Secondary sort, descending avl space in VG, using sort stability 
+            chosenVG,overlap = sorted(s, key=itemgetter(1))[-1] #Primary sort, chose host with maximum clump peers, using sort stability
             if overlap == 0:
                 for ii in range(0,len(qualvgs)): #There is no clump peer, so need to fall back to aagroup
                     (vg,discardthis) = qualvgs[ii]
@@ -106,7 +107,8 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
                 return chosenVG
 
         if len(qualvgs) > 0:
-            chosenVG,overlap =sorted(qualvgs, key=itemgetter(1))[0]
+            s = sorted(qualvgs,key=itemgetter(2),reverse=True) #Secondary sort
+            chosenVG,overlap =sorted(s, key=itemgetter(1))[0] #Primary sory
             logger.info('Anti-affinity group %s chose Saturn server %s with an overlap of %d.' %(aagroup,chosenVG.vghost,overlap))
             return chosenVG
         if len(vgchoices)>numDel:
