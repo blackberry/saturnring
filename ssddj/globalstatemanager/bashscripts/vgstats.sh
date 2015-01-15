@@ -36,10 +36,11 @@ if [ $? -eq 1 ]; then
   THINFREESIZE=`echo "(100.0-$THINUSEDPERCENT)*$TOTALTHINSIZE/100" | bc`
   echo $THINFREESIZE
   echo $TOTALTHINSIZE
+  echo 1
 else
   #VFree
   sudo vgs --noheadings --units g --separator , | grep $1 | cut -d, -f7 | cut -d"g" -f1
   #Vsize
   sudo vgs --noheadings --units g --separator , | grep $1 | cut -d, -f6 | cut -d"g" -f1
+  echo 0
 fi
-echo `VGisThin $1` #Also return if the VG has a thinpool or not

@@ -38,6 +38,7 @@ else
   fi
   echo $LVCOUTPUT
 fi
+set -e
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 vgu=`echo $6 | tr -d '-' | tr -d ' '`
 dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu

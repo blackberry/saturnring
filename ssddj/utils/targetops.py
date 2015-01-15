@@ -101,6 +101,8 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
             (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
+            logger.info("DevDic = "+str(devDic))
+            logger.info("TarDic = "+str(tarDic))
             if iqnTarget in tarDic:
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)
@@ -112,11 +114,14 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                     newLV = LV(target=newTarget,vg=chosenVG,
                             lvname=lvName,
                             lvsize=storageSize,
-                            lvthinmapped=lvDict[lvName]['Mapped size'],
+                            #lvthinmapped=lvDict[lvName]['Mapped size'],
                             lvuuid=lvDict[lvName]['LV UUID'])
                     newLV.save()
                     chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
                     chosenVG.save()
+            else:
+                logger.error('Error - could not use ParseSCSTConf while working with target creation of %s, check if git and %s are in sync' % (iqnTarget, targethost+'.scst.conf'))
+                return (-1,"CreateTarget returned error 2, contact admin")
 
             tar = Target.objects.get(iqntar=iqnTarget)
             aa = AAGroup(name=aagroup,target=tar)
@@ -134,8 +139,8 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
 
             return (0,iqnTarget)
         else:
-            logger.warn('CreateTarget did not work')
-            return (-1,"CreateTarget returned error, contact admin")
+            logger.error('CreateTarget did not work')
+            return (-1,"CreateTarget returned error 1, contact admin")
 
 
 def DeleteTargetObject(obj):

@@ -21,6 +21,7 @@ from traceback import format_exc
 from pprint import pprint
 from utils.configreader import ConfigReader
 from os import remove
+from ast import literal_eval # Convert string to list
 from os.path import join, dirname
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
@@ -53,25 +54,26 @@ class GSMTestCase (TestCase):
                 )
         testhost.save()
         outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.iscsiserver])
-        vguuid = outStr.split('"')[3]
-        vg = VG(vghost=testhost,
-                vguuid = vguuid,
-                vgpesize = 1.0,
-                vgtotalpe = 10.0,
-                vgsize = 1.0)
-        vg.save()
-        outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/vgscan/","-d","saturnserver="+self.iscsiserver])
-        self.host = StorageHost.objects.all()[0]
-        self.psrvr = PollServer(self.host.dnsname)
-
+        for eachElement in literal_eval(outStr):
+            vguuid = eachElement['vguuid']
+            vg = VG(vghost=testhost,
+                    vguuid = vguuid,
+                    vgpesize = 1.0,
+                    vgtotalpe = 10.0,
+                    vgsize = 1.0)
+            vg.save()
+        self.host = literal_eval(outStr)[0]['vghost']
+        self.psrvr = PollServer(self.host)
+   
     def test_GetLVs(self):
         """
         Test if LVs are being read off the test server
         """
-        vguuid = VG.objects.all()[0].vguuid
-        lvs = self.psrvr.GetLVs(vguuid)
-        pprint(lvs)
-        self.assertNotEqual(len(lvs),0)
+        allvgs = VG.objects.all()
+        for eachvg in allvgs:
+            lvs = self.psrvr.GetLVs(eachvg.vguuid)
+            pprint(lvs)
+            self.assertNotEqual(len(lvs),0)
 
     def test_InstallScripts(self):
         """

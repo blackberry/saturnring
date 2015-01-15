@@ -45,8 +45,8 @@ logger = logging.getLogger(__name__)
 #admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
-    readonly_fields = ('vghost','totalGB','maxavlGB','CurrentAllocGB')
-    list_display = ['vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error']
+    readonly_fields = ('vguuid','vghost','totalGB','maxavlGB','CurrentAllocGB')
+    list_display = ['vguuid','vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error','is_thin']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False

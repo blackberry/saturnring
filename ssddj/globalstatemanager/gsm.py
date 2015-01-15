@@ -129,8 +129,11 @@ class PollServer():
         Update LV information, called to monitor and update capacity.
         """
         lvdict = self.GetLVs(vgObject.vguuid)
+        if "No LVs " in lvdict:
+            logger.info("There are no LVs in %s to run UpdateLVs on in Saturn host %s" %(vgObject.vguuid, self.serverDNS))
+            return 0
         if lvdict == -1:
-            logger.error ("Could not run GetLVs")
+            logger.error ("Could not run GetLVs (perhaps there are no LVs in this VG yet?)")
             return -1
         lvs = LV.objects.filter(vg=vgObject)
         for lvName,lvinfo in lvdict.iteritems():
@@ -153,6 +156,9 @@ class PollServer():
             return -1
         execCmd=" ".join(['sudo','lvdisplay',vgname])
         lvStrList = self.Exec(execCmd)
+        if lvStrList ==[""]:
+            return "No LVs in %s" %(vguuid,)
+
         if lvStrList == -1:
             logger.error("Could not execute %s on %s " % (execCmd,self.serverDNS))
             return -1
@@ -200,9 +206,9 @@ class PollServer():
                 existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
                 existingvg.totalGB=totalGB
                 existingvg.avlGB=maxavl
-                existingvg.is_Thin=isThin
+                existingvg.is_thin=isThin
                 existingvg.vgsize = vgs[vgname]['VG Size']
-                existingvg.save(update_fields=['totalGB','maxavlGB','vgsize','CurrentAllocGB','in_error','is_Thin'])
+                existingvg.save(update_fields=['totalGB','maxavlGB','vgsize','CurrentAllocGB','in_error','is_thin'])
                 logger.info( "Ran in existingVG loop")
             else:
                 logger.info("Found new VG, adding\n" + str(vgs[vgname]))
@@ -210,7 +216,7 @@ class PollServer():
                         vguuid=vgs[vgname]['VG UUID'],vgpesize=vgs[vgname]['PE Size'],
                         vgtotalpe=vgs[vgname]['Total PE'],
                         vgfreepe=vgs[vgname]['Free  PE / Size'],
-                        totalGB=totalGB,maxavlGB=maxnavl, is_Thin=isThin)
+                        totalGB=totalGB,maxavlGB=maxavl, is_thin=isThin)
                 myvg.save()#force_update=True)
             rtnvguuidList = rtnvguuidList+ ','+ vgs[vgname]['VG UUID']
         return rtnvguuidList[1:]
