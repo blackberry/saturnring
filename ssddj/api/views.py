@@ -31,7 +31,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.forms.models import model_to_dict
 from logging import getLogger
 from django.core import serializers
-from utils.periodic import UpdateState
+#from utils.periodic import UpdateState
 from utils.periodic import UpdateOneState
 from django_rq import get_queue
 from ConfigParser import RawConfigParser
@@ -67,6 +67,10 @@ class ReturnStats(APIView):
     def get(self, request):
         try:
             error = StatMaker()
+            if error != 0:
+               logger.error('Stat creation returned'+str(error))
+               raise IOError
+
             config = ConfigReader()
             thefile = join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
             filename = basename(thefile)

@@ -207,7 +207,7 @@ class TargetAdmin(StatsAdmin):
 
 class LVAdmin(StatsAdmin):
     readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
-    list_display = ['target', 'owner_name', 'lvsize']
+    list_display = ['lvname','vg','target', 'lvsize','lvuuid']
     stats = (Sum('lvsize'),)
     search_fields = ['target__iqntar','target__owner__username']
     def owner_name(self, instance):

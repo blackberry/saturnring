@@ -118,6 +118,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                             lvuuid=lvDict[lvName]['LV UUID'])
                     newLV.save()
                     chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
+                    chosenVG.maxavlGB=max(0,chosenVG.maxavlGB-float(storageSize))
                     chosenVG.save()
             else:
                 logger.error('Error - could not use ParseSCSTConf while working with target creation of %s, check if git and %s are in sync' % (iqnTarget, targethost+'.scst.conf'))
@@ -149,6 +150,9 @@ def DeleteTargetObject(obj):
     if p.DeleteTarget(obj.iqntar,lv.vg.vguuid)==1:
         newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
         newth.save()
+        tarVG = lv.vg
+        tarVG.maxavlGB = tarVG.maxavlGB + obj.sizeinGB
+        tarVG.save()
         obj.delete()
         return 0
     else:

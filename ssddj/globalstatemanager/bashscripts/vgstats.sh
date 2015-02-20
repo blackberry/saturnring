@@ -32,9 +32,9 @@ if [ $? -eq 1 ]; then
   #Total thinpool size; we assume entire VG has only the thinpool as the Saturn provisioning area for that VG
   #Also, this will give funky answers for fractional (sub GB) Thin pool sizes; assumption is there are several GBs
   TOTALTHINSIZE=`lvs --noheadings --units g --nosuffix --separator , | tr -d ' ' | grep "^thinpool" | grep $1 | cut -d, -f4`
-  THINUSEDPERCENT=`lvs --noheadings --units g --nosuffix --separator , | tr -d ' ' | grep "^thinpool" | grep $1 | cut -d, -f7`
-  THINFREESIZE=`echo "(100.0-$THINUSEDPERCENT)*$TOTALTHINSIZE/100" | bc`
-  echo $THINFREESIZE
+  TOTALLVUSED=`lvs --noheadings --units g --nosuffix --separator , | tr -d ' ' | grep $1 | grep thinpool | grep -v "^thinpool" | cut -d, -f4 | awk '{s+=$1} END {print s}'`
+  #echo "$[$TOTALTHINSIZE-$TOTALLVUSED]"
+  python -c "print float($TOTALTHINSIZE)-float($TOTALLVUSED)"
   echo $TOTALTHINSIZE
   echo 1
 else

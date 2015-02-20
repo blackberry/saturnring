@@ -61,19 +61,24 @@ class PollServer():
         self.iscsiconfdir = join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
         self.remoteinstallLoc = config.get('saturnnode','install_location')
         self.localbashscripts = join(BASE_DIR,config.get('saturnring','bashscripts'))
+        try:
+            self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
+        except:
+            logger.error("Failed SSH-exec connection on Saturn server %s" % (self.serverDNS,) )
+            logger.error(format_exc())
 
     def InstallScripts(self):
         """
         Copy bash scripts from the saturnringserver into the saturn server via sftp
         """
-        srv = Connection(self.serverDNS,self.userName,self.keyFile)
-        srv.execute ('mkdir -p '+self.remoteinstallLoc+'saturn-bashscripts/')
-        srv.chdir(self.remoteinstallLoc+'saturn-bashscripts/')
+        #srv = Connection(self.serverDNS,self.userName,self.keyFile)
+        self.srv.execute ('mkdir -p '+self.remoteinstallLoc+'saturn-bashscripts/')
+        self.srv.chdir(self.remoteinstallLoc+'saturn-bashscripts/')
         locallist=listdir(self.localbashscripts)
         for localfile in locallist:
-            srv.put(self.localbashscripts+localfile)
-            srv.execute("chmod 777 "+self.remoteinstallLoc+'saturn-bashscripts/'+localfile)
-        srv.close()
+            self.srv.put(self.localbashscripts+localfile)
+            self.srv.execute("chmod 777 "+self.remoteinstallLoc+'saturn-bashscripts/'+localfile)
+        #srv.close()
         logger.info("Installed scripts")
 
     def Exec(self,command):
@@ -82,9 +87,9 @@ class PollServer():
         """
         rtncmd = -1
         try:
-            srv = Connection(self.serverDNS,self.userName,self.keyFile)
-            rtncmd=srv.execute(command)
-            srv.close()
+            #srv = Connection(self.serverDNS,self.userName,self.keyFile)
+            rtncmd=self.srv.execute(command)
+            #srv.close()
         except:
             logger.error("Failed SSH-exec command: %s on Saturn server %s" % (command, self.serverDNS))
             logger.error(format_exc())
@@ -178,6 +183,7 @@ class PollServer():
         if vgStrList == -1:
             return -1
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
+        logger.info("VGStating on %s returns %s " % (self.serverDNS, str(vgs)) )
         rtnvguuidList = ""
         for vgname in vgs:
             try:
@@ -198,14 +204,13 @@ class PollServer():
                     logger.error("VG not found in DB: %s" % ( vgs[vgname]['VG UUID'],))
                 return 3
 
-            logger.info(vgs)
             existingvgs = VG.objects.filter(vguuid=vgs[vgname]['VG UUID'])
             if len(existingvgs)==1:
                 existingvg = existingvgs[0]
                 existingvg.in_error=False
-                existingvg.CurrentAllocGB = Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
+                existingvg.CurrentAllocGB = totalGB-maxavl#Target.objects.filter(targethost=existingvg.vghost).aggregate(Sum('sizeinGB'))['sizeinGB__sum']
                 existingvg.totalGB=totalGB
-                existingvg.avlGB=maxavl
+                existingvg.maxavlGB=maxavl
                 existingvg.is_thin=isThin
                 existingvg.vgsize = vgs[vgname]['VG Size']
                 existingvg.save(update_fields=['totalGB','maxavlGB','vgsize','CurrentAllocGB','in_error','is_thin'])
@@ -227,9 +232,9 @@ class PollServer():
         Check in changes to config files into git repository
         """
         try:
-            srv = Connection(self.serverDNS,self.userName,self.keyFile)
-            srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
+            #srv = Connection(self.serverDNS,self.userName,self.keyFile)
+            self.srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            self.srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
             try:
                 repo = Repo(self.iscsiconfdir)
                 filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
@@ -248,9 +253,9 @@ class PollServer():
         Create iSCSI target by running the createtarget script; 
         and save latest scst.conf from the remote server (overwrite)
         """
-        srv = Connection(self.serverDNS,self.userName,self.keyFile)
+        #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
-        srv.close()
+        #srv.close()
         exStr=self.Exec(cmdStr)
         if exStr == -1:
             return -1
@@ -266,7 +271,6 @@ class PollServer():
             logger.info("Returning failed createtarget run")
             return 0
 
-    
     def GetTargetsState(self):
         """
         Read targets to determine their latest state via the parsetarget script
@@ -301,6 +305,7 @@ class PollServer():
         """
         Delete target
         """
+        logger.info("Trying to delete target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
         if self.GetTargetsState() == -1:
             logger.error("Could not GetTargetsState while deleting %s" %(iqntar,))
             return -1

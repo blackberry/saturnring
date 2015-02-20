@@ -17,6 +17,7 @@ from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from globalstatemanager.gsm import PollServer
+from traceback import format_exc
 
 
 #def UpdateState():
@@ -28,17 +29,17 @@ from globalstatemanager.gsm import PollServer
 
 
 logger = getLogger(__name__)
-def UpdateState():
-    allhosts=StorageHost.objects.filter(enabled=True)
-    for eachhost in allhosts:
-        p = PollServer(eachhost)
-        vguuidList = p.GetVG()
-        logger.info("getvg returns "+str(vguuidList))
-        if type(vguuidList) is str:
-            for vguuid in vguuidList.split(','):
-                p.UpdateLVs(VG.objects.get(vguuid=vguuid))
-        p.GetTargetsState()
-        p.GetInterfaces()
+#def UpdateState():
+#    allhosts=StorageHost.objects.filter(enabled=True)
+#    for eachhost in allhosts:
+#        p = PollServer(eachhost)
+#        vguuidList = p.GetVG()
+#        logger.info("getvg returns "+str(vguuidList))
+#        if type(vguuidList) is str:
+#            for vguuid in vguuidList.split(','):
+#                p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+#        p.GetTargetsState()
+#        p.GetInterfaces()
 
 def UpdateOneState(host):
     p = PollServer(host)
@@ -46,6 +47,11 @@ def UpdateOneState(host):
     logger.info("getvg returns "+str(vguuidList))
     if type(vguuidList) is str:
         for vguuid in vguuidList.split(','):
-            p.UpdateLVs(VG.objects.get(vguuid=vguuid))
+            try:
+                vg = VG.objects.get(vguuid=vguuid)
+                p.UpdateLVs(vg)
+            except:
+                logger.error("Cannot work with VG %s on %s" %(vguuid,host))
+                logger.error(format_exc())
     p.GetTargetsState()
     p.GetInterfaces()

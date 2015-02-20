@@ -13,27 +13,29 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
+source ./envvars.sh
 
-cd /home/vagrant
+cd /home/$USER
+#Get latest saturnringsoftware from master branch
 git clone https://github.com/sachinkagarwal/saturnring/
 
-cd /home/vagrant/saturnring
-if [ ! -d "/home/vagrant/saturnring/saturnenv" ]; then
+cd /home/$USER/saturnring
+if [ ! -d "/home/$USER/saturnring/saturnenv" ]; then
   virtualenv saturnenv
 fi
-cd /home/vagrant/saturnring/ssddj
-source /home/vagrant/saturnring/saturnenv/bin/activate
-pip install -r /home/vagrant/saturnring/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+cd /home/$USER/saturnring/ssddj
+source /home/$USER/saturnring/saturnenv/bin/activate
+pip install -r /home/$USER/saturnring/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
 python manage.py syncdb --noinput
 python manage.py convert_to_south ssdfrontend
 python manage.py schemamigration ssdfrontend --auto
 python manage.py migrate
 
-cat <<EOF > /home/vagrant/saturnring/redisqconf/rqworker.sh
+cat <<EOF > /home/$USER/saturnring/redisqconf/rqworker.sh
 #!/bin/bash
-source /home/vagrant/saturnring/saturnenv/bin/activate
-python /home/vagrant/saturnring/ssddj/manage.py rqworker default
+source /home/$USER/saturnring/saturnenv/bin/activate
+python /home/$USER/saturnring/ssddj/manage.py rqworker default
 
 EOF
 
@@ -43,16 +45,16 @@ import sys
 import site
 
 # Add the site-packages of the chosen virtualenv to work with
-site.addsitedir('/home/vagrant/saturnring/saturnenv/local/lib/python2.7/site-packages')
+site.addsitedir('/home/$USER/saturnring/saturnenv/local/lib/python2.7/site-packages')
 
 # Add the app's directory to the PYTHONPATH
-sys.path.append('/home/vagrant/saturnring/ssddj')
-sys.path.append('/home/vagrant/saturnring/ssddj/ssddj')
+sys.path.append('/home/$USER/saturnring/ssddj')
+sys.path.append('/home/$USER/saturnring/ssddj/ssddj')
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'ssddj.settings'
 
 # Activate your virtual env
-activate_env=os.path.expanduser("/home/vagrant/saturnring/saturnenv/bin/activate_this.py")
+activate_env=os.path.expanduser("/home/$USER/saturnring/saturnenv/bin/activate_this.py")
 execfile(activate_env, dict(__file__=activate_env))
 
 import django.core.handlers.wsgi
@@ -66,15 +68,15 @@ python manage.py collectstatic --noinput
 if [ ! -f mycron ];then
         crontab -l > mycron
         #echo new cron into cron file
-        echo "* * * * *  curl -X GET http://192.168.61.20/api/stateupdate/" >> mycron
+        echo "* * * * *  curl -X GET http://$SATURNRINGHOST:$SATURNRINGAPACHEPORT/api/stateupdate/" >> mycron
         #install new cron file
         crontab mycron
 fi
 
 # Create new keys
-CONFIGDIR=/nfsmount/saturnconfig
+CONFIGDIR=$SATURNRINGHOST/saturnconfig
 sudo mkdir -p $CONFIGDIR
-sudo chown vagrant:vagrant $CONFIGDIR
+sudo chown $USER:$USER $CONFIGDIR
 cd $CONFIGDIR
 git init
 ssh-keygen -q -f saturnkey -N ''

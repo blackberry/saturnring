@@ -19,10 +19,10 @@ then
         yes | scstadmin -rem_target $1 -driver iscsi
         TARGETMD5=`echo $1 | md5sum | cut -f1 -d" "`
         lvolName=lvol-${TARGETMD5:0:8}
-        VG=`vgdisplay -c | grep $2 | cut -d: -f1`
+        VG=`vgdisplay -c | grep $2 | cut -d: -f1 | tr -d ' '`
         lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
         yes | scstadmin -close_dev disk-${lvu:0:8} -handler vdisk_blockio
-        echo "Trying to remove LV "$lvolName
+        echo "Trying to remove LV "$lvolName 
         yes | lvremove -f $VG/$lvolName
         scstadmin -write_config /etc/scst.conf
         sudo mkdir -p /temp
