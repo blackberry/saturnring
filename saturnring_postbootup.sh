@@ -13,30 +13,33 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-source ./envvars.sh
+source /vagrant/envvars.sh
 
 apt-get update
 apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl libsasl2-dev libldap2-dev
+
 mkdir -p $SATURNWKDIR/saturnringlog
-chown $USER:$USER $SATURNWKDIR/saturnringlog
+chown $INSTALLUSER:$INSTALLUSER $SATURNWKDIR/saturnringlog
 
 
 mkdir -p /var/www/saturnring
-chown -R $USER:$USER /var/www
+chown -R $INSTALLUSER:$INSTALLUSER /var/www
 
+mkdir -p $DATABASE_DIR
+chown $INSTALLUSER:$INSTALLUSER $DATABASE_DIR
 
-sudo -u $USER -H bash -c "cd /$USER; ./saturnring_postbootup_as_$USER_user.sh"
+sudo -u $INSTALLUSER -H bash -c "cd /vagrant; ./saturnring_postbootup_as_"$INSTALLUSER"_user.sh"
 
-cd /home/$USER/saturnring/ssddj
+cd /home/$INSTALLUSER/saturnring/ssddj
 rm /etc/supervisor/conf.d/saturnworker.conf
 for ii in `seq 1 $NUMWORKERS`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
-  [program:django-rqworker-$ii]
-  command=/home/$USER/saturnring/misc/rqworker.sh queue$ii
-  user=$USER
-  stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
-  redirect_stderr=true
+[program:django-rqworker-$ii]
+command=/home/$INSTALLUSER/saturnring/misc/rqworker.sh queue$ii
+user=$INSTALLUSER
+stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
+redirect_stderr=true
   
 EOF
 done
@@ -50,8 +53,8 @@ cat <<EOF > /etc/apache2/sites-available/saturnring.conf
         ServerAdmin saturnadmin@yourdomain.com
         ServerName $SATURNRINGHOST
         WSGIScriptAlias / /var/www/saturnring/index.wsgi
-        WSGIDaemonProcess $USER  user=$USER
-        WSGIProcessGroup $USER
+        WSGIDaemonProcess $INSTALLUSER  user=$INSTALLUSER
+        WSGIProcessGroup $INSTALLUSER
         WSGIPassAuthorization On
         Alias /static/ /var/www/saturnring/static/
         <Location "/static/">
@@ -67,6 +70,7 @@ EOF
 
 ln -s /etc/apache2/sites-available/saturnring.conf /etc/apache2/sites-enabled/saturnring.conf
 
+#chown -R www-data:www-data  $DATABASE_DIR
 service apache2 restart
 
 service supervisor stop

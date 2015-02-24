@@ -1,0 +1,13 @@
+<testsuite errors="1" failures="0" name="Django Project Tests" skips="0" tests="2" time="0.038"><testcase classname="api.tests.APITestCase" name="test_Provisioner" time="0.007853"><system-out>Here is where we can set some state
+This did not work
+</system-out></testcase><testcase classname="api.tests.APITestCase" name="test_UpdateStateData" time="0.011522"><error message="Command '['curl', '-X', 'GET', 'http://127.0.0.1/saturnring/api/stateupdate/']' returned non-zero exit status 7" type="subprocess.CalledProcessError">Traceback (most recent call last):
+  File "/opt/django/app/api/tests.py", line 24, in test_UpdateStateData
+    outStr=check_output(["curl","-X","GET","http://127.0.0.1/saturnring/api/stateupdate/"])
+  File "/usr/lib/python2.7/subprocess.py", line 544, in check_output
+    raise CalledProcessError(retcode, cmd, output=output)
+CalledProcessError: Command '['curl', '-X', 'GET', 'http://127.0.0.1/saturnring/api/stateupdate/']' returned non-zero exit status 7
+
+Stdout:
+Here is where we can set some state
+</error><system-out>Here is where we can set some state
+</system-out></testcase></testsuite>

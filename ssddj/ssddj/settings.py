@@ -49,6 +49,7 @@ DBPORT = config.get('database','dbport')
 DBUSER = config.get('database','dbuser')
 DBTYPE = config.get('database','dbtype')
 DBPASSWORD = config.get('database','dbpassword')
+DBDIR = config.get('database','dbdir')
 
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
@@ -150,7 +151,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE':'django.db.backends.sqlite3',
-            'NAME': DBNAME,
+            'NAME': os.path.join(DBDIR,DBNAME),
         }
     }
 
