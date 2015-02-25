@@ -32,7 +32,8 @@ sudo -u $INSTALLUSER -H bash -c "cd /vagrant; ./saturnring_postbootup_as_"$INSTA
 
 cd /home/$INSTALLUSER/saturnring/ssddj
 rm /etc/supervisor/conf.d/saturnworker.conf
-for ii in `seq 1 $NUMWORKERS`;
+COUNTMAX=`expr $NUMWORKERS - 1`
+for ii in `seq 0 $COUNTMAX`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-$ii]

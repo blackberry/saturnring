@@ -51,7 +51,7 @@ logpath=/nfsmount/saturnring/saturnringlog
 
 #Number of queues
 #If you change this number then please adjust the /etc/supervisor/conf.d/saturnring.conf by adding or deleting queue entries out there
-numqueues=5
+numqueues=$NUMWORKERS
 
 [database]
 
@@ -93,12 +93,6 @@ python manage.py migrate
 
 cd /home/$INSTALLUSER/saturnring/ssddj
 echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', '$ADMINEMAIL', '$SATURNRINGPASSWORD')" | python manage.py shell
-cat <<EOF > /home/$INSTALLUSER/saturnring/misc/rqworker.sh
-#!/bin/bash
-source /home/$INSTALLUSER/saturnring/saturnenv/bin/activate
-python /home/$INSTALLUSER/saturnring/ssddj/manage.py rqworker default
-
-EOF
 
 cat <<EOF > /var/www/saturnring/index.wsgi
 import os
