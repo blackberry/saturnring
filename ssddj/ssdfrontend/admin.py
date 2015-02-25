@@ -14,6 +14,8 @@
 
 from django.contrib import admin
 from django import forms
+from django.shortcuts import redirect
+from django.core.urlresolvers import reverse
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -40,11 +42,11 @@ import ConfigParser
 
 
 logger = logging.getLogger(__name__)
-admin.site.disable_action('delete_selected')
+#admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
-    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
-    list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
+    readonly_fields = ('vguuid','vghost','totalGB','maxavlGB','CurrentAllocGB')
+    list_display = ['vguuid','vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error','is_thin']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
@@ -55,7 +57,15 @@ class InterfaceAdmin(StatsAdmin):
     list_display = ['ip','storagehost']
 admin.site.register(Interface,InterfaceAdmin)
 
-def delete_iscsi_target(StatsAdmin,request,queryset):
+
+def config_snapshots(StatsAdmin,request,queryset):
+    targetList = []
+    for obj in queryset:
+        targetList.append(obj.iqntar)
+    return redirect('snapbackup:snapconfig',targets=obj)
+#    return redirect('snapconfig')
+
+def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -115,6 +125,12 @@ class TargetHistoryAdmin(StatsAdmin):
             return False
         return True
 
+    def has_add_permission(self, request):
+        return False
+    
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+                return False
+    
     def queryset(self, request):
         if request.user.is_superuser:
             return TargetHistory.objects.all()
@@ -129,14 +145,19 @@ admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
     readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-    actions = [delete_iscsi_target]
-    search_fields = ['iqntar','iqnini']
+    list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+    actions = [delete_selected_iscsi_targets,config_snapshots]
+    #actions = [delete_selected_iscsi_targets]
+    search_fields = ['iqntar','iqnini','aagroup']
     stats = (Sum('sizeinGB'),)
     def has_add_permission(self, request):
         return False
-#    def has_delete_permission(self, request, obj=None): # note the obj=None
-#                return False
+    def storemedia(self,obj):
+        mylv = LV.objects.get(target=obj)
+        return mylv.vg.storemedia
+
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+        return False
 
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
@@ -176,18 +197,25 @@ class TargetAdmin(StatsAdmin):
             obj.owner = request.user
         obj.save()
 
+    def get_actions(self, request):
+    #Disable delete
+        actions = super(TargetAdmin, self).get_actions(request)
+        del actions['delete_selected']
+        return actions
 
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','lvthinmapped','created_at')
-    list_display = ['target', 'owner_name', 'lvsize','lvthinmapped']
-    stats = (Sum('lvsize'),Sum('lvthinmapped'),)
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
+    list_display = ['lvname','vg','target', 'lvsize','lvuuid']
+    stats = (Sum('lvsize'),)
     search_fields = ['target__iqntar','target__owner__username']
     def owner_name(self, instance):
                 return instance.target.owner
     owner_name.admin_order_field  = 'target__owner'
 
+    def has_add_permission(self, request):
+        return False
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False
     def has_change_permission(self, request, obj=None):

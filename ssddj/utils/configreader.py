@@ -1,4 +1,3 @@
-#!/bin/bash
 #Copyright 2014 Blackberry Limited
 #
 #Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +12,13 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-#lvs --units g | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f2
-#lvs --units g | grep "\s\sthinpool*" | cut -d" " -f6- | tr -d " " | cut -d"g" -f1
-lvdisplay storevg/thinpool --units g | grep "Allocated pool data" | sed 's/[^0-9\.]*//g'
-lvdisplay storevg/thinpool --units g | grep "LV Size" | sed 's/[^0-9\.]*//g'
+#utils/configreader.py
+
+
+from os.path import dirname,join
+from ConfigParser import RawConfigParser
+def ConfigReader(configfile='saturn.ini'):
+    BASE_DIR = dirname(dirname(__file__))
+    config = RawConfigParser()
+    config.read(join(BASE_DIR,configfile))
+    return config

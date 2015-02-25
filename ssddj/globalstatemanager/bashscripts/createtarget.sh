@@ -13,22 +13,39 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-set -e
+function VGisThin () {
+        VGSTR=`lvs --noheadings --units g --separator , | grep thinpool`
+        if grep -q $1 <<<$VGSTR; then
+                return 1
+        else
+                return 0
+        fi
+}
+
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
+VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`
 if sudo lvs | egrep -q "$lvolName"; then
    echo "Warning: Using previously-created LV "$lvolName
 else
-  LVCOUTPUT=`lvcreate -V$1G -T $6/thinpool -n $lvolName`
+  VGisThin $VG
+  if [ $? -eq 1 ]; then
+    echo "Trying to provision thinpool LV on $VG"
+    LVCOUTPUT=`lvcreate -V$1G -T $VG/thinpool -n $lvolName`
+  else
+    echo "Trying to provision non-thin LV on $VG"
+    LVCOUTPUT=`lvcreate -L$1G $VG -n $lvolName`
+  fi
   echo $LVCOUTPUT
 fi
-lvu=`lvdisplay $6/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
-vgu=`vgdisplay $6 | grep "VG UUID" | sed  's/VG UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
+set -e
+lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
+vgu=`echo $6 | tr -d '-' | tr -d ' '`
 dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
 echo $dmp
 
 #Please use the below line, the other one is a place holder for older saturn server testing on VMs
-scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=1,rotational=0,write_through=1,blocksize=4096
+scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=0,rotational=0,write_through=1,blocksize=4096
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
 echo "add_target $2" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "add_target_attribute $2 allowed_portal $3" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
@@ -48,7 +65,7 @@ echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 scstadmin -write_config /etc/scst.conf
 sudo mkdir -p /temp
 sudo cp /etc/scst.conf /temp
-sudo cp /etc/lvm/backup/$6 /temp
+sudo cp /etc/lvm/backup/$VG /temp/$6
 sudo chmod  666 /temp/scst.conf
 sudo chmod 666 /temp/$6
-echo "SUCCESS"
+echo "SUCCESS: created target $2 on $VG:  ($6)"

@@ -39,81 +39,111 @@ class APITestCase (TestCase):
         self.assertIn('Ok, enqueued state update request', outStr)
         print outStr
     
-    def test_ProvisionerPlain(self):
+    def test_Provisioner(self):
         """
             Test the provisioning call
 
-            Note: needs a account to be setup in the portal
+            Note: needs an account to be setup in the portal
             testuser/password
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionrandom&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
 
-    def test_Provisioner_pcie1(self):
-        """
-            Test the provisioning call
-
-            Note: needs a account to be setup in the portal
-            testuser/password
-        """
-        print "TESTING Provisioner"
-        outStr = check_output(["curl","-X","GET",
-            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pcie1',
-            "-u","testuser:password",])
-        self.assertIn('"error": 0',outStr)
-        print outStr
-
-    def test_Provisioner_pcie2(self):
-        """
-            Test the provisioning call
-
-            Note: needs a account to be setup in the portal
-            testuser/password
-        """
-        print "TESTING Provisioner"
-        outStr = check_output(["curl","-X","GET",
-            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=pcie2',
-            "-u","testuser:password",])
-        self.assertIn('"error": 0',outStr)
-        print outStr
-
-    def test_Provisioner_diskssd_sameservicename(self):
-        """
-            Test the provisioning call, should fail to provision
-            because it tries to create 2 identical targetnames on different media
-
-            Note: needs a account to be setup in the portal
-            testuser/password
-            Needs 2 media types - diskssd and pciessd (basically 2 VGs in the iscsiserver, 
-            and then assigned to the media types)
-        """
-        print "TESTING Provisioner"
-        outStr = check_output(["curl","-X","GET",
-            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=diskssd',
-            "-u","testuser:password",])
-        outStr = check_output(["curl","-X","GET",
-            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=pciessd',
-            "-u","testuser:password",])
-        self.assertIn('DIFFERENT storemedia',outStr)
-        print outStr
-
-    def test_DeletionTargetPlain(self):
+    def test_DeletionTarget(self):
         """
             Test the deletion call for 1 target
+            Note: needs an account to be setup in the portal
+            testuser/password
 
-            Note: needs the test_Provisioner test to be run so that 
-            the target has already been created
         """
         print "TESTING DeletionTarget"
+        print "Creating target if it doesnt exist"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionrandom&aagroup=testgroup',
+            "-u","testuser:password",])
+        print outStr
+        print "Deleting target"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovisionrandom:aa59eb0a",
+            "-u","testuser:password"])
+        print outStr
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_ProvisionerThin(self):
+        """
+            Test the provisioning call
+
+            Note: needs an account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionthin&aagroup=testgroup&provisiontype=1',
+            "-u","testuser:password",])
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_DeletionTargetThin(self):
+        """
+            Test the deletion call for 1 target
+            Note: needs an account to be setup in the portal
+            testuser/password
+
+        """
+        print "TESTING DeletionTarget"
+        print "Creating target if it doesnt exist"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionthin&aagroup=testgroup&provisiontype=1',
+            "-u","testuser:password",])
+        print outStr
+        print "Deleting target"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovisionthin:aa59eb0a",
+            "-u","testuser:password"])
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_ProvisionerThick(self):
+        """
+            Test the provisioning call
+
+            Note: needs an account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionthick&aagroup=testgroup&provisiontype=0',
+            "-u","testuser:password",])
+        self.assertIn('"error": 0',outStr)
+        print outStr
+
+    def test_DeletionTargetThick(self):
+        """
+            Test the deletion call for 1 target
+            Note: needs an account to be setup in the portal
+            testuser/password
+
+        """
+        print "TESTING DeletionTarget"
+        print "Creating target if it doesnt exist"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionthick&aagroup=testgroup&provisiontype=0',
+            "-u","testuser:password",])
+        print outStr
+        print "Deleting target"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
             "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovision:aa59eb0a",
@@ -121,16 +151,6 @@ class APITestCase (TestCase):
         self.assertIn('"error": 0',outStr)
         print outStr
 
-    def test_DeletionClientIQN(self):
-        """
-            Test the deletion call for all targets created off a clientiqn for a specific user
-        """
-
-    def test_DeletionUserTargetStorageHost(self):
-
-        """
-            This is the deletion call for all targets belonging to a user  on a specified StorageHost
-        """
     def test_VGScan(self):
         print "TESTING VGScan"
         outStr = check_output(["curl","-X","GET",
@@ -139,13 +159,20 @@ class APITestCase (TestCase):
         print outStr
         self.assertIn('vguuid',outStr)
 
-
     def tearDown(self):
         print "Attempting to clean up"
-        #print "Deleting"
-        #outStr = check_output(["curl","-X","GET",
-        #    "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-        #    "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovision:aa59eb0a",
-        #    "-u","testuser:password"])
+        print "Deleting"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovision:aa59eb0a",
+            "-u","testuser:password"])
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovisionthin:aa59eb0a",
+            "-u","testuser:password"])
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovisionthick:aa59eb0a",
+            "-u","testuser:password"])
 
 

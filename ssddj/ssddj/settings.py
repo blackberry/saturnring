@@ -33,7 +33,7 @@ import sys
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+#DEBUG = False
 config = ConfigParser.RawConfigParser()
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -43,6 +43,13 @@ config.read(os.path.join(BASE_DIR,'saturn.ini'))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config.get('saturnring','django_secret_key')
+DBNAME = config.get('database','dbname')
+DBHOST = config.get('database','dbhost')
+DBPORT = config.get('database','dbport')
+DBUSER = config.get('database','dbuser')
+DBTYPE = config.get('database','dbtype')
+DBPASSWORD = config.get('database','dbpassword')
+DBDIR = config.get('database','dbdir')
 
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
@@ -96,8 +103,6 @@ TEMPLATE_DIRS = (
             os.path.join(BASE_DIR,  'templates'),
             )
 
-# Application definition
-
 INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.auth',
@@ -113,6 +118,7 @@ INSTALLED_APPS = (
     'utils',
     'admin_stats',
     'django_rq',
+    'snapbackup',
 )
 
 
@@ -123,31 +129,34 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.exceptions.PlainExceptionsMiddleware',
 )
 
 ROOT_URLCONF = 'ssddj.urls'
 
-#WSGI_APPLICATION = 'ssddj.wsgi.application'
-
-
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'saturndb.sqlite3'),
+if DBTYPE == 'postgres':
+    DATABASES = {
+        'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': DBNAME,
+        'USER': DBUSER,
+        'PASSWORD': DBPASSWORD,
+        'HOST': DBHOST,
+        'PORT': DBPORT,
     }
 }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE':'django.db.backends.sqlite3',
+            'NAME': os.path.join(DBDIR,DBNAME),
+        }
+    }
 
-#Recreating this database
-#drop old db
-#GRANT ALL on demodb.* TO saturnadmin@'saturnring.store.altus.bblabs'
-#syncdb
-#schema migration 
 
-
-
+numqueues = config.get('saturnring','numqueues')
 RQ_QUEUES = {
     'default': {
         'HOST': 'localhost',
@@ -156,12 +165,12 @@ RQ_QUEUES = {
     },
 }
 
-numqueues = config.get('saturnring','numqueues')
 for ii in range(0,int(numqueues)):
     RQ_QUEUES['queue'+str(ii)]={
-            'HOST': 'localhost',
+            'HOST': '127.0.0.1',
             'PORT' : 6379,
             'DB': 0,
+            'DEFAULT_TIMEOUT': 100,
             }
 
 
