@@ -160,7 +160,6 @@ An iSCSI session from the iscsiclient to an iscsi server will be created. A bloc
     sudo mount /dev/sda /mnt -o nodiscard,noatime
     ```
 
-
 ## Saturnring iSCSI Target Properties
 
 iSCSI targets have some unique properties
