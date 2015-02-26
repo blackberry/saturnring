@@ -1,6 +1,17 @@
 #Assumed there is a host capable of running Vagrant VMs (at least 2 VMs, see Vagrantfile for VM sizing)
 #Tested using Virtualbox Vagrant provider
+#
+#In this howto HOST-$ refers to the computer which hosts the VMs running Saturn.
+#To install Vagrant
+#Go to http://docs.vagrantup.com/v2/installation/index.html and install Vagrant on your OS platform
+#Download the "Ubuntu 14.04 Box"
+HOST-$ vagrant box add ubuntu/trusty64
 
+#A folder named saturnring is created while cloning https://github.com/sachinkagarwal/saturnring; 
+#this contains the code as well as the Vagrant/installation environment.
+#The scripts saturnring_postbootup.sh and saturnring_postbootup_as_user.sh are used to adapt the generic
+# OS image into Saturnring servers. The same scripts can be used as starting points for 
+# contextualizing any cloud-based-VM or baremetal servers
 HOST-$ cd saturnring
 # Create guest VM running Ubuntu1404+Saturnring as defined in @192.168.61.20 (as defined in the V
 HOST-$ vagrant up saturnring
