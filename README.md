@@ -40,6 +40,10 @@ Saturnring is built out of multiple components - the iSCSI server(s), the Django
 
 An unhindered Internet connection and a computer capable of running at least 2 VMs (256M RAM per VM, 1 vCPU per VM, 20GiB disk) is assumed here. 'Host' refers to the PC running the VMs, the SSH login/password for all VMs is vagrant/vagrant, and the Vagrant file defines an internal network 192.168.61/24 and a bridged adaptor to let VMs access the Internet.
 
+For further instructions read the HOWTO.SETUP file.
+
+## Manual install - deprecated -
+
 1. Install Virtualbox
 http://www.virtualbox.org
 
