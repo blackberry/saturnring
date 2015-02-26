@@ -159,7 +159,7 @@ class PollServer():
         if vgname == -1:
             logger.error("Could not execute %s on %s " % (execCmd,self.serverDNS))
             return -1
-        execCmd=" ".join(['sudo','lvdisplay',vgname])
+        execCmd=" ".join(['sudo','lvdisplay','--units g',vgname])
         lvStrList = self.Exec(execCmd)
         if lvStrList ==[""]:
             return "No LVs in %s" %(vguuid,)
