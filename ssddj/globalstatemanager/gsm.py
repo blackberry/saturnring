@@ -339,7 +339,8 @@ class PollServer():
         """
         Scan and get network interfaces into saturnring DB
         """
-        cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
+        #cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
+        cmdStr = 'ip addr | grep -oE "inet [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d" "  -f2'
         ipadds=self.Exec(cmdStr)
         if ipadds == -1:
             return -1
@@ -373,7 +374,7 @@ class PollServer():
                         Interface.objects.filter(ip=addr).delete()
                         logger.warn("IP address %s was reassigned to another host" % (addr,))
             except socket.error:
-                logger.warn("Invalid IP address retuned in GetInterfaces call on Saturn server %s " % (self.serverDNS, ))
+                logger.warn("Invalid IP address %s retuned in GetInterfaces call on Saturn server %s " % (addr, self.serverDNS ))
                 var = format_exc()
                 logger.warn(var)
 
