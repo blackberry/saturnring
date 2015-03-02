@@ -63,17 +63,25 @@ service scst restart
 #Setup a loop device to emulate the block device that needs to be shared
 #In any real setup the device will instead be the block device that needs to be shared
 mkdir -p /loopdatadev
-dd if=/dev/zero of=/loopdatadev/file.img bs=1MiB count=10000
-DEV=`losetup --find --show /loopdatadev/file.img`
+dd if=/dev/zero of=/loopdatadev/file-thin.img bs=1MiB count=5000
+DEV=`losetup --find --show /loopdatadev/file-thin.img`
 
 #VG setup
 pvcreate $DEV
-vgcreate storevg $DEV
-#the logical volumes are all thin provisioned.
+vgcreate storevg-thin $DEV
+#the logical volumes here are all thin provisioned.
 #Overkill on metadatasize - although running out of metadata is a very bad thing; if the shared block device is big (e.g several 100s of GB
 #, then its best to max out the metadatasize (16GiB)
-lvcreate -L9000MiB --poolmetadatasize 950MiB --type thin-pool --thinpool storevg/thinpool
+lvcreate -L4800MiB --poolmetadatasize 100MiB --type thin-pool --thinpool storevg/thinpool
 
+
+dd if=/dev/zero of=/loopdatadev/file-nothin.img bs=1MiB count=5000
+DEV=`losetup --find --show /loopdatadev/file-nothin.img`
+
+#VG setup
+pvcreate $DEV
+vgcreate storevg-nothin $DEV
+#the logical volumes are not thin provisioned.
 
 
 

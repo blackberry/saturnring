@@ -17,10 +17,12 @@ HOST-$ cd saturnring
 HOST-$ vagrant up saturnring
 #Now test by pointing the host-OS browser to http://192.168.61.20/admin
 #Login using admin/changeme credentials and confirm it works
+#If there are multiple interfaces on the host Vagrant may ask which one to bridge to. Choose the one used to connect to the Internet
 
 #Create iSCSI server @192.168.61.21 (as defined in the Vagrantfile)
 HOST-$ vagrant up iscsiserver1
 #Log into saturnring via SSH/commandline
+#If there are multiple interfaces on the host Vagrant may ask which one to bridge to. Choose the one used to connect to the Internet
 HOST-$ vagrant ssh saturnring
 SATURNRING-$cd /nfsmount/saturnring/saturnringconfig
 #Copy SSH key into iSCSI server
@@ -29,18 +31,40 @@ SATURNRING-$ ssh-copy-id -i saturnkey vagrant@192.168.61.21
 #Add iscsiserver1 to the Saturnring DB via the Saturnring browser GUI
 #Login as admin at http://192.168.61.20/admin -> storage host -> Add storage host (see the userguide.pdf for details on this process)
 
-#Scan the iscsiserver1 to get the volume group information into saturnring
-HOST-$ curl -X GET http://192.168.61.20/api/vgscan/ -d "saturnserver=192.168.61.21" | python -mjson.tool
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+#Scan the iscsiserver1 to get the volume group information into saturnring - 2 VGs are found
+
+HOST-$ curl -X GET http://192.168.61.20/api/vgscan/ -d "saturnserver=192.168.61.21" | python -mjson.tool  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-  0    81    0    81    0     0     67      0 --:--:--  0:00:01 --:--:--   395
-  0    81    0    81    0     0     67      0 --:--:--  0:00:01 --:--:--   395
+100   162    0   162    0     0    213      0 --:--:-- --:--:-- --:--:--     0
 [
     {
         "vghost": "192.168.61.21",
-        "vguuid": "jPOZxb-9bSU-MgKe-npeE-nSX4-h5PQ-6cCfHy"
-        "vguuid": "jPOZxb-9bSU-MgKe-npeE-nSX4-h5PQ-6cCfHy"
+        "vguuid": "SRehEw-Dmow-sPHD-4n8X-FKa7-HoA0-fHLzJB"
+    },
+    {
+        "vghost": "192.168.61.21",
+        "vguuid": "TXHTlG-ieJQ-2yS3-yjzp-ZYpN-3qXZ-ni8NIi"
     }
 ]
 
+#Provision a 1GB LUN; this is usually done on the client requiring iSCSI storage.
+HOST-$ curl -X GET http://192.168.61.20/api/provisioner/ -u "admin:changeme" -d "sizeinGB=1.0&clientiqn=ini.test.ini&serviceName=testservice1" | python -mjson.tool
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100   333    0   333    0     0    749      0 --:--:-- --:--:-- --:--:--     0
+{
+    "aagroup__name": "random",
+    "already_existed": 0,
+    "clumpgroup__name": "noclump",
+    "error": 0,
+    "iqnini": "ini.test.ini",
+    "iqntar": "iqn.2014.01.192.168.61.21:testservice1:80f1eca5",
+    "sessionup": false,
+    "sizeinGB": 1.0,
+    "targethost": "192.168.61.21",
+    "targethost__storageip1": "192.168.61.21",
+    "targethost__storageip2": "192.168.61.21"
+}
+
+# Thi is a great point to open up the documentation (userguide under dec/
 
