@@ -32,6 +32,7 @@ import logging
 from globalstatemanager.gsm import PollServer
 from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -130,16 +131,16 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
             aa.hosts.add(targethost)
             aa.save()
             newTarget.aagroup=aa
-
             cg =ClumpGroup(name=clumpgroup,target=tar)
             cg.save()
             cg.hosts.add(targethost)
             cg.save()
             newTarget.clumpgroup=cg
             newTarget.save()
-
+            connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
             return (0,iqnTarget)
         else:
+            connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
             logger.error('CreateTarget did not work')
             return (-1,"CreateTarget returned error 1, contact admin")
 
@@ -154,6 +155,8 @@ def DeleteTargetObject(obj):
         tarVG.maxavlGB = tarVG.maxavlGB + obj.sizeinGB
         tarVG.save()
         obj.delete()
+        connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
         return 0
-    else:
+    else: 
+        connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
         return 1

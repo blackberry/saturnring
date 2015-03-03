@@ -18,7 +18,7 @@ from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from globalstatemanager.gsm import PollServer
 from traceback import format_exc
-
+from django.db import connection
 
 #def UpdateState():
 #    allvgs=VG.objects.all()
@@ -42,16 +42,23 @@ logger = getLogger(__name__)
 #        p.GetInterfaces()
 
 def UpdateOneState(host):
-    p = PollServer(host)
-    vguuidList = p.GetVG()
-    logger.info("getvg returns "+str(vguuidList))
-    if type(vguuidList) is str:
-        for vguuid in vguuidList.split(','):
-            try:
-                vg = VG.objects.get(vguuid=vguuid)
-                p.UpdateLVs(vg)
-            except:
-                logger.error("Cannot work with VG %s on %s" %(vguuid,host))
-                logger.error(format_exc())
-    p.GetTargetsState()
-    p.GetInterfaces()
+    try:
+        p = PollServer(host)
+        vguuidList = p.GetVG()
+        logger.info("getvg returns "+str(vguuidList))
+        if type(vguuidList) is str:
+            for vguuid in vguuidList.split(','):
+                try:
+                    vg = VG.objects.get(vguuid=vguuid)
+                    p.UpdateLVs(vg)
+                except:
+                    logger.error("Cannot work with VG %s on %s" %(vguuid,host))
+                    logger.error(format_exc())
+        p.GetTargetsState()
+        p.GetInterfaces()
+    except:
+        logger.error("UpdateOneState failed for %s " %(str(host),))
+    finally:
+        connection.close()
+    
+
