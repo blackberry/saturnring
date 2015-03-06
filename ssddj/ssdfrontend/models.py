@@ -60,7 +60,7 @@ class VG (models.Model):
     storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
     is_thin = models.BooleanField(default=True)
     def __unicode__(self):              # __unicode__ on Python 2
-        return str(self.vghost)+'::'+str(self.storemedia)+'::'+str(self.vguuid)+'::Thin='+str(self.is_thin)
+        return 'SERVER:'+str(self.vghost)+':VG:'+str(self.vguuid)
 
 
 class StorageHost(models.Model):

@@ -123,6 +123,7 @@ python manage.py collectstatic --noinput
 if [ ! -f mycron ];then
         crontab -l > mycron
         #echo new cron into cron file
+ 	echo "12 22 * * * cd /home/$INSTALLUSER/saturnring/ssddj/; source ../saturnenv/bin/activate; python manage.py cleanup && echo 'vacuum (analyze, verbose);' | python manage.py dbshell" >> mycron
         echo "* * * * *  curl -X GET http://$SATURNRINGHOST:$SATURNRINGAPACHEPORT/api/stateupdate/" >> mycron
         #install new cron file
         crontab mycron

@@ -144,17 +144,28 @@ class TargetHistoryAdmin(StatsAdmin):
 admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
-    list_display = ['iqntar','iqnini','storemedia','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
+#    if self.request.user.is_superuser: 
+#        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+#    else:
+#        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
     actions = [delete_selected_iscsi_targets,config_snapshots]
     #actions = [delete_selected_iscsi_targets]
-    search_fields = ['iqntar','iqnini','aagroup']
+    search_fields = ['iqntar','iqnini','lv__lvname','lv__vg__vguuid','targethost__dnsname']
     stats = (Sum('sizeinGB'),)
+
+    def get_readonly_fields(self,request,obj=None):
+        if request.user.is_superuser:
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+        else:
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+
     def has_add_permission(self, request):
         return False
-    def storemedia(self,obj):
+    def Physical_Location(self,obj):
         mylv = LV.objects.get(target=obj)
-        return mylv.vg.storemedia
+        return str(mylv.vg) + ":LV:"+str(mylv)
 
     def has_delete_permission(self, request, obj=None): # note the obj=None
         return False
