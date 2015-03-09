@@ -168,7 +168,10 @@ class TargetAdmin(StatsAdmin):
         return str(mylv.vg) + ":LV:"+str(mylv)
 
     def has_delete_permission(self, request, obj=None): # note the obj=None
-        return False
+        if request.user.is_superuser:
+            return True
+        else:
+            return False
 
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
