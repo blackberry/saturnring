@@ -55,7 +55,7 @@ numqueues=$NUMWORKERS
 
 #Proxyfolder
 #This is the proxy subfolder if the application is being run behind a proxy
-proxyfolder=/saturnvagrant/
+proxyfolder=$PROXYFOLDER
 
 [database]
 
