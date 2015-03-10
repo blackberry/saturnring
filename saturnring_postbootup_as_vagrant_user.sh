@@ -53,6 +53,10 @@ logpath=/nfsmount/saturnring/saturnringlog
 #If you change this number then please adjust the /etc/supervisor/conf.d/saturnring.conf by adding or deleting queue entries out there
 numqueues=$NUMWORKERS
 
+#Proxyfolder
+#This is the proxy subfolder if the application is being run behind a proxy
+proxyfolder=/saturnvagrant/
+
 [database]
 
 dbtype=$DATABASE_TYPE

@@ -191,8 +191,17 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
+
+#Needed if behind a proxy
+try:
+    PROXYFOLDER=config.get('saturnring','proxyfolder')
+except:
+    PROXYFOLDER=''
+USE_X_FORWARDED_HOST=True
+FORCE_SCRIPT_NAME = PROXYFOLDER
+
 STATIC_ROOT = '/var/www/saturnring/static/'
-STATIC_URL = '/static/'
+STATIC_URL = PROXYFOLDER+'/static/'
 REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
         'rest_framework.serializers.HyperlinkedModelSerializer',
