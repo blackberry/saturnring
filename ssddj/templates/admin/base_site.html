@@ -7,9 +7,11 @@
 
 {% block branding %}
 <h1 id="site-name"><a href="{% url 'admin:index' %}">Saturn Ring Storage Portal for {% get_clustername %}</a></h1>
-{% with theuser=user.get_username %}
-	<h2 id="Quota information: "><a href="{% url 'admin:index' %}"> <p right> User quota {% get_totalquota theuser %}, Already used {% get_usedquota theuser %}, Maximum allowed iSCSI target size {% get_maxlunsize theuser %}</a></h2>
-{% endwith %}
+{% if user.is_authenticated %}
+	{% with theuser=user.get_username %}
+		<h2 id="Quota information: "><a href="{% url 'admin:index' %}"> <p right> User quota {% get_totalquota theuser %}, Already used {% get_usedquota theuser %}, Maximum allowed iSCSI target size {% get_maxlunsize theuser %}</a></h2>
+	{% endwith %}
+{% endif %}
 {% endblock %}
 
 {% block nav-global %}{% endblock %}
