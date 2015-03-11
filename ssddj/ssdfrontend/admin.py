@@ -304,11 +304,33 @@ from django.contrib.auth.models import User
 
 from ssdfrontend.models import Profile
 
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+    
+    def clean_max_alloc_sizeGB(self):
+        logger.info('Checking quota')
+        try:
+            requestedGB = self.cleaned_data['max_alloc_sizeGB']
+            totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
+            allocGB = VG.objects.all().aggregate(CAGB=db.models.Sum('CurrentAllocGB'))['CAGB']
+            if requestedGB > (totalGB-allocGB):
+                raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
+        except:
+            logger.error("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
+            raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
+        return requestedGB
+
+
 class ProfileInline(admin.StackedInline):
+    form = ProfileForm
     model = Profile
     can_delete = False
     list_display=[]
     verbose_name_plural = 'Profile'
+
+
 
 class UserAdmin(UserAdmin):
     inlines = (ProfileInline,)
