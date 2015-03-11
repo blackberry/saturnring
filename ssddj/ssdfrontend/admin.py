@@ -39,7 +39,7 @@ import logging
 import django_rq
 import os
 import ConfigParser
-
+from django import db
 
 logger = logging.getLogger(__name__)
 #admin.site.disable_action('delete_selected')
@@ -312,6 +312,30 @@ class ProfileInline(admin.StackedInline):
 
 class UserAdmin(UserAdmin):
     inlines = (ProfileInline,)
+    list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
+    def max_target_GB(self, obj):
+        try:
+            mts = obj.profile.max_target_sizeGB 
+            return mts
+        except:
+            return ""
+    max_target_GB.short_description = 'Max Target size GB'
+
+    def used_GB(self,obj):
+        try:
+            usedsize = Target.objects.filter(owner=obj).aggregate(used_size=db.models.Sum('sizeinGB'))['used_size']
+            return usedsize
+        except:
+            return ""
+    used_GB.short_description = 'Currently used GB'
+
+    def max_alloc_GB(self, obj):
+     try:
+        ma = obj.profile.max_alloc_sizeGB 
+        return ma
+     except:
+         return ""
+    max_alloc_GB.short_description = 'Assigned quota GB'
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
