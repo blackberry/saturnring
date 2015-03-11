@@ -228,11 +228,13 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
+	    'class': 'logging.handlers.RotatingFileHandler',
 #            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
-            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
-            'formatter': 'verbose'
-        },
+	    'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
+	    'formatter': 'verbose',
+	    'maxBytes' : 1000*1000*100,
+	    'backupCount': 100,
+	},
     },
     'loggers': {
         'django': {
