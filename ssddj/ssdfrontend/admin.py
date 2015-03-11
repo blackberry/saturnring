@@ -312,16 +312,32 @@ class ProfileForm(forms.ModelForm):
     
     def clean_max_alloc_sizeGB(self):
         oldalloc = 0
+        usedsize = 0
+        #Test 1:  if the user has already used more than the new quota
+        try:
+            requestedGB = self.cleaned_data['max_alloc_sizeGB']
+            usedsize = Target.objects.filter(owner=self.cleaned_data['user']).aggregate(used_size=db.models.Sum('sizeinGB'))['used_size']
+            if usedsize == None:
+                usedsize = 0
+            if (usedsize > requestedGB):
+                raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+	except:
+            logger.error(format_exc())
+            raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+            logger.error("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+
+        #Test 2: if the cluster has that much available storage
         try:
             requestedGB = self.cleaned_data['max_alloc_sizeGB']
             totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
             allocGB = Profile.objects.all().aggregate(CAGB=db.models.Sum('max_alloc_sizeGB'))['CAGB']
             thisuser = self.cleaned_data['user']
             oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
-            logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
+            #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
             if totalGB < allocGB+requestedGB-oldalloc:
                 raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         except:
+            logger.error(format_exc())
             logger.error("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
             raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         return requestedGB
