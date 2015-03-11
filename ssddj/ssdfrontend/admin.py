@@ -16,6 +16,7 @@ from django.contrib import admin
 from django import forms
 from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
+from traceback import format_exc
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -310,16 +311,19 @@ class ProfileForm(forms.ModelForm):
         model = Profile
     
     def clean_max_alloc_sizeGB(self):
-        logger.info('Checking quota')
+        oldalloc = 0
         try:
             requestedGB = self.cleaned_data['max_alloc_sizeGB']
             totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
-            allocGB = VG.objects.all().aggregate(CAGB=db.models.Sum('CurrentAllocGB'))['CAGB']
-            if requestedGB > (totalGB-allocGB):
-                raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
+            allocGB = Profile.objects.all().aggregate(CAGB=db.models.Sum('max_alloc_sizeGB'))['CAGB']
+            thisuser = self.cleaned_data['user']
+            oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
+            if totalGB < allocGB+requestedGB-oldalloc:
+                raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         except:
-            logger.error("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
-            raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB,))
+            logger.error("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
+            raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         return requestedGB
 
 
