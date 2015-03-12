@@ -7,7 +7,7 @@ CLUSTERNAME=saturndevcluster
 DATABASE_TYPE=sqlite
 DATABASE_NAME=saturntestdb.sqlite
 #N/A for non-SQLLite DB
-DATABASE_DIR=/home/vagrant/sqlitedbdir
+DATABASE_DIR=/vagrant/sqlitedbdir
 #N/A for SQLlite DB
 DATABASE_HOST=dbhost
 #Only applicable for POstgres
