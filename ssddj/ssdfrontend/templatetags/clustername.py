@@ -6,5 +6,8 @@ register = template.Library()
 
 @register.simple_tag
 def get_clustername():
-    config = ConfigReader()
-    return config.get('saturnring','clustername')
+    try:
+        config = ConfigReader()
+        return config.get('saturnring','clustername')
+    except:
+        return 'undefined'

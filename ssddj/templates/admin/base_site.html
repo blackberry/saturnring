@@ -3,10 +3,11 @@
 {% load totalquota %}
 {% load usedquota %}
 {% load maxlunsize %}
+{% load clusterinfo %}
 {% block title %}{{ title }} | {{ site_title }}{% endblock %}
 
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">Saturn Ring Storage Portal for {% get_clustername %}</a></h1>
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Saturn Ring Storage Portal for {% get_clustername %}: {% get_clusterinfo %}</a></h1>
 {% if user.is_authenticated %}
 	{% with theuser=user.get_username %}
 		<h2 id="Quota information: "><a href="{% url 'admin:index' %}"> <p right> User quota {% get_totalquota theuser %}, Already used {% get_usedquota theuser %}, Maximum allowed iSCSI target size {% get_maxlunsize theuser %}</a></h2>

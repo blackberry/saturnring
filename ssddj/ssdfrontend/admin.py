@@ -330,7 +330,11 @@ class ProfileForm(forms.ModelForm):
         try:
             requestedGB = self.cleaned_data['max_alloc_sizeGB']
             totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
+            if totalGB == None:
+                totalGB = 0
             allocGB = Profile.objects.all().aggregate(CAGB=db.models.Sum('max_alloc_sizeGB'))['CAGB']
+            if allocGB == None:
+                allogGB = 0
             thisuser = self.cleaned_data['user']
             oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
@@ -353,7 +357,7 @@ class ProfileInline(admin.StackedInline):
 
 
 class UserAdmin(UserAdmin):
-    inlines = (ProfileInline,)
+    #inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
     def max_target_GB(self, obj):
         try:
@@ -366,6 +370,8 @@ class UserAdmin(UserAdmin):
     def used_GB(self,obj):
         try:
             usedsize = Target.objects.filter(owner=obj).aggregate(used_size=db.models.Sum('sizeinGB'))['used_size']
+            if usedsize == None:
+                usedsize = 0
             return usedsize
         except:
             return ""
