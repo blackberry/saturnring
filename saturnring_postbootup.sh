@@ -22,6 +22,9 @@ mkdir -p $SATURNWKDIR/saturnringlog
 chown $INSTALLUSER:$INSTALLUSER $SATURNWKDIR/saturnringlog
 
 
+mkdir -p $SATURNWKDIR/saturnringconfig
+chown $INSTALLUSER:$INSTALLUSER $SATURNWKDIR/saturnringconfig
+
 mkdir -p /var/www/saturnring
 chown -R $INSTALLUSER:$INSTALLUSER /var/www
 
@@ -33,14 +36,14 @@ chown $INSTALLUSER:$INSTALLUSER $INSTALLLOCATION
 
 sudo -u $INSTALLUSER -H bash -c "cd /vagrant; ./saturnring_postbootup_as_"$INSTALLUSER"_user.sh"
 
-cd $INSTALLLOCATION/saturnring/ssddj
+cd $INSTALLLOCATION/ssddj
 rm /etc/supervisor/conf.d/saturnworker.conf
 COUNTMAX=`expr $NUMWORKERS - 1`
 for ii in `seq 0 $COUNTMAX`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-$ii]
-command=$INSTALLLOCATION/saturnring/misc/rqworker.sh queue$ii
+command=$INSTALLLOCATION/misc/rqworker.sh queue$ii
 user=$INSTALLUSER
 stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
 redirect_stderr=true

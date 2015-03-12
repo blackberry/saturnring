@@ -19,16 +19,16 @@ cd $INSTALLLOCATION
 #Get latest saturnringsoftware from master branch
 #git clone https://github.com/sachinkagarwal/saturnring/
 mkdir saturnring
-cd $INSTALLLOCATION/saturnring
+cd $INSTALLLOCATION
 cp -R /vagrant/* .
-if [ ! -d "$INSTALLLOCATION/saturnring/saturnenv" ]; then
+if [ ! -d "$INSTALLLOCATION/saturnenv" ]; then
   virtualenv saturnenv
 fi
-cd $INSTALLLOCATION/saturnring/ssddj
-source $INSTALLLOCATION/saturnring/saturnenv/bin/activate
-pip install -r $INSTALLLOCATION/saturnring/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+cd $INSTALLLOCATION/ssddj
+source $INSTALLLOCATION/saturnenv/bin/activate
+pip install -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
-cat <<EOF > $INSTALLLOCATION/saturnring/ssddj/saturn.ini
+cat <<EOF > $INSTALLLOCATION/ssddj/saturn.ini
 [saturnring]
 #Cluster name: This is used as the stats Excel XLS filename
 clustername=$CLUSTERNAME
@@ -38,16 +38,16 @@ clustername=$CLUSTERNAME
 bashscripts=globalstatemanager/bashscripts/
 
 #The user needs to copy the corresponding public key to the saturn node's user (specified in the [saturnnode] section using e.g. ssh-copy-id
-privatekeyfile=/nfsmount/saturnring/saturnringconfig/saturnkey
+privatekeyfile=$SATURNWKDIR/saturnringconfig/saturnkey
 
 #This is where saturnring keeps the latest iscsi config file
-iscsiconfigdir=/nfsmount/saturnring/saturnringconfig/
+iscsiconfigdir=$SATURNWKDIR/saturnringconfig/
 
 #Django secret key (CHANGE in production)
 django_secret_key=$DJANGOSECRETKEY
 
 #Logging path
-logpath=/nfsmount/saturnring/saturnringlog
+logpath=$SATURNWKDIR/saturnringlog
 
 #Number of queues
 #If you change this number then please adjust the /etc/supervisor/conf.d/saturnring.conf by adding or deleting queue entries out there
@@ -95,7 +95,7 @@ python manage.py schemamigration ssdfrontend --auto
 python manage.py migrate
 
 
-cd $INSTALLLOCATION/saturnring/ssddj
+cd $INSTALLLOCATION/ssddj
 echo "from django.contrib.auth.models import User; User.objects.create_superuser('admin', '$ADMINEMAIL', '$SATURNRINGPASSWORD')" | python manage.py shell
 
 cat <<EOF > /var/www/saturnring/index.wsgi
@@ -104,16 +104,16 @@ import sys
 import site
 
 # Add the site-packages of the chosen virtualenv to work with
-site.addsitedir('$INSTALLLOCATION/saturnring/saturnenv/$INSTALLUSER/lib/python2.7/site-packages')
+site.addsitedir('$INSTALLLOCATION/saturnenv/$INSTALLUSER/lib/python2.7/site-packages')
 
 # Add the app's directory to the PYTHONPATH
-sys.path.append('$INSTALLLOCATION/saturnring/ssddj')
-sys.path.append('$INSTALLLOCATION/saturnring/ssddj/ssddj')
+sys.path.append('$INSTALLLOCATION/ssddj')
+sys.path.append('$INSTALLLOCATION/ssddj/ssddj')
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'ssddj.settings'
 
 # Activate your virtual env
-activate_env=os.path.expanduser("$INSTALLLOCATION/saturnring/saturnenv/bin/activate_this.py")
+activate_env=os.path.expanduser("$INSTALLLOCATION/saturnenv/bin/activate_this.py")
 execfile(activate_env, dict(__file__=activate_env))
 
 import django.core.handlers.wsgi
@@ -127,7 +127,7 @@ python manage.py collectstatic --noinput
 if [ ! -f mycron ];then
         crontab -l > mycron
         #echo new cron into cron file
- 	echo "12 22 * * * cd $INSTALLLOCATION/saturnring/ssddj/; source ../saturnenv/bin/activate; python manage.py cleanup && echo 'vacuum (analyze, verbose);' | python manage.py dbshell" >> mycron
+ 	echo "12 22 * * * cd $INSTALLLOCATION/ssddj/; source ../saturnenv/bin/activate; python manage.py cleanup && echo 'vacuum (analyze, verbose);' | python manage.py dbshell" >> mycron
         echo "* * * * *  curl -X GET http://$SATURNRINGHOST:$SATURNRINGAPACHEPORT/api/stateupdate/" >> mycron
         #install new cron file
         crontab mycron
