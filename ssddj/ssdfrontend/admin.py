@@ -329,14 +329,18 @@ class ProfileForm(forms.ModelForm):
         #Test 2: if the cluster has that much available storage
         try:
             requestedGB = self.cleaned_data['max_alloc_sizeGB']
+            if requestedGB == 0:
+                return requestedGB
             totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
             if totalGB == None:
                 totalGB = 0
             allocGB = Profile.objects.all().aggregate(CAGB=db.models.Sum('max_alloc_sizeGB'))['CAGB']
             if allocGB == None:
-                allogGB = 0
+                allocGB = 0
             thisuser = self.cleaned_data['user']
             oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            if oldalloc == None:
+                oldalloc = 0
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
             if totalGB < allocGB+requestedGB-oldalloc:
                 raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
@@ -357,7 +361,7 @@ class ProfileInline(admin.StackedInline):
 
 
 class UserAdmin(UserAdmin):
-    #inlines = (ProfileInline,)
+    inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
     def max_target_GB(self, obj):
         try:
