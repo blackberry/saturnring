@@ -12,15 +12,15 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-
-source /vagrant/envvars.sh
+source ./envvars.sh
 
 cd $INSTALLLOCATION
 #Get latest saturnringsoftware from master branch
 #git clone https://github.com/sachinkagarwal/saturnring/
-mkdir saturnring
 cd $INSTALLLOCATION
-cp -R /vagrant/* .
+if [ $INSTALLLOCATION != $CODEROOT ]; then
+  cp -R $CODEROOT .
+fi
 if [ ! -d "$INSTALLLOCATION/saturnenv" ]; then
   virtualenv saturnenv
 fi
@@ -132,6 +132,8 @@ if [ ! -f mycron ];then
         #install new cron file
         crontab mycron
 fi
+git config --global user.email "$INSTALLUSER@changeme.com"
+git config --global user.name "$INSTALLUSER"
 
 # Create new keys
 CONFIGDIR=$SATURNWKDIR/saturnringconfig
