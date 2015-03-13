@@ -146,3 +146,11 @@ ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
 git add *
 git commit -a -m "Created Saturn keys"
 
+mkdir -p $INSTALLLOCATION/redisqconf
+cat <<EOF > $INSTALLLOCATION/redisqconf/rqworker.sh
+#!/bin/bash
+source $INSTALLLOCATION/saturnenv/bin/activate
+python $INSTALLLOCATION/ssddj/manage.py rqworker default
+
+EOF
+chmod +x $INSTALLLOCATION/redisqconf/rqworker.sh

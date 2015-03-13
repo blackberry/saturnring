@@ -43,7 +43,7 @@ for ii in `seq 0 $COUNTMAX`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-$ii]
-command=$INSTALLLOCATION/misc/rqworker.sh queue$ii
+command=$INSTALLLOCATION/redisqconf/rqworker.sh queue$ii
 user=$INSTALLUSER
 stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
 redirect_stderr=true
