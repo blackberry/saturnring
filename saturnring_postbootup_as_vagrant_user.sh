@@ -150,7 +150,7 @@ mkdir -p $INSTALLLOCATION/redisqconf
 cat <<EOF > $INSTALLLOCATION/redisqconf/rqworker.sh
 #!/bin/bash
 source $INSTALLLOCATION/saturnenv/bin/activate
-python $INSTALLLOCATION/ssddj/manage.py rqworker default
+python $INSTALLLOCATION/ssddj/manage.py rqworker \$1
 
 EOF
 chmod +x $INSTALLLOCATION/redisqconf/rqworker.sh
