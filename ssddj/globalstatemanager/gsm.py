@@ -64,8 +64,7 @@ class PollServer():
         try:
             self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         except:
-            logger.error("Failed SSH-exec connection on Saturn server %s" % (self.serverDNS,) )
-            logger.error(format_exc())
+            logger.critical("Failed SSH-exec connection on Saturn server %s; possible cause: %s" % (self.serverDNS,format_exc()) )
 
     def InstallScripts(self):
         """
@@ -183,7 +182,7 @@ class PollServer():
         if vgStrList == -1:
             return -1
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
-        logger.info("VGStating on %s returns %s " % (self.serverDNS, str(vgs)) )
+        #logger.info("VGStating on %s returns %s " % (self.serverDNS, str(vgs)) )
         rtnvguuidList = ""
         for vgname in vgs:
             try:
@@ -242,10 +241,10 @@ class PollServer():
                 repo.do_commit(commentStr)
             except:
                 var = format_exc()
-                logger.warn("%s: Git save error: %s" % (commentStr, var))
+                logger.error("During GitSave: %s: Git save error: %s" % (commentStr, var))
         except:
             var = format_exc()
-            logger.warn("%s: PYSFTP download error: %s" % (commentStr, var))
+            logger.error("During GitSave: %s: PYSFTP download error: %s" % (commentStr, var))
 
     
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid):
@@ -268,7 +267,7 @@ class PollServer():
             logger.info("Returning successful createtarget run")
             return 1
         else:
-            logger.info("Returning failed createtarget run")
+            logger.error("Returning failed createtarget run")
             return 0
 
     def GetTargetsState(self):
@@ -329,9 +328,11 @@ class PollServer():
                 if "successfully removed" in eachLine:
                     success2=True
             if success1==True and success2==True:
-                logger.debug("successfully removed target: "+iqntar)
+                logger.info("Successful deletion of target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
+
                 return 1
             else:
+                logger.error("Error deleting target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
                 return -1
         return -1
 
@@ -350,6 +351,8 @@ class PollServer():
         for addr in ipadds:
             try:
                 addr = addr.rstrip()
+                if "127.0.0.1" in addr: #Ignore loopback addresses
+                    continue
                 socket.inet_aton(addr)
                 interfaces = Interface.objects.filter(ip=addr)
                 if len(interfaces) != 1: #If 0, then new interface

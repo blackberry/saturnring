@@ -14,12 +14,20 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+import string
 # Create your models here.
+from django.core.exceptions import ValidationError
+
+def validate_nospecialcharacters(value):
+    invalidcharacters = set(string.punctuation.replace("_", ""))
+    if len(invalidcharacters.intersection(value)):
+        raise ValidationError(u'%s contains a special character' % value)
+
 
 class Provisioner(models.Model):
     clientiqn = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
-    serviceName = models.CharField(max_length=100)
+    serviceName = models.CharField(max_length=100,validators=[validate_nospecialcharacters])
     def __unicode__(self):              # __unicode__ on Python 2
         return self.clientiqn
 
