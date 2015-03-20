@@ -342,7 +342,7 @@ class ProfileForm(forms.ModelForm):
             if oldalloc == None:
                 oldalloc = 0
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
-            if totalGB < allocGB+requestedGB-oldalloc:
+            if (totalGB < allocGB+requestedGB-oldalloc) and (oldalloc < requestedGB):
                 raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         except:
             logger.error(format_exc())
