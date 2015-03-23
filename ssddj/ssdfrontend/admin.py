@@ -13,6 +13,7 @@
 #limitations under the License.
 
 from django.contrib import admin
+from django.contrib.admin.views.main import ChangeList
 from django import forms
 from django.shortcuts import redirect
 from django.core.urlresolvers import reverse
@@ -342,7 +343,7 @@ class ProfileForm(forms.ModelForm):
             if oldalloc == None:
                 oldalloc = 0
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
-            if totalGB < allocGB+requestedGB-oldalloc:
+            if (totalGB < allocGB+requestedGB-oldalloc) and (requestedGB > oldalloc):
                 raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
         except:
             logger.error(format_exc())
@@ -359,10 +360,20 @@ class ProfileInline(admin.StackedInline):
     verbose_name_plural = 'Profile'
 
 
+class UserChangeList(ChangeList):
+    def get_results(self, *args, **kwargs):
+        super(UserChangeList,self).get_results(*args, **kwargs)
+        q = self.result_list.aggregate(total_alloc_GB=db.models.Sum('profile__max_alloc_sizeGB'))
+        self.total_alloc_GB = q['total_alloc_GB']
+
 
 class UserAdmin(UserAdmin):
     inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
+
+    def get_changelist(self, request):
+        return UserChangeList
+
     def max_target_GB(self, obj):
         try:
             mts = obj.profile.max_target_sizeGB 

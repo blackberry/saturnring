@@ -100,6 +100,7 @@ else:
 TEMPLATE_INFO = True
 ALLOWED_HOSTS = ['*']
 TEMPLATE_DIRS = (
+            os.path.join(BASE_DIR,'ssdfrontend','templates'),
             os.path.join(BASE_DIR,  'templates'),
             )
 

@@ -61,7 +61,12 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
             iqnComponents = t.iqntar.split(':')
             if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
                 logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                existingTargetstoremedia = LV.objects.get(target=t).vg.storemedia
+                try:
+                    existingTargetstoremedia = LV.objects.get(target=t).vg.storemedia
+                except:
+                    logger.error("Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
+                    return (-1,"Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
+
                 if (existingTargetstoremedia == storemedia):
                     return (1,t.iqntar)
                 else:
@@ -98,6 +103,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
 
         if p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid) == 1:
+            logger.info ("SUCCESSFUL TARGET RUN")
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))

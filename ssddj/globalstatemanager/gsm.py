@@ -125,6 +125,8 @@ class PollServer():
                         continue
         if len(valueDict) == len(paraList):
              rtnDict[valueDict[paraList[0]]] = valueDict
+
+        logger.info(rtnDict)
         return rtnDict
 
 
@@ -255,6 +257,7 @@ class PollServer():
         #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         #srv.close()
+        logger.info ("Launching createtarget with \n%s" %(cmdStr,))
         exStr=self.Exec(cmdStr)
         if exStr == -1:
             return -1

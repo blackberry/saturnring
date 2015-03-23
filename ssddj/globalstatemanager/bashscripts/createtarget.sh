@@ -25,8 +25,8 @@ function VGisThin () {
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
 VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`
-if sudo lvs | egrep -q "$lvolName"; then
-   echo "Warning: Using previously-created LV "$lvolName
+if sudo lvs | grep $VG | egrep -q "$lvolName"; then
+   echo "Warning: Using previously-created LV "$lvolName "on VG "$VG
 else
   VGisThin $VG
   if [ $? -eq 1 ]; then
@@ -38,12 +38,10 @@ else
   fi
   echo $LVCOUTPUT
 fi
-set -e
+
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 vgu=`echo $6 | tr -d '-' | tr -d ' '`
 dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
-echo $dmp
-
 #Please use the below line, the other one is a place holder for older saturn server testing on VMs
 scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=0,rotational=0,write_through=1,blocksize=4096
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp
@@ -68,4 +66,20 @@ sudo cp /etc/scst.conf /temp
 sudo cp /etc/lvm/backup/$VG /temp/$6
 sudo chmod  666 /temp/scst.conf
 sudo chmod 666 /temp/$6
+
+#The last thing - checking if everything looks good
+
+
+if ! grep  --quiet "disk-${lvu:0:8}" /etc/scst.conf; then
+  echo "FAILED = no disk-${lvu:0:8} in /etc/scst.conf"
+  exit
+fi
+
+if ! grep  --quiet "$2" /etc/scst.conf; then
+  echo "FAILED - no entry for target $2  in scst.conf"
+  exit
+fi
+
 echo "SUCCESS: created target $2 on $VG:  ($6)"
+
+
