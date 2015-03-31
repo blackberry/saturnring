@@ -72,7 +72,7 @@ vgcreate storevg-thin $DEV
 #the logical volumes here are all thin provisioned.
 #Overkill on metadatasize - although running out of metadata is a very bad thing; if the shared block device is big (e.g several 100s of GB
 #, then its best to max out the metadatasize (16GiB)
-lvcreate -L4800MiB --poolmetadatasize 100MiB --type thin-pool --thinpool storevg/thinpool
+lvcreate -L4800MiB --poolmetadatasize 100MiB --type thin-pool --thinpool storevg-thin/thinpool
 
 
 dd if=/dev/zero of=/loopdatadev/file-nothin.img bs=1MiB count=5000
