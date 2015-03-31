@@ -4,7 +4,7 @@
 {% load usedquota %}
 {% load maxlunsize %}
 {% load clusterinfo %}
-{% block title %}{{ title }} | {{ site_title }}{% endblock %}
+{% block title %}{{ title }} {% get_clustername %}  {{ site_title }}{% endblock %}
 
 {% block branding %}
 <h1 id="site-name"><a href="{% url 'admin:index' %}">Saturn Ring Storage Portal for {% get_clustername %}: {% get_clusterinfo %}</a></h1>
