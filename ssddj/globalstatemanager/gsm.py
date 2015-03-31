@@ -332,11 +332,13 @@ class PollServer():
                     success2=True
             if success1==True and success2==True:
                 logger.info("Successful deletion of target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
-
                 return 1
             else:
                 logger.error("Error deleting target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
                 return -1
+        else:
+            logger.error("Target state of %s is set to session up, will not try to delete it." %(iqntar,))
+
         return -1
 
     def GetInterfaces(self):
