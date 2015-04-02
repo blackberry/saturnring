@@ -16,14 +16,17 @@
 
 # For ideal performance SCST should be installed on a patched kernel. For how to patch the Ubuntu kernel for SCST see link:
 # http://scst.sourceforge.net/iscsi-scst-howto.txt
-apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2
+export https_proxy="https://proxy.bblabs:80"
+export http_proxy="http://proxy.bblabs:80"
+
+apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2 unzip
 mkdir -p /temp
 cd /temp
-svn checkout svn://svn.code.sf.net/p/scst/svn/trunk scst-svn
+#svn checkout svn://svn.code.sf.net/p/scst/svn/trunk scst-svn
 #If using the latest dev version doesnt seem appropriate then get a suitable version on to the vagrant directory and use these steps
-#cp /vagrant/scst.tar.gz .
-#tar -xvzf scst.tar.gz
-cd scst-svn
+cp /vagrant/scst.6177.zip .
+unzip  scst.6177.zip
+cd scst-svn-6177-branches-2.2.x
 make 2perf
 make scst scst_install iscsi iscsi_install scstadm scstadm_install
 #Twice - seems to fix the iscsi module missing problem

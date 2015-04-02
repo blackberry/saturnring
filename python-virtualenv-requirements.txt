@@ -1,4 +1,4 @@
-Django
+Django==1.6
 GitPython==0.1.7
 Markdown==2.4
 PyYAML==3.10

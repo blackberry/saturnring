@@ -13,6 +13,8 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 source ./envvars.sh
+export https_proxy="https://proxy.bblabs:80"
+export http_proxy="http://proxy.bblabs:80"
 
 cd $INSTALLLOCATION
 #Get latest saturnringsoftware from master branch
@@ -26,7 +28,7 @@ if [ ! -d "$INSTALLLOCATION/saturnenv" ]; then
 fi
 cd $INSTALLLOCATION/ssddj
 source $INSTALLLOCATION/saturnenv/bin/activate
-pip install -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+pip --proxy http://proxy.bblabs:80 install -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
 cat <<EOF > $INSTALLLOCATION/ssddj/saturn.ini
 [saturnring]

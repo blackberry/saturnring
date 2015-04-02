@@ -81,26 +81,26 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define "saturnring" do |saturnring|
     saturnring.vm.hostname= "saturnring"
     saturnring.vm.network  "public_network"
-    saturnring.vm.network  "private_network", ip:'192.168.61.20'
+    saturnring.vm.network  "private_network", ip:'192.168.56.20'
     saturnring.vm.provision "shell", path: "saturnring_postbootup.sh"
   end
   config.vm.define "iscsiserver1" do |iscsiserver1|
 	  iscsiserver1.vm.hostname = 'iscsiserver1'
 	  iscsiserver1.vm.network "public_network"
-	  iscsiserver1.vm.network "private_network", ip:"192.168.61.21"
+	  iscsiserver1.vm.network "private_network", ip:"192.168.56.21"
     iscsiserver1.vm.provision "shell", path: "scst-iscsiserver.sh"
   end
 
   config.vm.define "iscsiserver2" do |iscsiserver2|
 	  iscsiserver2.vm.hostname = 'iscsiserver2'
 	  iscsiserver2.vm.network "public_network"
-	  iscsiserver2.vm.network "private_network", ip:"192.168.61.22"
+	  iscsiserver2.vm.network "private_network", ip:"192.168.56.22"
     iscsiserver2.vm.provision "shell", path: "scst-iscsiserver.sh"
   end
  config.vm.define "iscsiclient" do |iscsiclient|
     iscsiclient.vm.hostname = 'iscsiclient'
 		iscsiclient.vm.network "public_network"
-    iscsiclient.vm.network "private_network", ip: "192.168.61.23"
+    iscsiclient.vm.network "private_network", ip: "192.168.56.23"
     iscsiclient.vm.provision "shell", path: "iscsi-client.sh"
  end
 
