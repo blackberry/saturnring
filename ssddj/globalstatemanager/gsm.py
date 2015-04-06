@@ -65,6 +65,7 @@ class PollServer():
             self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         except:
             logger.critical("Failed SSH-exec connection on Saturn server %s; possible cause: %s" % (self.serverDNS,format_exc()) )
+    
 
     def InstallScripts(self):
         """
@@ -93,6 +94,28 @@ class PollServer():
             logger.error("Failed SSH-exec command: %s on Saturn server %s" % (command, self.serverDNS))
             logger.error(format_exc())
         return rtncmd
+
+    def PutKeyFile(self,keyfileName):
+        """
+        Copy over the keyfile to be used for creating the LUKs encrypted DM volumes
+        """
+        remoteKeyfileDir = self.remoteinstallLoc+'/keys'
+        self.Exec ('mkdir -p ' + remoteKeyfileDir)
+        self.srv.chdir(remoteKeyfileDir)
+        self.srv.put(os.path.join(self.iscsiconfdir,keyfileName))
+        self.Exec("chmod 664 "+os.path.join(self.remoteKeyfileDir,keyfileName))
+        rtnString = self.Exec ('test -f ' + os.path.join(self.iscsiconfdir,keyfileName) + '&&  echo "OK Putkeyfile" ')
+        return rtnString
+
+    def DelKeyFile(self,keyfileName):
+        """
+        Delete key file from saturn server
+        """
+        remoteKeyfileDir = self.remoteinstallLoc+'/keys'
+        self.srv.execute('rm '+ os.path.join(remoteKeyfileDir,keyfileName))
+        rtnString = self.Exec ('test ! -f ' + os.path.join(self.iscsiconfdir,keyfileName) ' &&  echo "OK Deleted keyfile"')
+        return rtnString
+
 
     def ParseLVM(self,strList,delimitStr,paraList):
         """
@@ -258,6 +281,30 @@ class PollServer():
         cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         #srv.close()
         logger.info ("Launching createtarget with \n%s" %(cmdStr,))
+        exStr=self.Exec(cmdStr)
+        if exStr == -1:
+            return -1
+
+        commentStr = "Trying to create target %s " %( iqnTarget, )
+
+        self.GitSave(vguuid,commentStr)
+        logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
+        if "SUCCESS" in str(exStr):
+            logger.info("Returning successful createtarget run")
+            return 1
+        else:
+            logger.error("Returning failed createtarget run")
+            return 0
+
+    def CreateEncryptedTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,keyfilePath):
+        """
+        Create an encrypted iSCSI target by running the createencryptedtarget script; 
+        and save latest scst.conf from the remote server (overwrite)
+        """
+        #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
+        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createencryptedtarget.sh',
+            str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,keyfilePath])
+        logger.info ("Launching createencryptedtarget with \n%s" %(cmdStr,))
         exStr=self.Exec(cmdStr)
         if exStr == -1:
             return -1

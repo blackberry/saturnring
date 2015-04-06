@@ -24,9 +24,9 @@ mkdir -p /temp
 cd /temp
 #svn checkout svn://svn.code.sf.net/p/scst/svn/trunk scst-svn
 #If using the latest dev version doesnt seem appropriate then get a suitable version on to the vagrant directory and use these steps
-cp /vagrant/scst.6177.zip .
-unzip  scst.6177.zip
-cd scst-svn-6177-branches-2.2.x
+cp /vagrant/scst.tar.gz .
+tar -xvzf scst.tar.gz
+cd scst
 make 2perf
 make scst scst_install iscsi iscsi_install scstadm scstadm_install
 #Twice - seems to fix the iscsi module missing problem
