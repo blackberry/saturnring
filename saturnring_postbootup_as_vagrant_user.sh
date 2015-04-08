@@ -145,6 +145,11 @@ cd $CONFIGDIR
 git init
 ssh-keygen -q -f saturnkey -N ''
 ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
+#dd if=/dev/random of=~/cryptokeyfile bs=8 count=1
+cat <<EOF > cryptokey 
+THISR3ALLYN33DSTOB3RANDOMANDN3V3RLOST
+EOF
+
 git add *
 git commit -a -m "Created Saturn keys"
 

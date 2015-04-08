@@ -113,7 +113,7 @@ class PollServer():
         """
         remoteKeyfileDir = self.remoteinstallLoc+'/keys'
         self.srv.execute('rm '+ os.path.join(remoteKeyfileDir,keyfileName))
-        rtnString = self.Exec ('test ! -f ' + os.path.join(self.iscsiconfdir,keyfileName) ' &&  echo "OK Deleted keyfile"')
+        rtnString = self.Exec ('test ! -f ' + os.path.join(self.iscsiconfdir,keyfileName)+ ' &&  echo "OK Deleted keyfile"')
         return rtnString
 
 

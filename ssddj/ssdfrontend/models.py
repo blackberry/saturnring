@@ -40,6 +40,8 @@ class LV(models.Model):
     lvuuid = models.CharField(max_length=200,primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    isencrypted = models.BooleanField(default=False)
+
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
 
@@ -99,6 +101,7 @@ class Target(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     storageip1 = models.GenericIPAddressField(default='127.0.0.1')
     storageip2 = models.GenericIPAddressField(default='127.0.0.1')
+    isencrypted = models.BooleanField(default=False)
 
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar

@@ -38,12 +38,12 @@ else
   fi
   echo $LVCOUTPUT
 fi
-dd if=/dev/zero of=/dev/$VG/$lvolName && sync
+dd if=/dev/zero of=/dev/$VG/$lvolName && sync #Zero the LV to make sure dm-crypt/LUKs do not get confused by old stuff
 cryptsetup luksFormat /dev/$VG/$lvolName -caes-cbc-essiv:sha256 $7
-cryptsetup luksOpen /dev/$VG/$lvolName $encrypted_$lvolName  --key-file $7
+cryptsetup luksOpen /dev/$VG/$lvolName encrypted_$lvolName  --key-file $7
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
-vgu=`echo $6 | tr -d '-' | tr -d ' '`
-dmp='/dev/disk/by-id/dm-uuid-LVM-'$vgu$lvu
+#vgu=`echo $6 | tr -d '-' | tr -d ' '`
+dmp="/dev/mapper/encrypted_$lvolName"
 #Please use the below line, the other one is a place holder for older saturn server testing on VMs
 scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp,thin_provisioned=0,rotational=0,write_through=1,blocksize=4096
 #scstadmin -open_dev disk-${lvu:0:8} -handler vdisk_blockio -attributes filename=$dmp

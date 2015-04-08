@@ -163,7 +163,12 @@ def MakeTarget(requestDic,owner):
     else:
         provisiontype = 'any'
 
-    logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype))
+    if 'isencrypted' in requestDic:
+        isencrypted = requestDic['isencrypted']
+    else:
+        isencrypted = '0'
+
+    logger.info("Provisioner - request received: \nClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s, isEncrypted: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype, isencrypted))
     try:
         while 1:
             globallock = Lock.objects.get(lockname='allvglock')
