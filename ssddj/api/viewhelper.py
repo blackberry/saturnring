@@ -204,7 +204,7 @@ def MakeTarget(requestDic,owner):
         queue = get_queue(queuename)
         logger.info("Launching create target job into queue %s" %(queuename,) )
         storemedia = chosenVG.storemedia
-        job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
+        job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner,isencrypted)
         while 1:
             if job.result or job.is_failed:
                 chosenVG.is_locked = False

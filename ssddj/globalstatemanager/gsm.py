@@ -99,21 +99,30 @@ class PollServer():
         """
         Copy over the keyfile to be used for creating the LUKs encrypted DM volumes
         """
-        remoteKeyfileDir = self.remoteinstallLoc+'/keys'
-        self.Exec ('mkdir -p ' + remoteKeyfileDir)
-        self.srv.chdir(remoteKeyfileDir)
-        self.srv.put(os.path.join(self.iscsiconfdir,keyfileName))
-        self.Exec("chmod 664 "+os.path.join(self.remoteKeyfileDir,keyfileName))
-        rtnString = self.Exec ('test -f ' + os.path.join(self.iscsiconfdir,keyfileName) + '&&  echo "OK Putkeyfile" ')
-        return rtnString
+        remoteKeyfileDir = join(self.remoteinstallLoc,'keys')
+        try:
+            self.Exec ('mkdir -p ' + remoteKeyfileDir)
+            self.srv.chdir(remoteKeyfileDir)
+            self.srv.put(join(self.iscsiconfdir,keyfileName))
+            remoteKeyfilePath = join(remoteKeyfileDir,keyfileName)
+            rtnString = self.Exec ('test -f ' + remoteKeyfilePath + '&&  echo "OK Putkeyfile" ')
+            logger.info(rtnString)
+            if "OK Putkeyfile" not in str(rtnString):
+                raise ValueError("Putkey didnt install file")
+        except ValueError:
+            logger.error("Failed to put keyfile on Saturn server %s at location %s" %(self.serverDNS,join(remoteKeyfileDir,keyfileName)))
+            logger.error(format_exc())
+            return -1
+
+        return remoteKeyfilePath
 
     def DelKeyFile(self,keyfileName):
         """
         Delete key file from saturn server
         """
         remoteKeyfileDir = self.remoteinstallLoc+'/keys'
-        self.srv.execute('rm '+ os.path.join(remoteKeyfileDir,keyfileName))
-        rtnString = self.Exec ('test ! -f ' + os.path.join(self.iscsiconfdir,keyfileName)+ ' &&  echo "OK Deleted keyfile"')
+        self.srv.execute('rm '+ join(remoteKeyfileDir,keyfileName))
+        rtnString = self.Exec ('test ! -f ' + join(self.iscsiconfdir,keyfileName)+ ' &&  echo "OK Deleted keyfile"')
         return rtnString
 
 
@@ -271,40 +280,29 @@ class PollServer():
             var = format_exc()
             logger.error("During GitSave: %s: PYSFTP download error: %s" % (commentStr, var))
 
-    
-    def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid):
+    def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,isencrypted):
         """
         Create iSCSI target by running the createtarget script; 
         and save latest scst.conf from the remote server (overwrite)
         """
         #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
-        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
+        if isencrypted == 'no':
+            cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',
+            str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
+        else:
+            try:
+                remotekeyfilelocation = self.PutKeyFile("cryptokey")
+                cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createencryptedtarget.sh',
+                str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,remotekeyfilelocation])
+                if remotekeyfilelocation == -1:
+                    raise ValueError("Putkey failed")
+            except:
+                logger.error("Error setting up encrypted target: %s " %(iqnTarget,))
+                logger.error(format_exc())
+                return -1
+
         #srv.close()
         logger.info ("Launching createtarget with \n%s" %(cmdStr,))
-        exStr=self.Exec(cmdStr)
-        if exStr == -1:
-            return -1
-
-        commentStr = "Trying to create target %s " %( iqnTarget, )
-
-        self.GitSave(vguuid,commentStr)
-        logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
-        if "SUCCESS" in str(exStr):
-            logger.info("Returning successful createtarget run")
-            return 1
-        else:
-            logger.error("Returning failed createtarget run")
-            return 0
-
-    def CreateEncryptedTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,keyfilePath):
-        """
-        Create an encrypted iSCSI target by running the createencryptedtarget script; 
-        and save latest scst.conf from the remote server (overwrite)
-        """
-        #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
-        cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createencryptedtarget.sh',
-            str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,keyfilePath])
-        logger.info ("Launching createencryptedtarget with \n%s" %(cmdStr,))
         exStr=self.Exec(cmdStr)
         if exStr == -1:
             return -1

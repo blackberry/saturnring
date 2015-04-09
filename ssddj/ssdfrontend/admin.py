@@ -151,7 +151,7 @@ class TargetAdmin(StatsAdmin):
 #    else:
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
 
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','isencrypted','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
     actions = [delete_selected_iscsi_targets,config_snapshots]
     #actions = [delete_selected_iscsi_targets]
     search_fields = ['iqntar','iqnini','lv__lvname','lv__vg__vguuid','targethost__dnsname']

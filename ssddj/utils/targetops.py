@@ -49,7 +49,8 @@ def CheckUserQuotas(storageSize,owner):
         return (-1,rtnStr)
     return (1, "Quota checks ok, proceeding")
 
-def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
+def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
+        serviceName,storageSize,aagroup,clumpgroup,subnet,owner,isencrypted):
     chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
@@ -102,18 +103,21 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                 logger.error('Chosen host %s is missing IP addresses in requested subnet' % ( targethost, ) )
                 return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
 
-        if p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid) == 1:
+        if p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid,isencrypted) == 1:
             logger.info ("SUCCESSFUL TARGET RUN")
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
-            (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
-            logger.info("DevDic = "+str(devDic))
-            logger.info("TarDic = "+str(tarDic))
+#            (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
+#            logger.info("DevDic = "+str(devDic))
+#            logger.info("TarDic = "+str(tarDic))
             if iqnTarget in tarDic:
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)
+                if isencrypted == '1':
+                    newTarget.isencrypted = True
                 newTarget.save()
+
                 lvDict=p.GetLVs(targetvguuid)
                 lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
                 logger.info("Looking for %s in lvDict %s" %(lvName, str(lvDict)))
@@ -123,6 +127,9 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,serviceName,stor
                             lvsize=storageSize,
                             #lvthinmapped=lvDict[lvName]['Mapped size'],
                             lvuuid=lvDict[lvName]['LV UUID'])
+
+                    if isencrypted == '1':
+                        newLV.isencrypted = True
                     newLV.save()
                     chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
                     chosenVG.maxavlGB=max(0,chosenVG.maxavlGB-float(storageSize))
