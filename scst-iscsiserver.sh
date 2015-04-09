@@ -64,31 +64,34 @@ service scst start
 
 #Setup a loop device to emulate the block device that needs to be shared
 #In any real setup the device will instead be the block device that needs to be shared
-mkdir -p /vagrant/loopdatadev$HOSTNAME
-if [ ! -f /vagrant/loopdatadev$HOSTNAME/file-thin.img ]; then
-  dd if=/dev/zero of=/vagrant/loopdatadev$HOSTNAME/file-thin.img bs=1MiB count=10000 && sync
+mkdir -p /loopdatadev$HOSTNAME
+if [ ! -f /loopdatadev$HOSTNAME/file-thin.img ]; then
+  dd if=/dev/zero of=/loopdatadev$HOSTNAME/file-thin.img bs=1MiB count=10000 && sync
 fi
-DEV=`losetup --find --show /vagrant/loopdatadev$HOSTNAME/file-thin.img`
+DEV=`losetup --find --show /loopdatadev$HOSTNAME/file-thin.img`
 
+sleep 5
 #VG setup
+vgs
 pvcreate $DEV
 vgcreate storevg-thin $DEV
-sync
-sleep 5
+vgs
 #the logical volumes here are all thin provisioned.
 #Overkill on metadatasize - although running out of metadata is a very bad thing; if the shared block device is big (e.g several 100s of GB
 #, then its best to max out the metadatasize (16GiB)
 lvcreate -L9600MiB --type thin-pool --thinpool storevg-thin/thinpool
 
-if [ ! -f /vagrant/loopdatadev$HOSTNAME/file-nothin.img ]; then
-  dd if=/dev/zero of=/vagrant/loopdatadev$HOSTNAME/file-nothin.img bs=1MiB count=10000 && sync
+if [ ! -f /loopdatadev$HOSTNAME/file-nothin.img ]; then
+  dd if=/dev/zero of=/loopdatadev$HOSTNAME/file-nothin.img bs=1MiB count=10000 && sync
 fi
 
-DEV=`losetup --find --show /vagrant/loopdatadev$HOSTNAME/file-nothin.img`
+DEV=`losetup --find --show /loopdatadev$HOSTNAME/file-nothin.img`
 sleep 5
 #VG setup
+vgs
 pvcreate $DEV
 vgcreate storevg-nothin $DEV
+vgs
 #the logical volumes are not thin provisioned.
 
 
