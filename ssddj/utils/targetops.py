@@ -108,9 +108,9 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
-#            (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
-#            logger.info("DevDic = "+str(devDic))
-#            logger.info("TarDic = "+str(tarDic))
+            (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
+            #logger.info("DevDic = "+str(devDic))
+            #logger.info("TarDic = "+str(tarDic))
             if iqnTarget in tarDic:
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)

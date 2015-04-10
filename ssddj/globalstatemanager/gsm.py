@@ -286,7 +286,7 @@ class PollServer():
         and save latest scst.conf from the remote server (overwrite)
         """
         #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
-        if isencrypted == 'no':
+        if str(isencrypted) != '1':
             cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',
             str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         else:
