@@ -12,7 +12,7 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-set -e
+#set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if  python $DIR/parsetarget.py | grep $1 | grep "no sessions"
 then
@@ -26,7 +26,7 @@ then
         if [ -b /dev/mapper/encrypted_$lvolName ]; then
            cryptsetup luksClose /dev/mapper/encrypted_$lvolName
         fi
-        yes | lvremove -f $VG/$lvolNam aux | grep 3306
+        yes | lvremove -f $VG/$lvolName
         scstadmin -write_config /etc/scst.conf
         sudo mkdir -p /temp
         sudo cp /etc/scst.conf /temp
