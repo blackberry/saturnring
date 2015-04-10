@@ -143,7 +143,7 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
             if (flag==0 or flag==1):
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup','isencrypted')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['targethost__storageip1']=rtnDict.pop('storageip1') #in order to not change the user interface
                 if rtnDict['targethost__storageip1']=='127.0.0.1':

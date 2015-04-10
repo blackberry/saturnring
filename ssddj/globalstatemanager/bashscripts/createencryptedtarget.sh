@@ -39,7 +39,7 @@ else
   echo $LVCOUTPUT
 fi
 dd if=/dev/zero of=/dev/$VG/$lvolName && sync #Zero the LV to make sure dm-crypt/LUKs do not get confused by old stuff
-cryptsetup luksFormat /dev/$VG/$lvolName -caes-cbc-essiv:sha256 $7
+cryptsetup luksFormat /dev/$VG/$lvolName -q -caes-cbc-essiv:sha256 $7
 cryptsetup luksOpen /dev/$VG/$lvolName encrypted_$lvolName  --key-file $7
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 #vgu=`echo $6 | tr -d '-' | tr -d ' '`
