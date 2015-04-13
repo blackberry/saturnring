@@ -72,7 +72,7 @@ dbdir=$DATABASE_DIR
 [saturnnode]
 user=$INSTALLUSER
 #Location on the saturnnode where the scripts are installed.
-install_location=$INSTALLLOCATION/saturn/
+install_location=/home/vagrant/saturn/
 bashpath=/bin/bash
 pythonpath=/usr/bin/python
 

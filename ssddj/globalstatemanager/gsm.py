@@ -77,9 +77,14 @@ class PollServer():
         locallist=listdir(self.localbashscripts)
         for localfile in locallist:
             self.srv.put(self.localbashscripts+localfile)
-            self.srv.execute("chmod 777 "+self.remoteinstallLoc+'saturn-bashscripts/'+localfile)
+            self.srv.execute("chmod 777 "+join(self.remoteinstallLoc,'saturn-bashscripts',localfile))
         #srv.close()
+        #Update rc.local for luks reboot functionality
+        luksopenscriptpath = join(self.remoteinstallLoc,'saturn-bashscripts','luksonreboot.sh');
+        self.srv.execute("sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
+        logger.info("Executed " + "sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
         logger.info("Installed scripts")
+
 
     def Exec(self,command):
         """
