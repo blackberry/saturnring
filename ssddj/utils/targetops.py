@@ -130,6 +130,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
 
                     if isencrypted == '1':
                         newLV.isencrypted = True
+                        p.InsertCrypttab(lvName,'encrypted_'+lvName,p.remotekeyfilelocation)
                     newLV.save()
                     chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
                     chosenVG.maxavlGB=max(0,chosenVG.maxavlGB-float(storageSize))
@@ -161,6 +162,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
 def DeleteTargetObject(obj):
     p = PollServer(obj.targethost)
     lv = LV.objects.get(target=obj)
+    p.DeleteCrypttab(lv.lvname)
     if p.DeleteTarget(obj.iqntar,lv.vg.vguuid)==1:
         newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
         newth.save()

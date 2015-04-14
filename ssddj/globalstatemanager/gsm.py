@@ -81,8 +81,8 @@ class PollServer():
         #srv.close()
         #Update rc.local for luks reboot functionality
         luksopenscriptpath = join(self.remoteinstallLoc,'saturn-bashscripts','luksonreboot.sh');
+        self.srv.execute("sudo sed -i '/luksonreboot.sh/d' /etc/rc.local") #delete pre-existing line if any
         self.srv.execute("sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
-        logger.info("Executed " + "sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
         logger.info("Installed scripts")
 
 
@@ -109,8 +109,8 @@ class PollServer():
             self.Exec ('mkdir -p ' + remoteKeyfileDir)
             self.srv.chdir(remoteKeyfileDir)
             self.srv.put(join(self.iscsiconfdir,keyfileName))
-            remoteKeyfilePath = join(remoteKeyfileDir,keyfileName)
-            rtnString = self.Exec ('test -f ' + remoteKeyfilePath + '&&  echo "OK Putkeyfile" ')
+            self.remoteKeyfilePath = join(remoteKeyfileDir,keyfileName)
+            rtnString = self.Exec ('test -f ' + self.remoteKeyfilePath + '&&  echo "OK Putkeyfile" ')
             logger.info(rtnString)
             if "OK Putkeyfile" not in str(rtnString):
                 raise ValueError("Putkey didnt install file")
@@ -119,7 +119,7 @@ class PollServer():
             logger.error(format_exc())
             return -1
 
-        return remoteKeyfilePath
+        return self.remoteKeyfilePath
 
     def DelKeyFile(self,keyfileName):
         """
@@ -296,11 +296,12 @@ class PollServer():
             str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
         else:
             try:
-                remotekeyfilelocation = self.PutKeyFile("cryptokey")
+                self.remotekeyfilelocation = self.PutKeyFile("cryptokey")
                 cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createencryptedtarget.sh',
-                str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,remotekeyfilelocation])
-                if remotekeyfilelocation == -1:
+                str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,self.remotekeyfilelocation])
+                if self.remotekeyfilelocation == -1:
                     raise ValueError("Putkey failed")
+
             except:
                 logger.error("Error setting up encrypted target: %s " %(iqnTarget,))
                 logger.error(format_exc())
@@ -435,6 +436,28 @@ class PollServer():
                 logger.warn("Invalid IP address %s retuned in GetInterfaces call on Saturn server %s " % (addr, self.serverDNS ))
                 var = format_exc()
                 logger.warn(var)
+
+    def InsertCrypttab(self,base_LV,enc_LV,keyfilePath):
+        """
+        Insert entry into /etc/crypttab
+        """
+        baselvpath = self.Exec(" ".join(["sudo sh -c 'lvs -o lv_path | grep ",base_LV," | tr -d \" \"'"]))[0].strip()
+        logger.info("BaseLVPATH = " + baselvpath)
+        cmdStr = " ".join(["sudo sh -c 'echo \"" + enc_LV, baselvpath, keyfilePath, "luks\" >> /etc/crypttab'"])
+        logger.info("InsertCrypttab: "+cmdStr)
+        self.Exec(cmdStr)
+
+    def DeleteCrypttab(self,lvStr):
+        """
+        Delete entry from /etc/crypttab
+        LVStr can be either the encrypted LV name or the base LV name
+        """
+        cmdStr = " ".join(['sudo sed -i','/'+lvStr+'/d','/etc/crypttab'])
+        logger.info("DeleteCrypttab: "+cmdStr)
+        self.Exec(cmdStr)
+
+
+
 
 
 #Commented out because there are formal unit tests.

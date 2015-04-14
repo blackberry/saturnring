@@ -38,9 +38,11 @@ else
   fi
   echo $LVCOUTPUT
 fi
-dd if=/dev/zero of=/dev/$VG/$lvolName && sync #Zero the LV to make sure dm-crypt/LUKs do not get confused by old stuff
+#dd if=/dev/zero of=/dev/$VG/$lvolName && sync #Zero the LV to make sure dm-crypt/LUKs do not get confused by old stuff
 cryptsetup luksFormat /dev/$VG/$lvolName -q -caes-cbc-essiv:sha256 $7
 cryptsetup luksOpen /dev/$VG/$lvolName encrypted_$lvolName  --key-file $7
+###INSERT CODE TO WRITE OUT CRYPTTAB HERE
+
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 #vgu=`echo $6 | tr -d '-' | tr -d ' '`
 dmp="/dev/mapper/encrypted_$lvolName"
@@ -81,6 +83,8 @@ if ! grep  --quiet "$2" /etc/scst.conf; then
   echo "FAILED - no entry for target $2  in scst.conf"
   exit
 fi
+
+
 
 echo "SUCCESS: created target $2 on $VG:  ($6)"
 
