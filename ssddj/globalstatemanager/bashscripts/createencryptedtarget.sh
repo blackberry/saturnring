@@ -41,7 +41,9 @@ fi
 #dd if=/dev/zero of=/dev/$VG/$lvolName && sync #Zero the LV to make sure dm-crypt/LUKs do not get confused by old stuff
 cryptsetup luksFormat /dev/$VG/$lvolName -q -caes-cbc-essiv:sha256 $7
 cryptsetup luksOpen /dev/$VG/$lvolName encrypted_$lvolName  --key-file $7
-###INSERT CODE TO WRITE OUT CRYPTTAB HERE
+
+mkdir -p /cryptbackups
+cryptsetup luksHeaderBackup /dev/$VG/$lvolName --header-backup-file /cryptbackups/$lvolName.cryptbackup.img
 
 lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
 #vgu=`echo $6 | tr -d '-' | tr -d ' '`

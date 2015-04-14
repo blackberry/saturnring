@@ -27,6 +27,7 @@ then
            cryptsetup luksClose /dev/mapper/encrypted_$lvolName
         fi
         dd if=/dev/zero of=/dev/$VG/$lvolName bs=1M count=10 && sync #Lets zero the first 10MB to remove any metadata
+        rm /cryptbackups/$lvolName.cryptbackup.img # remove cryptographic header backup
         yes | lvremove -f $VG/$lvolName
         scstadmin -write_config /etc/scst.conf
         sudo mkdir -p /temp
