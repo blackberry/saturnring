@@ -441,6 +441,7 @@ class PollServer():
         """
         Insert entry into /etc/crypttab
         """
+        #Needed for the crypttab 
         baselvpath = self.Exec(" ".join(["sudo sh -c 'lvs -o lv_path | grep ",base_LV," | tr -d \" \"'"]))[0].strip()
         logger.info("BaseLVPATH = " + baselvpath)
         cmdStr = " ".join(["sudo sh -c 'echo \"" + enc_LV, baselvpath, keyfilePath, "luks\" >> /etc/crypttab'"])
