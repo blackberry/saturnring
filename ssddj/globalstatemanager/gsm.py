@@ -100,6 +100,20 @@ class PollServer():
             logger.error(format_exc())
         return rtncmd
 
+
+    def GetFile(self,localPath,remotePath):
+        """
+        Get a file from the remote server.
+        return 1 on success, -1 on error
+        """
+        try:
+            self.srv.get(localPath,remotePath)
+            return 1
+        except:
+            logger.error("Error copying file %s from remote server %s to local path %s" %(remotePath,self.serverDNS,localPath))
+            logger.error(format_exc())
+        return -1
+
     def PutKeyFile(self,keyfileName):
         """
         Copy over the keyfile to be used for creating the LUKs encrypted DM volumes
@@ -264,26 +278,18 @@ class PollServer():
             rtnvguuidList = rtnvguuidList+ ','+ vgs[vgname]['VG UUID']
         return rtnvguuidList[1:]
 
-    
-    def GitSave(self,vguuid,commentStr):
+    def GitSave(self):
         """
         Check in changes to config files into git repository
         """
         try:
-            #srv = Connection(self.serverDNS,self.userName,self.keyFile)
-            self.srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            self.srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-            try:
-                repo = Repo(self.iscsiconfdir)
-                filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
-                repo.stage(filelist)
-                repo.do_commit(commentStr)
-            except:
-                var = format_exc()
-                logger.error("During GitSave: %s: Git save error: %s" % (commentStr, var))
+            repo = Repo(self.iscsiconfdir)
+            filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
+            repo.stage(filelist)
+            repo.do_commit(commentStr)
         except:
             var = format_exc()
-            logger.error("During GitSave: %s: PYSFTP download error: %s" % (commentStr, var))
+            logger.error("During GitSave: Git save error: %s" % (var,))
 
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,isencrypted):
         """
@@ -315,7 +321,9 @@ class PollServer():
 
         commentStr = "Trying to create target %s " %( iqnTarget, )
 
-        self.GitSave(vguuid,commentStr)
+        self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+        self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
+        self.GitSave()
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
@@ -372,7 +380,11 @@ class PollServer():
             exStr = self.Exec(cmdStr)
             if exStr == -1:
                 return -1
-            self.GitSave(vguuid,"Trying to delete  target %s " %( iqntar,))
+            #self.srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            #self.srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
+            self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
+            self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
+            self.GitSave()
             success1 = False
             success2 = False
             for eachLine in exStr:
@@ -447,6 +459,8 @@ class PollServer():
         cmdStr = " ".join(["sudo sh -c 'echo \"" + enc_LV, baselvpath, keyfilePath, "luks\" >> /etc/crypttab'"])
         logger.info("InsertCrypttab: "+cmdStr)
         self.Exec(cmdStr)
+        self.GetFile('/etc/crypttab',self.iscsiconfdir+self.serverDNS+'.crypttab')
+        self.GitSave()
 
     def DeleteCrypttab(self,lvStr):
         """
