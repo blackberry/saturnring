@@ -1,4 +1,4 @@
-Django==1.6.2
+Django
 GitPython==0.1.7
 Markdown==2.4
 PyYAML==3.10
@@ -14,6 +14,7 @@ dulwich==0.9.7
 ecdsa==0.11
 ipaddress==1.0.6
 paramiko==1.13.0
+psycopg2==2.5.3
 pycrypto==2.6.1
 pysqlite==2.6.3
 python-dateutil==2.2

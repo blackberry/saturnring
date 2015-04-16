@@ -13,7 +13,11 @@
 #limitations under the License.
 
 from django.contrib import admin
+from django.contrib.admin.views.main import ChangeList
 from django import forms
+from django.shortcuts import redirect
+from django.core.urlresolvers import reverse
+from traceback import format_exc
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -37,14 +41,14 @@ import logging
 import django_rq
 import os
 import ConfigParser
-
+from django import db
 
 logger = logging.getLogger(__name__)
-admin.site.disable_action('delete_selected')
+#admin.site.disable_action('delete_selected')
 
 class VGAdmin(StatsAdmin):	
-    readonly_fields = ('vghost','thintotalGB','maxthinavlGB','thinusedpercent','CurrentAllocGB')
-    list_display = ['vghost','thintotalGB','maxthinavlGB','CurrentAllocGB','thinusedpercent','thinusedmaxpercent','opf','is_locked','in_error']
+    readonly_fields = ('vguuid','vghost','totalGB','maxavlGB','CurrentAllocGB')
+    list_display = ['vguuid','vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error','is_thin']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
@@ -55,7 +59,15 @@ class InterfaceAdmin(StatsAdmin):
     list_display = ['ip','storagehost']
 admin.site.register(Interface,InterfaceAdmin)
 
-def delete_iscsi_target(StatsAdmin,request,queryset):
+
+def config_snapshots(StatsAdmin,request,queryset):
+    targetList = []
+    for obj in queryset:
+        targetList.append(obj.iqntar)
+    return redirect('snapbackup:snapconfig',targets=obj)
+#    return redirect('snapconfig')
+
+def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -115,6 +127,12 @@ class TargetHistoryAdmin(StatsAdmin):
             return False
         return True
 
+    def has_add_permission(self, request):
+        return False
+    
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+                return False
+    
     def queryset(self, request):
         if request.user.is_superuser:
             return TargetHistory.objects.all()
@@ -128,15 +146,34 @@ class TargetHistoryAdmin(StatsAdmin):
 admin.site.register(TargetHistory,TargetHistoryAdmin)
 
 class TargetAdmin(StatsAdmin):
-    readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','rkb','wkb','sessionup']
-    actions = [delete_iscsi_target]
-    search_fields = ['iqntar','iqnini']
+#    if self.request.user.is_superuser: 
+#        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+#    else:
+#        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
+    actions = [delete_selected_iscsi_targets,config_snapshots]
+    #actions = [delete_selected_iscsi_targets]
+    search_fields = ['iqntar','iqnini','lv__lvname','lv__vg__vguuid','targethost__dnsname']
     stats = (Sum('sizeinGB'),)
+
+    def get_readonly_fields(self,request,obj=None):
+        if request.user.is_superuser:
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+        else:
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+
     def has_add_permission(self, request):
         return False
-#    def has_delete_permission(self, request, obj=None): # note the obj=None
-#                return False
+    def Physical_Location(self,obj):
+        mylv = LV.objects.get(target=obj)
+        return str(mylv.vg) + ":LV:"+str(mylv)
+
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+        if request.user.is_superuser:
+            return True
+        else:
+            return False
 
     def has_change_permission(self, request, obj=None):
         has_class_permission = super(TargetAdmin, self).has_change_permission(request, obj)
@@ -176,18 +213,25 @@ class TargetAdmin(StatsAdmin):
             obj.owner = request.user
         obj.save()
 
+    def get_actions(self, request):
+    #Disable delete
+        actions = super(TargetAdmin, self).get_actions(request)
+        del actions['delete_selected']
+        return actions
 
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','lvthinmapped','created_at')
-    list_display = ['target', 'owner_name', 'lvsize','lvthinmapped']
-    stats = (Sum('lvsize'),Sum('lvthinmapped'),)
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
+    list_display = ['lvname','vg','target', 'lvsize','lvuuid']
+    stats = (Sum('lvsize'),)
     search_fields = ['target__iqntar','target__owner__username']
     def owner_name(self, instance):
                 return instance.target.owner
     owner_name.admin_order_field  = 'target__owner'
 
+    def has_add_permission(self, request):
+        return False
     def has_delete_permission(self, request, obj=None): # note the obj=None
                 return False
     def has_change_permission(self, request, obj=None):
@@ -262,14 +306,99 @@ from django.contrib.auth.models import User
 
 from ssdfrontend.models import Profile
 
+
+class ProfileForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+    
+    def clean_max_alloc_sizeGB(self):
+        oldalloc = 0
+        usedsize = 0
+        #Test 1:  if the user has already used more than the new quota
+        try:
+            requestedGB = self.cleaned_data['max_alloc_sizeGB']
+            usedsize = Target.objects.filter(owner=self.cleaned_data['user']).aggregate(used_size=db.models.Sum('sizeinGB'))['used_size']
+            if usedsize == None:
+                usedsize = 0
+            if (usedsize > requestedGB):
+                raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+	except:
+            logger.error(format_exc())
+            raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+            logger.error("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
+
+        #Test 2: if the cluster has that much available storage
+        try:
+            requestedGB = self.cleaned_data['max_alloc_sizeGB']
+            if requestedGB == 0:
+                return requestedGB
+            totalGB = VG.objects.all().aggregate(totalGB=db.models.Sum('totalGB'))['totalGB']
+            if totalGB == None:
+                totalGB = 0
+            allocGB = Profile.objects.all().aggregate(CAGB=db.models.Sum('max_alloc_sizeGB'))['CAGB']
+            if allocGB == None:
+                allocGB = 0
+            thisuser = self.cleaned_data['user']
+            oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            if oldalloc == None:
+                oldalloc = 0
+            #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
+            if (totalGB < allocGB+requestedGB-oldalloc) and (requestedGB > oldalloc):
+                raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
+        except:
+            logger.error(format_exc())
+            logger.error("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
+            raise forms.ValidationError("Sorry, cluster capacity exceeded; maximum possible is %d GB" %(totalGB-allocGB+oldalloc,))
+        return requestedGB
+
+
 class ProfileInline(admin.StackedInline):
+    form = ProfileForm
     model = Profile
     can_delete = False
     list_display=[]
     verbose_name_plural = 'Profile'
 
+
+class UserChangeList(ChangeList):
+    def get_results(self, *args, **kwargs):
+        super(UserChangeList,self).get_results(*args, **kwargs)
+        q = self.result_list.aggregate(total_alloc_GB=db.models.Sum('profile__max_alloc_sizeGB'))
+        self.total_alloc_GB = q['total_alloc_GB']
+
+
 class UserAdmin(UserAdmin):
     inlines = (ProfileInline,)
+    list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
+
+    def get_changelist(self, request):
+        return UserChangeList
+
+    def max_target_GB(self, obj):
+        try:
+            mts = obj.profile.max_target_sizeGB 
+            return mts
+        except:
+            return ""
+    max_target_GB.short_description = 'Max Target size GB'
+
+    def used_GB(self,obj):
+        try:
+            usedsize = Target.objects.filter(owner=obj).aggregate(used_size=db.models.Sum('sizeinGB'))['used_size']
+            if usedsize == None:
+                usedsize = 0
+            return usedsize
+        except:
+            return ""
+    used_GB.short_description = 'Currently used GB'
+
+    def max_alloc_GB(self, obj):
+     try:
+        ma = obj.profile.max_alloc_sizeGB 
+        return ma
+     except:
+         return ""
+    max_alloc_GB.short_description = 'Assigned quota GB'
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

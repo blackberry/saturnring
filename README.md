@@ -1,43 +1,55 @@
 ## Synopsis
 
-Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring.
+Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring. The key design goal is to keep the multiple hosts independent of each other; i.e., each host can break independently and only affect the iSCSI targets on that host. So Saturnring is not a clustered file system; instead think of it as  manager for scaling up and orchestrating many iSCSI servers serving block storage to many clients. 
 
-You may also want to read the (very beta) user guide in the /doc directory: https://github.com/sachinkagarwal/saturnring/raw/master/doc/userguide.pdf.
+
+## Quickstart
+
+Read the HOWTO.SETUP file to setup a virtual saturnring cluster using a few Vagrant VMS.
+
 
 ## Motivation
 
 1. The IO capabilities of high performance block storage offered by cloud providers (e.g. SSDs attached to VMs) often exceed the requirements of that one VM. 
 2. Non-IO bottlenecks like CPU load or memory prevent the optimal use of high performance IO devices like SSDs . The unused IO capabilities (high number of IOs/sec, throughput, low latency) of SSDs can be exported to other VMs. This is usually more economical than buying SSD storage for VMs seperately.
 3. Saturnring can be used to create highly available block storage and remove single points of failure (single SSD block device attached to a VM). For example Saturnring can offer (parts of) two block devices from two different VMs to a third client VM, and the client can use software RAID 1 (like md or mirror LVM) to create a highly available block device. This setup also doubles the read IO capability.
+4. There are many usecases where the application takes care of replication and failure recovery (e.g. 3x replication in Cassandra or other nosql databases). Distributed file systems that make more copies on expensive solid-state storage doesnt make economic sense. Many distributed filesystems assume multiple copies are present and may not be suitable for single-copy operation (e.g. running CEPH with a single data copy is not recommended). 
  
-A use case for Saturnring might be an application that uses a relational database (e.g. Postgres or MariaDB) and a persistent messaging queue system (e.g. RabbitMQ) in the cloud. Both class of applications benefit from high-performing SSD storage, but may not individually require the full capabilities of 2 independent SSDs. Another use case is building a multi-head  SSD storage array for a private cloud by using Saturnring to provision and manage multiple bare-metal x86 boxes containing SSDs or PCIe solid-state storage cards. Saturnring aggregates block storage resources and enables architects to move block storage capabilities to where they are required in the application. 
+Another use case for Saturnring might be an application that uses a relational database (e.g. Postgres or MariaDB) and a persistent messaging queue system (e.g. RabbitMQ) in the cloud. Both class of applications benefit from high-performing SSD storage, but may not individually require the full capabilities of 2 independent SSDs. Another use case is building a multi-head  SSD storage array for a private cloud by using Saturnring to provision and manage multiple bare-metal x86 boxes containing SSDs or PCIe solid-state storage cards. Saturnring aggregates block storage resources and enables architects to move block storage capabilities to where they are required in the application. 
 
-Saturnring relies on recent versions of Linux LVM (Logical volume manager) to divide up block device(s) into logical volumes that are exported via an iSCSI server (currently, SCST) as iSCSI targets. Clients of this storage - iSCSI initiators - create iSCSI sessions to to the targets in order to use the corresponding LVs as block storage devices. Saturn provides mechanisms for orchestrating multiple block devices. Saturn can also provision targets that belong to the same anti-affinity groups: targets belonging to the same AAG will be placed on different target block devices if possible. This is useful in controlling failure domains for applications like Cassandra or active-active replicated storage back-ends for relational databases. Saturnring does not require control of the full block device, it instead provisions storage off a volume group that may be created over a part of a block device. 
+Saturnring provides tiering flexibility as well. Users can automate the creation of storage on different underlying media. For example the
+commit log of a database can be placed on SSD while the archivelog can be on spinning disk.
+
+Saturnring relies on recent versions of Linux LVM (Logical volume manager) to divide up block device(s) into logical volumes that are exported via an iSCSI server (currently, SCST) as iSCSI targets. Both thin and non-thin LVM logical volumes are supported. Clients of this storage - iSCSI initiators - create iSCSI sessions to to the targets in order to use the corresponding LVs as block storage devices. Saturn provides mechanisms for orchestrating multiple block devices. Saturn can also provision targets that belong to the same anti-affinity groups: targets belonging to the same AAG will be placed on different target block devices if possible. This is useful in controlling failure domains for applications like Cassandra or active-active replicated storage back-ends for relational databases. Saturnring does not require control of the full block device, it instead provisions storage off a volume group that may be created over a part of a block device. 
 
 Unlike clustered data storage systems (e.g. GPFS, Gluster, CEPH etc.) Saturnring makes no effort of replicating data on the back-end. There are no multiple copies being created on write. Instead Saturnring defers high-availability and data protection to the application (e.g. NoSQL database replication or software RAID 1 across 2 target LVs on the initiator). Saturnring manages one or more iSCSI servers. Saturnring focus is on preserving low latency, highIOPs and high throughput properties of SSDs or other "fast" storage over the cloud network. For this it relies on the well vetted Linux iSCSI implementation SCST (other iSCSI implmentations can be substituted with moderate effort). Its chief value add is manageability and RESTFul block storage sharing and provisioning, all amenable to cloud applications.
-
-For ideas on how a high-availability can be created using Saturnring anti-affinity-groups look at the example script saturnring/deployments/vagrant/clientscripts/high\_availability\_storage.sh
 
 ## Architecture
 
 Saturnring provides the following components:
 
 1. A web portal and API which allows the storage administrator to manage users and their iSCSI targets
-2. A HTTP RESTful-API call to provision iSCSI targets. To keep things simple the API is very sparse by design - there are only 3 API methods.
+2. A HTTP RESTful-API call to provision iSCSI targets. To keep things simple the API is very sparse by design.
 3. Facilities like user quotas, ingesting multiple iSCSI target servers into a Saturnring cluster, deleting storage, thin provisioning, and basic monitoring support etc. are available via the Saturnring portal
+4. Support for VLANs
+5. Tracking statistics about usage/quotas etc.
 
 A Vagrant setup where all of the above is setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
+
 
 Fig 1. shows how Saturnring may be setup to serve out block storage.
 ![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/images/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
 
 
-
 ## Installation and Getting Started
 Saturnring is built out of multiple components - the iSCSI server(s), the Django-driven Saturnring portal and API and Apache webserver with modwsgi extensions, the backend database (sqlite or other Django-compatible relational DB) and a redis-server and job workers for running periodic tasks. A Vagrant file and shell provisioner scripts are included to automatically setup these components for illustration. Instead of supplying pre-baked and customized VM images for quick setup the idea is to provide scripts that can be adapted to instantiate Saturnring on any private or public cloud. The Vagrant file setups up Virtualbox VMs that take on the roles of the Saturnring server, 2 iSCSI servers, and an iSCSI client. Vagrant brings up vanilla Ubuntu 14.04 images, and the shell provisioner scripts do the work of adapting the vanilla VMs into these different roles. These bash scripts are an easy segway to setting up Saturnring in any other virtual or bare-metal environment, or for creating custom images to be used in the cloud.
 
 An unhindered Internet connection and a computer capable of running at least 2 VMs (256M RAM per VM, 1 vCPU per VM, 20GiB disk) is assumed here. 'Host' refers to the PC running the VMs, the SSH login/password for all VMs is vagrant/vagrant, and the Vagrant file defines an internal network 192.168.61/24 and a bridged adaptor to let VMs access the Internet.
+
+For further instructions on the Vagrant setup read the HOWTO.SETUP file.
+
+## Manual install - deprecated -
 
 1. Install Virtualbox
 http://www.virtualbox.org
@@ -117,7 +129,7 @@ Confirm in the portal (under VGs) that there is a new volume group
 
 STAGE 3: Testing via an iscsi client VM (192.168.21.23)
 
-17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets. See  https://github.com/sachinkagarwal/saturnring/raw/master/doc/userguide.odt for details.
+17. Log into the Saturnring web portal as superuser and under users create an account for a test user (fastiouser/fastiopassword).Do not change the storage quota while creating the user. Make the user a staff user and give it permission to add, remove and modify targets. See  https://github.com/sachinkagarwal/saturnring/raw/master/doc/saturn-userguide.pdf for details.
 
 18. On the host  navigate to <DIRROOT>/saturnring/deployments/vagrant
     ```
@@ -154,7 +166,6 @@ An iSCSI session from the iscsiclient to an iscsi server will be created. A bloc
     sudo mkfs.ext4 /dev/sda -b 4096 -E nodiscard
     sudo mount /dev/sda /mnt -o nodiscard,noatime
     ```
-
 
 ## Saturnring iSCSI Target Properties
 

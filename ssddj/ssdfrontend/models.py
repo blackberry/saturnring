@@ -14,12 +14,20 @@
 
 from django.db import models
 from django.contrib.auth.models import User
+import string
 # Create your models here.
+from django.core.exceptions import ValidationError
+
+def validate_nospecialcharacters(value):
+    invalidcharacters = set(string.punctuation.replace("_", ""))
+    if len(invalidcharacters.intersection(value)):
+        raise ValidationError(u'%s contains a special character' % value)
+
 
 class Provisioner(models.Model):
     clientiqn = models.CharField(max_length=100)
     sizeinGB = models.FloatField()
-    serviceName = models.CharField(max_length=100)
+    serviceName = models.CharField(max_length=100,validators=[validate_nospecialcharacters])
     def __unicode__(self):              # __unicode__ on Python 2
         return self.clientiqn
 
@@ -30,7 +38,6 @@ class LV(models.Model):
     lvname = models.CharField(max_length=200,default='Not found')
     lvsize = models.FloatField()
     lvuuid = models.CharField(max_length=200,primary_key=True)
-    lvthinmapped = models.FloatField(default=-1)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
@@ -50,19 +57,19 @@ class VG (models.Model):
     vgpesize = models.FloatField()
     vgtotalpe = models.FloatField()
     vgfreepe = models.FloatField(default=-1)
-    thinusedpercent = models.FloatField(default=-1)
-    thintotalGB = models.FloatField(default=-1)
-    maxthinavlGB = models.FloatField(default=-1)
-    opf = models.FloatField(default=0.99)
-    thinusedmaxpercent = models.FloatField(default=99)
+    totalGB = models.FloatField(default=-1)
+    maxavlGB = models.FloatField(default=-1)
     enabled = models.BooleanField(default=True)
     CurrentAllocGB = models.FloatField(default=-100.0,null=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
+    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
+    is_thin = models.BooleanField(default=True)
     def __unicode__(self):              # __unicode__ on Python 2
-        return self.vguuid
+        return 'SERVER:'+str(self.vghost)+':VG:'+str(self.vguuid)
+
 
 class StorageHost(models.Model):
     dnsname = models.CharField(max_length=200,primary_key=True)
@@ -70,12 +77,11 @@ class StorageHost(models.Model):
     storageip1 = models.GenericIPAddressField(default='127.0.0.1')
     storageip2 = models.GenericIPAddressField(default='127.0.0.1')
     enabled = models.BooleanField(default=True)
+    snaplock = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return self.dnsname
-
-
 
 
 class Target(models.Model):
@@ -97,6 +103,7 @@ class Target(models.Model):
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
 
+
 class TargetHistory(models.Model):
     owner = models.ForeignKey(User)
     iqntar=models.CharField(max_length=200)
@@ -116,6 +123,7 @@ class AAGroup(models.Model):
     def __unicode__(self):
         return self.name
 
+
 class ClumpGroup(models.Model):
     name = models.CharField(max_length=200)
     hosts = models.ManyToManyField(StorageHost)
@@ -133,6 +141,17 @@ class IPRange(models.Model):
     def __unicode__(self):
         return self.iprange
 
+class SnapJob(models.Model):
+    numsnaps = models.IntegerField(default=1)
+    iqntar = models.ForeignKey(Target)
+    cronstring = models.CharField(max_length=100)
+    lastrun = models.DateTimeField(blank=True)
+    nextrun = models.DateTimeField(blank=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+    deleted_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    enqueued = models.BooleanField(blank=False,default=False)
+    run_now = models.BooleanField(blank=False,default=False)
+
 class Interface(models.Model):
     storagehost = models.ForeignKey(StorageHost)
     ip = models.CharField(max_length=15)
@@ -147,8 +166,8 @@ from django.contrib.auth.models import User
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
     user = models.OneToOneField(User,unique=True)
-    max_target_sizeGB = models.FloatField(default=5)
-    max_alloc_sizeGB = models.FloatField(default=10)
+    max_target_sizeGB = models.FloatField(default=0)
+    max_alloc_sizeGB = models.FloatField(default=0)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
