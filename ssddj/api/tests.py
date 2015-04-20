@@ -64,7 +64,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pcie1',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -79,7 +79,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=pcie2',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -91,20 +91,35 @@ class APITestCase (TestCase):
 
             Note: needs a account to be setup in the portal
             testuser/password
-            Needs 2 media types - diskssd and pciessd (basically 2 VGs in the iscsiserver, 
-            and then assigned to the media types)
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=diskssd',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=pciessd',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
+
+
+    def test_Provisioner_Encrypted(self):
+        """
+            Test the provisioning call for encrypted targets
+
+            Note: needs a account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner for encrypted ta rgets"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionencryption&aagroup=testgroup&isencrypted=1',
+            "-u","testuser:password",])
+        print outStr
+
+
 
     def test_DeletionTargetPlain(self):
         """

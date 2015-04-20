@@ -67,7 +67,7 @@ class VG (models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
-    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
+    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIEcard1','PCIEcard1',),('PCIEcard2','PCIEcard2',),('PCIEcard3','PCIEcard3',)])
     is_thin = models.BooleanField(default=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return 'SERVER:'+str(self.vghost)+':VG:'+str(self.vguuid)

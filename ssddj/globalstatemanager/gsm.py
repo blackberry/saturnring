@@ -278,7 +278,7 @@ class PollServer():
             rtnvguuidList = rtnvguuidList+ ','+ vgs[vgname]['VG UUID']
         return rtnvguuidList[1:]
 
-    def GitSave(self):
+    def GitSave(self,commentStr):
         """
         Check in changes to config files into git repository
         """
@@ -289,7 +289,7 @@ class PollServer():
             repo.do_commit(commentStr)
         except:
             var = format_exc()
-            logger.error("During GitSave: Git save error: %s" % (var,))
+            logger.error("During GitSave %s: Git save error: %s" % (commentStr,var))
 
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,isencrypted):
         """
@@ -323,7 +323,7 @@ class PollServer():
 
         self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
         self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-        self.GitSave()
+        self.GitSave(commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
@@ -384,7 +384,8 @@ class PollServer():
             #self.srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
             self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
             self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-            self.GitSave()
+           
+            self.GitSave("Trying to delete target "+iqntar)
             success1 = False
             success2 = False
             for eachLine in exStr:
@@ -460,7 +461,7 @@ class PollServer():
         logger.info("InsertCrypttab: "+cmdStr)
         self.Exec(cmdStr)
         self.GetFile('/etc/crypttab',self.iscsiconfdir+self.serverDNS+'.crypttab')
-        self.GitSave()
+        self.GitSave("Trying the insert crypttab entry " + cmdStr)
 
     def DeleteCrypttab(self,lvStr):
         """
