@@ -156,11 +156,11 @@ class APITestCase (TestCase):
 
 
     def tearDown(self):
-        print "Attempting to clean up"
-        #print "Deleting"
-        #outStr = check_output(["curl","-X","GET",
-        #    "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-        #    "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovision:aa59eb0a",
-        #    "-u","testuser:password"])
+        print "Attempting to clean up -  this will delete all iSCSI targets that belong to user testuser on the test iscsiserver"
+        outStr = check_output(["curl","-X","GET",
+        "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+        "-d","targethost="+self.iscsiserver,
+        "-u","testuser:password"])
+
 
 
