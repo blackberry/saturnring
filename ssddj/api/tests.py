@@ -16,6 +16,7 @@ from django.test import TestCase
 from subprocess import check_output
 import traceback
 from utils.configreader import ConfigReader
+from xlrd import open_workbook, XLRDError
 
 # Create your tests here.
 class APITestCase (TestCase):
@@ -154,6 +155,20 @@ class APITestCase (TestCase):
         print outStr
         self.assertIn('vguuid',outStr)
 
+    def test_Stats(self):
+        print "TESTING API stats excel return"
+        outStr = check_output(["curl","-X","GET",
+        "http://"+self.saturnringip+":"+self.saturnringport+"/api/stats/"
+        ])
+        with open('test.xls','wb') as f:
+            f.write(outStr)
+        xls = 'Returned XLS file not ok'
+	try:
+            book = open_workbook('test.xls')
+            xls = 'ok'
+        except XLRDError as e:
+            print e
+        self.assertEqual('ok',xls)
 
     def tearDown(self):
         print "Attempting to clean up -  this will delete all iSCSI targets that belong to user testuser on the test iscsiserver"
