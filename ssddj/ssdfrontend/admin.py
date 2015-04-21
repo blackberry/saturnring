@@ -122,7 +122,7 @@ admin.site.register(Interface,InterfaceAdmin)
 class TargetHistoryAdmin(StatsAdmin):
     readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
     list_display = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
-    search_fields = ['iqntar','owner']
+    search_fields = ['iqntar','owner__username']
     stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
     actions=[]
 
