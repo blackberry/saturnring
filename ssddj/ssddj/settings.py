@@ -106,6 +106,7 @@ TEMPLATE_DIRS = (
 
 INSTALLED_APPS = (
 #    'django.contrib.admindocs',
+    'django_admin_bootstrapped',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -190,7 +191,7 @@ USE_L10N = True
 
 USE_TZ = True
 
-
+DAB_FIELD_RENDERER = 'django_admin_bootstrapped.renderers.BootstrapFieldRenderer'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
 

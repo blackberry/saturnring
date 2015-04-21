@@ -5,6 +5,7 @@ PyYAML==3.10
 South==0.8.4
 argparse==1.2.1
 coverage==3.7.1
+django-admin-bootstrapped==2.3.5
 django-admin-changelist-stats==0.2
 django-auth-ldap==1.2.0
 django-filter==0.7

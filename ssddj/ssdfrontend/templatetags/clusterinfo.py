@@ -22,7 +22,7 @@ def get_clusterinfo():
             totalCap = -9999999999
         if (avlCap == None) or (avlCap < 0):
             avlCap = -99999999999
-        return "Saturn servers: %d; Total/quota-promised/in-actual-use/Max-LUN-size : %d/%d/%d/%d GB" %(numHosts,totalCap,quotapromised,totalCap-avlCap,maxSize)
+        return "<br> Number of servers: %d<br> Total across all servers: %dGB <br> Quota-promised to all users: %dGB <br> Actually provisioned: %dGB <br> Maximum LUN size possible: %dGB" %(numHosts,totalCap,quotapromised,totalCap-avlCap,maxSize)
     except:
         return 'Undefined'
         
