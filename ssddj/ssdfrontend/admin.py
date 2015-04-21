@@ -46,18 +46,16 @@ from django import db
 logger = logging.getLogger(__name__)
 #admin.site.disable_action('delete_selected')
 
+admin.site.disable_action('delete_selected')
+
 class VGAdmin(StatsAdmin):	
+    actions = ['delete_selected']
     readonly_fields = ('vguuid','vghost','totalGB','maxavlGB','CurrentAllocGB')
     list_display = ['vguuid','vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error','is_thin']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
 admin.site.register(VG,VGAdmin)
-
-
-class InterfaceAdmin(StatsAdmin):	
-    list_display = ['ip','storagehost']
-admin.site.register(Interface,InterfaceAdmin)
 
 
 def config_snapshots(StatsAdmin,request,queryset):
@@ -112,6 +110,15 @@ def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
         logger.error("Gave up trying to delete after 1 minute")
     return (rtnFlag,str(rtnStatus))
 
+class InterfaceAdmin(StatsAdmin):
+    readonly_fields = ('storagehost','ip')
+    list_display = ('storagehost','ip','owner')
+    def has_add_permission(self, request):
+        return False
+
+admin.site.register(Interface,InterfaceAdmin)
+
+
 class TargetHistoryAdmin(StatsAdmin):
     readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
     list_display = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
@@ -152,7 +159,7 @@ class TargetAdmin(StatsAdmin):
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
 
     list_display = ['iqntar','iqnini','created_at','sizeinGB','isencrypted','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
-    actions = [delete_selected_iscsi_targets,config_snapshots]
+    actions = [delete_selected_iscsi_targets]
     #actions = [delete_selected_iscsi_targets]
     search_fields = ['iqntar','iqnini','lv__lvname','lv__vg__vguuid','targethost__dnsname']
     stats = (Sum('sizeinGB'),)
@@ -213,11 +220,11 @@ class TargetAdmin(StatsAdmin):
             obj.owner = request.user
         obj.save()
 
-    def get_actions(self, request):
+#    def get_actions(self, request):
     #Disable delete
-        actions = super(TargetAdmin, self).get_actions(request)
-        del actions['delete_selected']
-        return actions
+#        actions = super(TargetAdmin, self).get_actions(request)
+#        del actions['delete_selected']
+#        return actions
 
 
 
@@ -225,7 +232,7 @@ class LVAdmin(StatsAdmin):
     readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at','isencrypted')
     list_display = ['lvname','vg','target', 'lvsize','lvuuid']
     stats = (Sum('lvsize'),)
-    search_fields = ['target__iqntar','target__owner__username']
+    search_fields = ['target__iqntar','target__owner__username','lvname','lvuuid']
     def owner_name(self, instance):
                 return instance.target.owner
     owner_name.admin_order_field  = 'target__owner'
@@ -259,13 +266,33 @@ class LockAdmin(StatsAdmin):
     readonly_fields = ('lockname',)
     list_display = ['lockname','locked']
 
+    def has_add_permission(self, request):
+        return False
+
+admin.site.register(Lock,LockAdmin)
+
+class AAGroupAdmin(StatsAdmin):
+    readonly_fields = ('name','hosts','target')
+    list_display = ['name','target','storage_host','target_owner']
+
+    def has_add_permission(self, request):
+        return False
+    
+    def target_owner (self,obj):
+        return obj.target.owner
+
+    def storage_host (self,obj):
+        return obj.target.targethost
+
+
+
+admin.site.register(AAGroup,AAGroupAdmin)
+
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-admin.site.register(AAGroup)
 admin.site.register(ClumpGroup)
 admin.site.register(IPRange)
-admin.site.register(Lock,LockAdmin)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
@@ -295,6 +322,7 @@ class StorageHostForm(forms.ModelForm):
 
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
+    actions = ['delete_selected']
     list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']
 admin.site.register(StorageHost, StorageHostAdmin)
 
