@@ -22,7 +22,7 @@ def get_clusterinfo():
             totalCap = -9999999999
         if (avlCap == None) or (avlCap < 0):
             avlCap = -99999999999
-        return "<br> Number of servers: %d<br> Total across all servers: %dGB <br> Quota-promised to all users: %dGB <br> Actually provisioned: %dGB <br> Maximum LUN size possible: %dGB" %(numHosts,totalCap,quotapromised,totalCap-avlCap,maxSize)
+        return "<div class='container'> <h4>Capacity snapshot</h4> <table class='table'>  <tbody> <tr> <td>Number of Servers</td> <td>%d</td> </tr> <tr> <td>Total capacity</td> <td>%dGB</td> </tr> 	 <tr> <td>Quota promised to all users</td> <td>%dGB</td> </tr> 	 <tr> <td>Actually provisioned storage</td> <td>%dGB</td> </tr> 	 <tr> <td>Maximum LUN size possible</td> <td>%dGB</td> </tr> </tbody> </table> </div>" %(numHosts,totalCap,quotapromised,totalCap-avlCap,maxSize)
     except:
         return 'Undefined'
         
