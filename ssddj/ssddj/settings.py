@@ -105,6 +105,7 @@ TEMPLATE_DIRS = (
             )
 
 INSTALLED_APPS = (
+#    'django.contrib.admindocs',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -122,7 +123,7 @@ INSTALLED_APPS = (
     'snapbackup',
 )
 
-
+#SITE_ID = 1
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

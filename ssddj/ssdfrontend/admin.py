@@ -159,9 +159,9 @@ class TargetAdmin(StatsAdmin):
 
     def get_readonly_fields(self,request,obj=None):
         if request.user.is_superuser:
-            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2','isencrypted')
         else:
-            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2','isencrypted')
 
     def has_add_permission(self, request):
         return False
@@ -222,7 +222,7 @@ class TargetAdmin(StatsAdmin):
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at','isencrypted')
     list_display = ['lvname','vg','target', 'lvsize','lvuuid']
     stats = (Sum('lvsize'),)
     search_fields = ['target__iqntar','target__owner__username']
