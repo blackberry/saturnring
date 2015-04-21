@@ -288,10 +288,26 @@ class AAGroupAdmin(StatsAdmin):
 
 admin.site.register(AAGroup,AAGroupAdmin)
 
+class ClumpGroupAdmin(StatsAdmin):
+    readonly_fields = ('name','hosts','target')
+    list_display = ['name','target','storage_host','target_owner']
+
+    def has_add_permission(self, request):
+        return False
+    
+    def target_owner (self,obj):
+        return obj.target.owner
+
+    def storage_host (self,obj):
+        return obj.target.targethost
+
+
+
+admin.site.register(ClumpGroup,ClumpGroupAdmin)
+
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-admin.site.register(ClumpGroup)
 admin.site.register(IPRange)
 #admin.site.register(HostGroup)
 
