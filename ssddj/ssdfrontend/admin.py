@@ -416,6 +416,11 @@ class UserChangeList(ChangeList):
 
 admin.site.unregister(User)
 class UserAdmin(UserAdmin):
+    def save_model(self, request, obj, form, change):
+        if request.user.is_superuser:
+            obj.is_staff = True
+            obj.save()
+
     inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
 
