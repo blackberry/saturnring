@@ -383,7 +383,10 @@ class ProfileForm(forms.ModelForm):
             if allocGB == None:
                 allocGB = 0
             thisuser = self.cleaned_data['user']
-            oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            try:
+                oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            except:
+                oldalloc = None
             if oldalloc == None:
                 oldalloc = 0
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
@@ -401,7 +404,7 @@ class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
     list_display=[]
-    verbose_name_plural = 'Profile'
+    verbose_name_plural = 'Quota Information'
 
 
 class UserChangeList(ChangeList):
@@ -411,6 +414,7 @@ class UserChangeList(ChangeList):
         self.total_alloc_GB = q['total_alloc_GB']
 
 
+admin.site.unregister(User)
 class UserAdmin(UserAdmin):
     inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
@@ -444,5 +448,4 @@ class UserAdmin(UserAdmin):
          return ""
     max_alloc_GB.short_description = 'Assigned quota GB'
 
-admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

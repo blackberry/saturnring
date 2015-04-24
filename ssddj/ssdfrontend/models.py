@@ -168,14 +168,14 @@ from django.contrib.auth.models import User
 
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
-    user = models.OneToOneField(User,unique=True)
+    user = models.OneToOneField(User,unique=True,primary_key=True)
     max_target_sizeGB = models.FloatField(default=0)
     max_alloc_sizeGB = models.FloatField(default=0)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
+        Profile.objects.get_or_create(user=instance)
 
 from django.db.models import signals
 signals.post_save.connect(create_user_profile, sender=User,dispatch_uid='autocreate_nuser')
