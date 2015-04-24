@@ -34,3 +34,4 @@ CODEROOT=/vagrant
 SATURNRINGPASSWORD=changeme
 ADMINEMAIL=admin@changeme.org
 PROXYFOLDER=''
+
