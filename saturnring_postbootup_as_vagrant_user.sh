@@ -97,7 +97,7 @@ bind_user_pw=$LDAP_BIND_USER_PW
 
 #Configuration to run unit tests.
 [tests]
-saturnringip=192.168.56.20
+saturnringip=$SATURNRINGHOST
 saturnringport=80
 saturniscsiserver=192.168.56.21
 
