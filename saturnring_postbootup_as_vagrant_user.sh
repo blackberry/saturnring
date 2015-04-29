@@ -13,8 +13,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 source ./envvars.sh
-export https_proxy="https://proxy.bblabs:80"
-export http_proxy="http://proxy.bblabs:80"
 
 cd $INSTALLLOCATION
 #Get latest saturnringsoftware from master branch
@@ -28,18 +26,21 @@ if [ ! -d "$INSTALLLOCATION/saturnenv" ]; then
 fi
 cd $INSTALLLOCATION/ssddj
 source $INSTALLLOCATION/saturnenv/bin/activate
-pip --proxy http://proxy.bblabs:80 install -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+
+pip install --proxy http://proxy.bblabs:80 -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
 cat <<EOF > $INSTALLLOCATION/ssddj/saturn.ini
 [saturnring]
-#Cluster name: This is used as the stats Excel XLS filename
+#Cluster name used in the GUI and XLS stats file output
 clustername=$CLUSTERNAME
 
 
-#This is where the Saturnring picks up scripts to install on the saturnnode for things like creating/deleting iSCSI targets
+#Location where the Saturnring picks up scripts to install 
+#on the iscsi server(saturnnode) for things like creating/deleting iSCSI targets
 bashscripts=globalstatemanager/bashscripts/
 
-#The user needs to copy the corresponding public key to the saturn node's user (specified in the [saturnnode] section using e.g. ssh-copy-id
+#The user needs to copy the corresponding public key to the saturn node's user 
+#(specified in the [saturnnode] section using e.g. ssh-copy-id
 privatekeyfile=$SATURNWKDIR/saturnringconfig/saturnkey
 
 #This is where saturnring keeps the latest iscsi config file
@@ -51,24 +52,33 @@ django_secret_key=$DJANGOSECRETKEY
 #Logging path
 logpath=$SATURNWKDIR/saturnringlog
 
-#Number of queues
-#If you change this number then please adjust the /etc/supervisor/conf.d/saturnring.conf by adding or deleting queue entries out there
+#Number of queues. A higher number will create more worker processes;
+#Useful for clusters with many iSCSI servers. Note that each iSCSI server
+#is always serviced by the same worker, so increasing this number will not
+#speed up a single-iSCSI server cluster. The parameter is useful when many
+#iSCSI servers are serviced by the same number of limited workers/
 numqueues=$NUMWORKERS
 
 #Proxyfolder
-#This is the proxy subfolder if the application is being run behind a proxy
+#This is the proxy subfolder if the application is being run behind a proxy.
+#Used to manage appropriate BASE URLs
 proxyfolder=$PROXYFOLDER
 
+#Database settings
 [database]
 
+#sqlite or postgres
 dbtype=$DATABASE_TYPE
 dbname=$DATABASE_NAME
+dbdir=$DATABASE_DIR
+#These parameters are only applicable to postgres
 dbhost=$DATABASE_HOST
 dbport=$DATABASE_PORT
 dbuser=$DATABASE_USER
 dbpassword=$DATABASE_PASSWORD
-dbdir=$DATABASE_DIR
 
+#iSCSI server settings (also referred to as saturnnode or storage host)
+#All iSCSI servers are assumed to have identical configurations
 [saturnnode]
 user=$INSTALLUSER
 #Location on the saturnnode where the scripts are installed.
@@ -76,6 +86,7 @@ install_location=/home/vagrant/saturn/
 bashpath=/bin/bash
 pythonpath=/usr/bin/python
 
+#LDAP/AD settings
 [activedirectory]
 enabled=$LDAP_ENABLED
 ldap_uri=$LDAP_LDAP_URI
@@ -84,6 +95,7 @@ staff_group=$LDAP_STAFF_GROUP
 bind_user_dn=$LDAP_BIND_USER_DN
 bind_user_pw=$LDAP_BIND_USER_PW
 
+#Configuration to run unit tests.
 [tests]
 saturnringip=$HOSTNAME
 saturnringport=80
@@ -146,9 +158,9 @@ git init
 ssh-keygen -q -f saturnkey -N ''
 ssh-keygen -f saturnkey.pub -e -m pem > saturnkey.pem
 #dd if=/dev/random of=~/cryptokeyfile bs=8 count=1
-cat <<EOF > cryptokey 
-THISR3ALLYN33DSTOB3RANDOMANDN3V3RLOST
-EOF
+
+# Write out the cryptokey to the config directory
+echo "$CRYPTOKEY" > "$CONFIGDIR"/cryptokey
 
 git add *
 git commit -a -m "Created Saturn keys"

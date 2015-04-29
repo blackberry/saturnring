@@ -68,7 +68,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
                     logger.error("Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
                     return (-1,"Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
 
-                if (existingTargetstoremedia == storemedia):
+                if (existingTargetstoremedia=='unassigned') or (existingTargetstoremedia == storemedia):
                     return (1,t.iqntar)
                 else:
                     errorStr = "Target %s on DIFFERENT storemedia %s already exists." % (t.iqntar,existingTargetstoremedia)

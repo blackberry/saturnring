@@ -19,7 +19,8 @@
 export https_proxy="https://proxy.bblabs:80"
 export http_proxy="http://proxy.bblabs:80"
 
-apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2 unzip
+apt-get update
+apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2 unzip cryptsetup cryptsetup-bin
 mkdir -p /temp
 cd /temp
 #svn checkout svn://svn.code.sf.net/p/scst/svn/trunk scst-svn

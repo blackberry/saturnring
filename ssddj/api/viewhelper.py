@@ -166,7 +166,7 @@ def MakeTarget(requestDic,owner):
     if 'isencrypted' in requestDic:
         isencrypted = requestDic['isencrypted']
     else:
-        isencrypted = '0'
+        isencrypted = '1' #1 means encryption is opt-out - should be explicity specified as 0 to prevent
 
     logger.info("Provisioner - request received: \nClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s, isEncrypted: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype, isencrypted))
     try:

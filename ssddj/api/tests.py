@@ -106,7 +106,7 @@ class APITestCase (TestCase):
         print outStr
 
 
-    def test_Provisioner_Encrypted(self):
+    def test_Provisioner_UnEncrypted(self):
         """
             Test the provisioning call for encrypted targets
 
@@ -116,7 +116,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner for encrypted ta rgets"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionencryption&aagroup=testgroup&isencrypted=1',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
             "-u","testuser:password",])
         print outStr
 
@@ -172,10 +172,10 @@ class APITestCase (TestCase):
 
     def tearDown(self):
         print "Attempting to clean up -  this will delete all iSCSI targets that belong to user testuser on the test iscsiserver"
-        outStr = check_output(["curl","-X","GET",
-        "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-        "-d","targethost="+self.iscsiserver,
-        "-u","testuser:password"])
+        #outStr = check_output(["curl","-X","GET",
+        #"http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+        #"-d","targethost="+self.iscsiserver,
+        #"-u","testuser:password"])
 
 
 
