@@ -67,7 +67,7 @@ redirect_stderr=true
 EOF
 done
 
-
+rm /etc/apache2/sites-enabled/000-default.conf
 cat <<EOF > /etc/apache2/sites-available/saturnring.conf
 <VirtualHost *:$SATURNRINGAPACHEPORT>
   LogLevel warn
