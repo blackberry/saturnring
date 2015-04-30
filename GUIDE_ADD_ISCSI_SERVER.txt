@@ -1,7 +1,0 @@
-1. Copy SSH key to the new iSCSI server
-cd /nfsmount/saturnring/saturnconfig
-ssh-copy-id -i saturnkey local@<new_iscsi_ip>
-
-2. As admin user, add the server via the portal (new storagehost)
-
-3. If the VG (usually called "storevg")  is already created on the new server a new VG should be populated in the portal within ~2 minutes
