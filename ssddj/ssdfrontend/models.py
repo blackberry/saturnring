@@ -168,7 +168,7 @@ from django.contrib.auth.models import User
 
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
-    user = models.OneToOneField(User,unique=True,primary_key=True)
+    user = models.OneToOneField(User,unique=True)
     max_target_sizeGB = models.FloatField(default=0)
     max_alloc_sizeGB = models.FloatField(default=0)
 
