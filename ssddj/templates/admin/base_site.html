@@ -1,9 +1,48 @@
 {% extends "admin/base.html" %}
-
-{% block title %}{{ title }} | {{ site_title }}{% endblock %}
-
+{% load i18n %}{% load admin_static bootstrapped_goodies_tags %}
+{% load clustername %}
+{% load totalquota %}
+{% load usedquota %}
+{% load maxlunsize %}
+{% load clusterinfo %}
 {% block branding %}
-<h1 id="site-name"><a href="{% url 'admin:index' %}">Saturn Ring Storage Portal</a></h1>
+<a class="navbar-brand" href="{% url 'admin:index' %}">{% if site_header %}{{ site_header }}{% else %}{% render_with_template_if_exist "admin/admin_title.html" "Django administration" %}{% endif %}</a>
 {% endblock %}
+{% block footer %} 
+<br><br><br>
+<div class="stats">
+    <div class="panel-group" id="accordion">
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h4 class="panel-title">
+                    <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">Saturn cluster {% get_clustername %} capacity</a>
+                </h4>
+            </div>
+            <div id="collapseOne" class="panel-collapse collapse ">
+                <div class="panel-body">
+                    {% get_clusterinfo %}
+                </div>
+            </div>
+        </div>
+		{% if user.is_authenticated %}
+			{% with theuser=user.get_username %}
+				<div class="panel panel-default">
+					<div class="panel-heading">
+						<h4 class="panel-title">
+							<a data-toggle="collapse" data-parent="#accordion" href="#collapseTwo">User quota</a>
+						</h4>
+					</div>
+					<div id="collapseTwo" class="panel-collapse collapse">
+						<div class="panel-body">
+							<div class="container"> <h4>User Quota</h4> <table class="table"> </thead> <tbody> <tr> <td>Total quota</td> <td>{% get_totalquota theuser %}</td> </tr> <tr> <td>Already used</td> <td>{% get_usedquota theuser %}</td> </tr>  <tr> <td>Maximum allowed target size</td> <td>{% get_maxlunsize theuser %}</td> </tr> </tbody> </table> </div>
+						</div>
+					</div>
+				</div>
+			{% endwith %}
+		{% endif %}
+	</div>
+</div>
 
+{%endblock %}
 {% block nav-global %}{% endblock %}
+

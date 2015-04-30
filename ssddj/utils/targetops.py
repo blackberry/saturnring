@@ -32,6 +32,7 @@ import logging
 from globalstatemanager.gsm import PollServer
 from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -48,8 +49,9 @@ def CheckUserQuotas(storageSize,owner):
         return (-1,rtnStr)
     return (1, "Quota checks ok, proceeding")
 
-def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner):
-    chosenVG=VG.objects.get(vghost=targetHost)
+def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
+        serviceName,storageSize,aagroup,clumpgroup,subnet,owner,isencrypted):
+    chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
     try:
@@ -60,7 +62,18 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
             iqnComponents = t.iqntar.split(':')
             if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
                 logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                return (1,t.iqntar)
+                try:
+                    existingTargetstoremedia = LV.objects.get(target=t).vg.storemedia
+                except:
+                    logger.error("Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
+                    return (-1,"Target %s exists in DB but LV does not, inconsistent" %(t.iqntar))
+
+                if (existingTargetstoremedia=='unassigned') or (existingTargetstoremedia == storemedia):
+                    return (1,t.iqntar)
+                else:
+                    errorStr = "Target %s on DIFFERENT storemedia %s already exists." % (t.iqntar,existingTargetstoremedia)
+                    logger.info(errorStr)
+                    return(-1,errorStr)
             else:
                 raise ObjectDoesNotExist
     except ObjectDoesNotExist:
@@ -90,26 +103,41 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
                 logger.error('Chosen host %s is missing IP addresses in requested subnet' % ( targethost, ) )
                 return (-1, 'Error in host network configuration or ownership for the required subnet, contact storage admin')
 
-        if (p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2)):
+        if p.CreateTarget(iqnTarget,clientiqn,str(storageSize),storeip1,storeip2,targetvguuid,isencrypted) == 1:
+            logger.info ("SUCCESSFUL TARGET RUN")
             BASE_DIR = os.path.dirname(os.path.dirname(__file__))
             config = ConfigParser.RawConfigParser()
             config.read(os.path.join(BASE_DIR,'saturn.ini'))
             (devDic,tarDic)=ParseSCSTConf(os.path.join(BASE_DIR,config.get('saturnring','iscsiconfigdir'),targetHost+'.scst.conf'))
+            #logger.info("DevDic = "+str(devDic))
+            #logger.info("TarDic = "+str(tarDic))
             if iqnTarget in tarDic:
                 newTarget = Target(owner=owner,targethost=targethost,iqnini=clientiqn,
                     iqntar=iqnTarget,sizeinGB=float(storageSize),storageip1=storeip1,storageip2=storeip2)
+                if isencrypted == '1':
+                    newTarget.isencrypted = True
                 newTarget.save()
-                lvDict=p.GetLVs()
+
+                lvDict=p.GetLVs(targetvguuid)
                 lvName =  'lvol-'+hashlib.md5(iqnTarget+'\n').hexdigest()[0:8]
+                logger.info("Looking for %s in lvDict %s" %(lvName, str(lvDict)))
                 if lvName in lvDict:
                     newLV = LV(target=newTarget,vg=chosenVG,
                             lvname=lvName,
                             lvsize=storageSize,
-                            lvthinmapped=lvDict[lvName]['Mapped size'],
+                            #lvthinmapped=lvDict[lvName]['Mapped size'],
                             lvuuid=lvDict[lvName]['LV UUID'])
+
+                    if isencrypted == '1':
+                        newLV.isencrypted = True
+                        p.InsertCrypttab(lvName,'encrypted_'+lvName,p.remotekeyfilelocation)
                     newLV.save()
                     chosenVG.CurrentAllocGB=max(0,chosenVG.CurrentAllocGB)+float(storageSize)
+                    chosenVG.maxavlGB=max(0,chosenVG.maxavlGB-float(storageSize))
                     chosenVG.save()
+            else:
+                logger.error('Error - could not use ParseSCSTConf while working with target creation of %s, check if git and %s are in sync' % (iqnTarget, targethost+'.scst.conf'))
+                return (-1,"CreateTarget returned error 2, contact admin")
 
             tar = Target.objects.get(iqntar=iqnTarget)
             aa = AAGroup(name=aagroup,target=tar)
@@ -117,26 +145,33 @@ def ExecMakeTarget(targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgro
             aa.hosts.add(targethost)
             aa.save()
             newTarget.aagroup=aa
-
             cg =ClumpGroup(name=clumpgroup,target=tar)
             cg.save()
             cg.hosts.add(targethost)
             cg.save()
             newTarget.clumpgroup=cg
             newTarget.save()
-
+            connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
             return (0,iqnTarget)
         else:
-            logger.warn('CreateTarget did not work')
-            return (-1,"CreateTarget returned error, contact admin")
+            connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
+            logger.error('CreateTarget did not work')
+            return (-1,"CreateTarget returned error 1, contact admin")
 
 
 def DeleteTargetObject(obj):
     p = PollServer(obj.targethost)
-    if p.DeleteTarget(obj.iqntar)==1:
+    lv = LV.objects.get(target=obj)
+    p.DeleteCrypttab(lv.lvname)
+    if p.DeleteTarget(obj.iqntar,lv.vg.vguuid)==1:
         newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
         newth.save()
+        tarVG = lv.vg
+        tarVG.maxavlGB = tarVG.maxavlGB + obj.sizeinGB
+        tarVG.save()
         obj.delete()
+        connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
         return 0
-    else:
+    else: 
+        connection.close() #close DB connection to prevent RQ connection reset error in PG database logs
         return 1

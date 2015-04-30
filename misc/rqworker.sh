@@ -14,5 +14,5 @@
 #limitations under the License.
 
 
-source /home/local/saturnring/saturnenv/bin/activate
-python /home/local/saturnring/ssddj/manage.py rqworker $1
+source /home/vagrant/saturnring/saturnenv/bin/activate
+python /home/vagrant/saturnring/ssddj/manage.py rqworker $1

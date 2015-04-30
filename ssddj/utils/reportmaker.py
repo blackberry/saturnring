@@ -1,3 +1,18 @@
+
+#Copyright 2014 Blackberry Limited
+#
+#Licensed under the Apache License, Version 2.0 (the "License");
+#you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
+
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
 from ssdfrontend.models import LV
@@ -31,21 +46,27 @@ def StatMaker():
         wsstorage.write(0,0,'Saturn host')
         wsstorage.write(0,1,'Total storage (GB)')
         wsstorage.write(0,2,'Allocated (GB)')
-        vgs = VG.objects.all()
-        vgCtr=0
-        totalGB = 0
-        allocGB = 0
-        for avg in vgs:
-            vgCtr=vgCtr+1
-            totalGB=totalGB+max(0,avg.thintotalGB)
-            allocGB=allocGB+max(0,avg.CurrentAllocGB)
-            wsstorage.write(vgCtr,0,avg.vghost.dnsname)
-            wsstorage.write(vgCtr,1,max(0,avg.thintotalGB))
-            wsstorage.write(vgCtr,2,max(0,avg.CurrentAllocGB))
+        storehostCtr=0
+        storehosts = StorageHost.objects.all()
+        clustertotalGB = 0
+        clusterAllocGB = 0
+        for astorehost in storehosts:
+            storehostCtr = storehostCtr+1
+            totalGB = 0
+            allocGB = 0
+            vgs = VG.objects.filter(vghost=astorehost)
+            for avg in vgs:
+                totalGB=totalGB+max(0,avg.totalGB)
+                allocGB=allocGB+max(0,avg.CurrentAllocGB)
+            wsstorage.write(storehostCtr,0,astorehost.dnsname)
+            wsstorage.write(storehostCtr,1,max(0,totalGB))
+            wsstorage.write(storehostCtr,2,max(0,allocGB))
+            clustertotalGB = clustertotalGB+totalGB
+            clusterAllocGB = clusterAllocGB + allocGB
         wssum.write(4,0,'Total storage (GB)')
-        wssum.write(4,1,totalGB)
+        wssum.write(4,1,clustertotalGB)
         wssum.write(5,0,'Used - allocated - storage (GB)')
-        wssum.write(5,1,allocGB)
+        wssum.write(5,1,clusterAllocGB)
         
         # User stats
         wsusers = book.add_sheet('users')
@@ -98,7 +119,7 @@ def StatMaker():
     except:
         var = traceback.format_exc()
         logger.warn("Stat generation (XLS) error: %s" %(var,))
-        return 1
+        return (1,var)
 
 if __name__=='__main__':
     stat = StatInfo()

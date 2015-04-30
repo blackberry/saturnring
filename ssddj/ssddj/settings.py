@@ -33,18 +33,23 @@ import sys
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+#DEBUG = False
 config = ConfigParser.RawConfigParser()
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-print str(BASE_DIR)
 config.read(os.path.join(BASE_DIR,'saturn.ini'))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.6/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config.get('saturnring','django_secret_key')
+DBNAME = config.get('database','dbname')
+DBHOST = config.get('database','dbhost')
+DBPORT = config.get('database','dbport')
+DBUSER = config.get('database','dbuser')
+DBTYPE = config.get('database','dbtype')
+DBPASSWORD = config.get('database','dbpassword')
+DBDIR = config.get('database','dbdir')
 
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
@@ -64,7 +69,7 @@ if (config.get('activedirectory','enabled')=='1'):
         AUTH_LDAP_BIND_PASSWORD = config.get('activedirectory','bind_user_pw').strip('"')
         AUTH_LDAP_SERVER_URI = config.get('activedirectory','ldap_uri').strip('"')
         AUTH_LDAP_CONNECTION_OPTIONS = {
-                ldap.OPT_DEBUG_LEVEL: 4095,
+                ldap.OPT_DEBUG_LEVEL: 255,
                 ldap.OPT_PROTOCOL_VERSION: 3,
                 ldap.OPT_REFERRALS: 0,
         }
@@ -77,7 +82,9 @@ if (config.get('activedirectory','enabled')=='1'):
         }
         AUTH_LDAP_GROUP_SEARCH = LDAPSearch(config.get('activedirectory','staff_group').strip('"'), ldap.SCOPE_SUBTREE)
         AUTH_LDAP_ALWAYS_UPDATE_USER = True
+        # Use LDAP group membership to calculate group permissions.
         AUTH_LDAP_FIND_GROUP_PERMS = True
+        # Cache group memberships for an hour to minimize LDAP traffic
         AUTH_LDAP_CACHE_GROUPS = True
         AUTH_LDAP_GROUP_CACHE_TIMEOUT = 3600
 
@@ -93,12 +100,13 @@ else:
 TEMPLATE_INFO = True
 ALLOWED_HOSTS = ['*']
 TEMPLATE_DIRS = (
+            os.path.join(BASE_DIR,'ssdfrontend','templates'),
             os.path.join(BASE_DIR,  'templates'),
             )
 
-# Application definition
-
 INSTALLED_APPS = (
+#    'django.contrib.admindocs',
+    'django_admin_bootstrapped',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -113,9 +121,10 @@ INSTALLED_APPS = (
     'utils',
     'admin_stats',
     'django_rq',
+    'snapbackup',
 )
 
-
+#SITE_ID = 1
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -123,45 +132,34 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'middleware.exceptions.PlainExceptionsMiddleware',
 )
 
 ROOT_URLCONF = 'ssddj.urls'
 
-#WSGI_APPLICATION = 'ssddj.wsgi.application'
-
-
 # Database
 # https://docs.djangoproject.com/en/1.6/ref/settings/#databases
-
-#DATABASES = {
-#   'default': {
-#       'ENGINE': 'django.db.backends.sqlite3',
-#        'NAME': os.path.join(BASE_DIR, 'saturndb.sqlite3'),
-#   }
-#}
-
-DATABASES = {
-     'default': {
-         'ENGINE': 'django.db.backends.postgresql_psycopg2', # Add 'postgresql_psycopg2', 'mysql', 'sqlite3' or 'oracle'.
-         'NAME': 'saturndb',                      # Or path to database file if using sqlite3.
-        # The following settings are not used with sqlite3:
-         'USER': 'postgres',
-         'PASSWORD': 'passw0rd',
-         'HOST': 'saturnpg1002.stor10.blackberry',                      # Empty for localhost through domain sockets or           '127.0.0.1' for localhost through TCP.
-         'PORT': '',                      # Set to empty string for default.
-     }
+if DBTYPE == 'postgres':
+    DATABASES = {
+        'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': DBNAME,
+        'USER': DBUSER,
+        'PASSWORD': DBPASSWORD,
+        'HOST': DBHOST,
+        'PORT': DBPORT,
+    }
 }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE':'django.db.backends.sqlite3',
+            'NAME': os.path.join(DBDIR,DBNAME),
+        }
+    }
 
 
-
-#Recreating this database
-#drop old db
-#GRANT ALL on demodb.* TO saturnadmin@'saturnring.store.altus.bblabs'
-#syncdb
-#schema migration 
-
-
-
+numqueues = config.get('saturnring','numqueues')
 RQ_QUEUES = {
     'default': {
         'HOST': 'localhost',
@@ -170,12 +168,12 @@ RQ_QUEUES = {
     },
 }
 
-numqueues = config.get('saturnring','numqueues')
 for ii in range(0,int(numqueues)):
     RQ_QUEUES['queue'+str(ii)]={
-            'HOST': 'localhost',
+            'HOST': '127.0.0.1',
             'PORT' : 6379,
             'DB': 0,
+            'DEFAULT_TIMEOUT': 100,
             }
 
 
@@ -193,12 +191,20 @@ USE_L10N = True
 
 USE_TZ = True
 
-DEBUG = True
-
+DAB_FIELD_RENDERER = 'django_admin_bootstrapped.renderers.BootstrapFieldRenderer'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.6/howto/static-files/
+
+#Needed if behind a proxy
+try:
+    PROXYFOLDER=config.get('saturnring','proxyfolder')
+except:
+    PROXYFOLDER=''
+USE_X_FORWARDED_HOST=True
+FORCE_SCRIPT_NAME = PROXYFOLDER
+
 STATIC_ROOT = '/var/www/saturnring/static/'
-STATIC_URL = '/static/'
+STATIC_URL = PROXYFOLDER+'/static/'
 REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
         'rest_framework.serializers.HyperlinkedModelSerializer',
@@ -210,7 +216,6 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     )
 }
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -226,13 +231,13 @@ LOGGING = {
     'handlers': {
         'file': {
             'level': 'INFO',
-            'class': 'logging.FileHandler',
-            #'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn-master.log'),
-            'formatter': 'verbose'
-            #'maxBytes': 10247680,
-            #'backupCount': 10,
-        },
+	    'class': 'logging.handlers.RotatingFileHandler',
+#            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
+	    'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
+	    'formatter': 'verbose',
+	    'maxBytes' : 1000*1000*100,
+	    'backupCount': 100,
+	},
     },
     'loggers': {
         'django': {
@@ -242,18 +247,17 @@ LOGGING = {
         },
         'ssdfrontend': {
             'handlers': ['file'],
+            'propagate': True,
             'level': 'INFO',
         },
         'globalstatemanager': {
             'handlers': ['file'],
+            'propagate': True,
             'level': 'INFO',
         },
         'api': {
             'handlers': ['file'],
-            'level': 'INFO',
-        },
-        'utils': {
-            'handlers': ['file'],
+            'propagate': True,
             'level': 'INFO',
         },
     }
