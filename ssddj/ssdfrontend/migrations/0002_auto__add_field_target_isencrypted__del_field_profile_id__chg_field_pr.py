@@ -13,6 +13,12 @@ class Migration(SchemaMigration):
                       self.gf('django.db.models.fields.BooleanField')(default=False),
                       keep_default=False)
 
+        # Deleting field 'Profile.id'
+        db.delete_column(u'ssdfrontend_profile', u'id')
+
+
+        # Changing field 'Profile.user'
+        db.alter_column(u'ssdfrontend_profile', 'user_id', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True))
         # Adding field 'LV.isencrypted'
         db.add_column(u'ssdfrontend_lv', 'isencrypted',
                       self.gf('django.db.models.fields.BooleanField')(default=False),
@@ -23,6 +29,14 @@ class Migration(SchemaMigration):
         # Deleting field 'Target.isencrypted'
         db.delete_column(u'ssdfrontend_target', 'isencrypted')
 
+        # Adding field 'Profile.id'
+        db.add_column(u'ssdfrontend_profile', u'id',
+                      self.gf('django.db.models.fields.AutoField')(default=datetime.datetime(2015, 5, 1, 0, 0), primary_key=True),
+                      keep_default=False)
+
+
+        # Changing field 'Profile.user'
+        db.alter_column(u'ssdfrontend_profile', 'user_id', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True))
         # Deleting field 'LV.isencrypted'
         db.delete_column(u'ssdfrontend_lv', 'isencrypted')
 
@@ -111,10 +125,9 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.profile': {
             'Meta': {'object_name': 'Profile'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'max_alloc_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
             'max_target_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
-            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
+            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True', 'primary_key': 'True'})
         },
         u'ssdfrontend.provisioner': {
             'Meta': {'object_name': 'Provisioner'},
