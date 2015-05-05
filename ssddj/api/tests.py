@@ -50,7 +50,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -65,7 +65,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testi-serviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -80,7 +80,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -96,11 +96,11 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
@@ -116,7 +116,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner for encrypted ta rgets"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
             "-u","testuser:password",])
         print outStr
 
@@ -132,7 +132,7 @@ class APITestCase (TestCase):
         print "TESTING DeletionTarget"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovision:aa59eb0a",
+            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":test-serviceprovision:aa59eb0a",
             "-u","testuser:password"])
         self.assertIn('"error": 0',outStr)
         print outStr
