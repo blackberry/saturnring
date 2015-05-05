@@ -19,9 +19,9 @@ import string
 from django.core.exceptions import ValidationError
 
 def validate_nospecialcharacters(value):
-    invalidcharacters = set(string.punctuation.replace("_", ""))
+    invalidcharacters = set(string.punctuation.replace("_", "").replace("-",""))
     if len(invalidcharacters.intersection(value)):
-        raise ValidationError(u'%s contains a special character' % value)
+        raise ValidationError(u'%s contains a special character, retry after removing it' % value)
 
 
 class Provisioner(models.Model):
