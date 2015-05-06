@@ -473,13 +473,3 @@ class PollServer():
         self.Exec(cmdStr)
 
 
-
-
-
-#Commented out because there are formal unit tests.
-#if __name__=="__main__":
-#    pollserver = PollServer('saturnserver0.store.altus.bblabs')
-#    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
-#    print cmdStr
-
-

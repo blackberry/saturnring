@@ -104,11 +104,6 @@ DATABASES = {
 
 
 
-#Recreating this database
-#drop old db
-#GRANT ALL on demodb.* TO saturnadmin@'saturnring.store.altus.bblabs'
-#syncdb
-#schema migration 
 
 
 
