@@ -26,6 +26,7 @@ class Migration(SchemaMigration):
             ('lvuuid', self.gf('django.db.models.fields.CharField')(max_length=200, primary_key=True)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
+            ('isencrypted', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
         db.send_create_signal(u'ssdfrontend', ['LV'])
 
@@ -86,6 +87,7 @@ class Migration(SchemaMigration):
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
             ('storageip1', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
             ('storageip2', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
+            ('isencrypted', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
         db.send_create_signal(u'ssdfrontend', ['Target'])
 
@@ -189,8 +191,7 @@ class Migration(SchemaMigration):
 
         # Adding model 'Profile'
         db.create_table(u'ssdfrontend_profile', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True)),
+            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True)),
             ('max_target_sizeGB', self.gf('django.db.models.fields.FloatField')(default=0)),
             ('max_alloc_sizeGB', self.gf('django.db.models.fields.FloatField')(default=0)),
         ))
@@ -324,6 +325,7 @@ class Migration(SchemaMigration):
         u'ssdfrontend.lv': {
             'Meta': {'object_name': 'LV'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
+            'isencrypted': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'lvname': ('django.db.models.fields.CharField', [], {'default': "'Not found'", 'max_length': '200'}),
             'lvsize': ('django.db.models.fields.FloatField', [], {}),
             'lvuuid': ('django.db.models.fields.CharField', [], {'max_length': '200', 'primary_key': 'True'}),
@@ -333,10 +335,9 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.profile': {
             'Meta': {'object_name': 'Profile'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'max_alloc_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
             'max_target_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
-            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
+            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True', 'primary_key': 'True'})
         },
         u'ssdfrontend.provisioner': {
             'Meta': {'object_name': 'Provisioner'},
@@ -374,6 +375,7 @@ class Migration(SchemaMigration):
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'iqnini': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
             'iqntar': ('django.db.models.fields.CharField', [], {'max_length': '200', 'primary_key': 'True'}),
+            'isencrypted': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'rkb': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
             'rkbpm': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
