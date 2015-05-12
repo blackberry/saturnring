@@ -66,6 +66,12 @@ redirect_stderr=true
   
 EOF
 done
+cat <<EOF > /etc/supervisor/conf.d/logserver.conf
+[program:logserver]
+command=python $INSTALLLOCATION/logserver/logserver.py
+user=$INSTALLUSER
+EOF
+
 
 rm /etc/apache2/sites-enabled/000-default.conf
 cat <<EOF > /etc/apache2/sites-available/saturnring.conf

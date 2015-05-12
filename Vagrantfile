@@ -110,6 +110,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     iscsiclient.vm.provision "shell", path: "iscsi-client.sh"
  end
 
+  config.vm.define "tgtserver" do |server3|
+	  iscsiserver2.vm.hostname = 'tgtserver'
+	  #iscsiserver2.vm.network "public_network"
+	  iscsiserver2.vm.network "private_network", ip:"192.168.56.24"
+    iscsiserver2.vm.provision "shell", path: "tgtserver.sh"
+  end
 
   # Enable provisioning with chef solo, specifying a cookbooks path, roles
   # path, and data_bags path (all relative to this Vagrantfile), and adding
