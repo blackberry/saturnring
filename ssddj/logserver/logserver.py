@@ -58,6 +58,7 @@ import threading
 import datetime
 import cgi
 import time
+import ConfigParser
 
 try:
     from collections import deque
@@ -377,6 +378,7 @@ def main():
     ## named after this module name, with extension .log
     #
     formatter = logging.Formatter("[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s")
+    logpath=ConfigParser.
     rotFH = logging.handlers.RotatingFileHandler('/nfsmount/v31/saturnring/saturnringlog/saturnng.log',maxBytes=50000000,backupCount=500)
     rotFH.setFormatter(formatter)
     rootLogger.addHandler(rotFH)
