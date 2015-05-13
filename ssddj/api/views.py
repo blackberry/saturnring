@@ -90,6 +90,15 @@ class UpdateStateData(APIView):
     Does not require authenticated user
     /api/stateupdate
     """
+    #Inserted get and set state for pickle issues of the logger object
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+ 
     def get(self, request):
         config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
@@ -106,6 +115,13 @@ class Delete(APIView):
     a specific initiator
     /api/delete
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
@@ -129,6 +145,13 @@ class Provision(APIView):
     Provision API call
     /api/provisioner
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
@@ -171,6 +194,13 @@ class VGScanner(APIView):
     Create or update models for all VGs on a Saturn server
     /api/vgscanner
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     def get(self, request):
         logger.info("VG scan request received: %s " %(request.DATA,))
         saturnserver=request.DATA[u'saturnserver']

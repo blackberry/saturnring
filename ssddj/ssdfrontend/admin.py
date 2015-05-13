@@ -157,6 +157,13 @@ class TargetAdmin(StatsAdmin):
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
 #    else:
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
 
     list_display = ['iqntar','iqnini','created_at','sizeinGB','isencrypted','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
     actions = [delete_selected_iscsi_targets]

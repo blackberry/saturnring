@@ -59,17 +59,19 @@ for ii in `seq 0 $COUNTMAX`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-$ii]
-command=$INSTALLLOCATION/redisqconf/rqworker.sh queue$ii
+command=/bin/bash -c "source $INSTALLLOCATION/saturnenv/bin/activate; python $INSTALLLOCATION/ssddj/manage.py rqworker queue$ii"
 user=$INSTALLUSER
 stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
 redirect_stderr=true
-  
+stopasgroup=true
+
 EOF
 done
 cat <<EOF > /etc/supervisor/conf.d/logserver.conf
 [program:logserver]
 command=python $INSTALLLOCATION/ssddj/logserver/logserver.py
 user=$INSTALLUSER
+stopasgroup=true
 EOF
 
 
