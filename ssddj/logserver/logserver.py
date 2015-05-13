@@ -59,6 +59,17 @@ import datetime
 import cgi
 import time
 import ConfigParser
+from os.path import dirname,join,abspath
+from ConfigParser import RawConfigParser
+
+def ConfigReader(configfile='saturn.ini'):
+    print __file__
+    BASE_DIR = dirname(dirname(abspath(__file__)))
+    print str(BASE_DIR)
+    config = RawConfigParser()
+    config.read(join(BASE_DIR,configfile))
+    return config
+
 
 try:
     from collections import deque
@@ -151,6 +162,7 @@ class LoggingReceiver(SocketServer.ThreadingTCPServer):
                  handler=LogRecordStreamHandler):
         if port is None:
             port = logging.handlers.DEFAULT_TCP_LOGGING_PORT
+        SocketServer.ThreadingTCPServer.allow_reuse_address = True
         SocketServer.ThreadingTCPServer.__init__(self, (host, port), handler)
 
 
@@ -378,22 +390,30 @@ def main():
     ## named after this module name, with extension .log
     #
     formatter = logging.Formatter("[%(asctime)s] %(levelname)s [%(name)s:%(lineno)s] %(message)s")
-    logpath=ConfigParser.
-    rotFH = logging.handlers.RotatingFileHandler('/nfsmount/v31/saturnring/saturnringlog/saturnng.log',maxBytes=50000000,backupCount=500)
+    print "Entering configreader"
+    config = ConfigReader()
+    print "Exiting configreader"
+    logfile = os.path.join(config.get('saturnring','logpath'),config.get('saturnring','logfile'))
+    rotSize = int(config.get('saturnring','logfilerotatesize'))
+    rotCount = int(config.get('saturnring','logfilerotatecount'))
+    loghost = config.get('saturnring','logserverhost')
+    logport = int(config.get('saturnring','logserverport'))
+    weblogport = int(config.get('saturnring','logwebmonitorport'))
+    rotFH = logging.handlers.RotatingFileHandler(logfile,maxBytes=rotSize,backupCount=rotCount)
     rotFH.setFormatter(formatter)
     rootLogger.addHandler(rotFH)
     #fileHandler = logging.FileHandler(os.path.splitext(__file__)[0] + '.log')
     #fileHandler.setFormatter(formatter)
     #rootLogger.addHandler(fileHandler)
 
-    webmonitor = LoggingWebMonitor()
+    webmonitor = LoggingWebMonitor(port=weblogport)
     webmonitor.mostrecent = mostrecent
     thr_webmonitor = threading.Thread(target=webmonitor.serve_forever)
     thr_webmonitor.daemon = True
     print '%s started at %s' % (webmonitor.__class__.__name__, webmonitor.server_address)
     thr_webmonitor.start()
 
-    recv = LoggingReceiver()
+    recv = LoggingReceiver(host=loghost,port=logport)
     thr_recv = threading.Thread(target=recv.serve_forever)
     thr_recv.daemon = True
     print '%s started at %s' % (recv.__class__.__name__, recv.server_address)

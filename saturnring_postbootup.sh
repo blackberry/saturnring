@@ -68,7 +68,7 @@ EOF
 done
 cat <<EOF > /etc/supervisor/conf.d/logserver.conf
 [program:logserver]
-command=python $INSTALLLOCATION/logserver/logserver.py
+command=python $INSTALLLOCATION/ssddj/logserver/logserver.py
 user=$INSTALLUSER
 EOF
 
