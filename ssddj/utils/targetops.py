@@ -34,9 +34,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
 from django.db import connection
 
-logger = logging.getLogger(__name__)
 
 def CheckUserQuotas(storageSize,owner):
+    logger = logging.getLogger(__name__)
     user = User.objects.get(username=owner)
     if (storageSize > user.profile.max_target_sizeGB):
         rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
@@ -50,7 +50,9 @@ def CheckUserQuotas(storageSize,owner):
     return (1, "Quota checks ok, proceeding")
 
 def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
-        serviceName,storageSize,aagroup,clumpgroup,subnet,owner,isencrypted):
+        serviceName,storageSize,aagroup,clumpgroup,subnet,ownername,isencrypted):
+    logger = logging.getLogger(__name__)
+    owner = User.objects.get(username=ownername)
     chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
     iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
@@ -159,7 +161,9 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
             return (-1,"CreateTarget returned error 1, contact admin")
 
 
-def DeleteTargetObject(obj):
+def DeleteTargetObject(iqntar):
+    obj = Target.objects.get(iqntar=iqntar)
+    logger = logging.getLogger(__name__)
     p = PollServer(obj.targethost)
     lv = LV.objects.get(target=obj)
     p.DeleteCrypttab(lv.lvname)

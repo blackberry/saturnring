@@ -50,7 +50,6 @@ from .viewhelper import DeleteTarget
 from .viewhelper import VGFilter
 from .viewhelper import MakeTarget
 from utils.configreader import ConfigReader
-logger = getLogger(__name__)
 
 def ValuesQuerySetToDict(vqs):
     """
@@ -65,6 +64,7 @@ class ReturnStats(APIView):
     Does not require authenticated user
     """
     def get(self, request):
+        logger = getLogger(__name__)
         try:
             error = StatMaker()
             if error != 0:
@@ -106,7 +106,7 @@ class UpdateStateData(APIView):
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
             queue = get_queue(queuename)
-            queue.enqueue(UpdateOneState,eachhost)
+            queue.enqueue(UpdateOneState,args=(eachhost.dnsname,), timeout=45)
         return Response("Ok, enqueued state update request")
 
 class Delete(APIView):
@@ -125,6 +125,7 @@ class Delete(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
+        logger = getLogger(__name__)
         logger.info("Raw request data is "+str(request.DATA))
         (flag,statusStr) = DeleteTarget(request.DATA,request.user)
         logger.info("Deletion via API result" + str(statusStr))
@@ -155,6 +156,7 @@ class Provision(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
+        logger = getLogger(__name__)
         logger.info("Raw request data is "+str(request.DATA))
         serializer = ProvisionerSerializer(data=request.DATA)
         if serializer.is_valid():
@@ -202,6 +204,7 @@ class VGScanner(APIView):
     def __setstate__(self, d):
         self.__dict__.update(d)
     def get(self, request):
+        logger = getLogger(__name__)
         logger.info("VG scan request received: %s " %(request.DATA,))
         saturnserver=request.DATA[u'saturnserver']
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):

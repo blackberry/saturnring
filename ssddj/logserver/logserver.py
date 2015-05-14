@@ -320,7 +320,7 @@ table.vtable tr th.heading {
         for record in reversed(list(mostrecent.db)):
             try:
                 cells = escape(formatter.format(record)).split('\n', 4)
-                cells = ['<td>%s</td>' % cell for cell in cells]
+                cells = ['<td>%s</td>' % cell.encode('ascii', 'ignore') for cell in cells]
                 cells[-1] = cells[-1].replace('\n', '<br>\n') # message & stack trace
                 items.append('<tr class="%s">%s\n</tr>' %
                     (escape(record.levelname.lower()), ''.join(cells)))
