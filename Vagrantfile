@@ -82,9 +82,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Using pre-baked images for rapid testing. See the Vagrant box add command to create a prebaked image from a running vagrant VM
     # For the first time, comment out the 3 lines below to build the VM from vanilla Ubuntu
     # Using prebaked images is much much faster
-    saturnring.vm.box = "saturnringbaked" #For prebaked
-    saturnring.ssh.insert_key="false" #For prebaked
-    saturnring.ssh.password="vagrant" #For prebaked
     saturnring.vm.hostname= "saturnring"
     #saturnring.vm.network  "public_network"
     saturnring.vm.network  "private_network", ip:'192.168.56.20'
@@ -94,9 +91,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     # Using pre-baked images for rapid testing. See the Vagrant box add command to create a prebaked image from a running vagrant VM
     # For the first time, comment out the 3 lines below to build the VM from vanilla Ubuntu
     # Using prebaked images is much much faster
-    iscsiserver1.vm.box = "iscsibaked" #For prebaked
-    iscsiserver1.ssh.insert_key="false" #For prebaked
-    iscsiserver1.ssh.password="vagrant" #For prebaked
 	  iscsiserver1.vm.hostname = 'iscsiserver1'
 	  #iscsiserver1.vm.network "public_network"
 	  iscsiserver1.vm.network "private_network", ip:"192.168.56.21"
@@ -104,9 +98,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.define "iscsiserver2" do |iscsiserver2|
-    iscsiserver2.vm.box = "iscsibaked" #For prebaked
-    iscsiserver2.ssh.insert_key="false" #For prebaked
-    iscsiserver2.ssh.password="vagrant" #For prebaked
 	  iscsiserver2.vm.hostname = 'iscsiserver2'
 	  #iscsiserver2.vm.network "public_network"
 	  iscsiserver2.vm.network "private_network", ip:"192.168.56.22"

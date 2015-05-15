@@ -42,6 +42,7 @@ import django_rq
 import os
 import ConfigParser
 from django import db
+from logging import getLogger
 
 #admin.site.disable_action('delete_selected')
 
