@@ -3,13 +3,13 @@
 Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring. The key design goal is to keep the multiple hosts independent of each other; i.e., each host can break independently and only affect the iSCSI targets on that host. So Saturnring is not a clustered file system; instead think of it as  manager for scaling up and orchestrating many iSCSI servers serving block storage to many clients. 
 
 ## Documentation
-Updated Documentation is available in the /doc folder: "Saturn Cloud Storage User Guide.docx"
+Updated Documentation for the code and basic usage is available in the /doc folder's [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf)
 
 
 
 ## Architecture
 
-*Detailed and up-to-date documentation is provided in the file "Saturn Cloud Storage User Guide.docx" in the /doc directory.*
+*Detailed and up-to-date documentation is provided in the file [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf)
 
 Saturnring provides the following components:
 
@@ -21,11 +21,7 @@ Saturnring provides the following components:
 
 A Vagrant setup where all of the above can be quickly setup; this example should give enough guidance to  install Saturnring in AWS or other suitable public or private cloud provider.
 
-
-Fig 1. shows how Saturnring may be setup to serve out block storage.
-![Fig 1: high level architecture](https://raw.githubusercontent.com/sachinkagarwal/saturnring/master/doc/images/high-level-arch.png "High Level Architecture")
 Clients can use the RESTful provisioner call to create iSCSI targets on saturn servers' LVM volume groups. The portal allows administrators to track the overall storage in the Saturnring cluster (up to the logical volume level). It also provides user views to track Saturn storage for individual users. The web portal is a modified Django admin interface. By hacking the default Django interface rather than creating custom views, the core functionlity (managing iSCSI block devices) has been the key development focus. 
-
 
 ## Installation and Getting Started
 Saturnring is built out of multiple components - the iSCSI server(s), the Django-driven Saturnring portal and API and Apache webserver with modwsgi extensions, the backend database (sqlite or other Django-compatible relational DB) and a redis-server and job workers for running periodic tasks. A Vagrant file and shell provisioner scripts are included to automatically setup these components for illustration. Instead of supplying pre-baked and customized VM images for quick setup the idea is to provide scripts that can be adapted to instantiate Saturnring on any private or public cloud. The Vagrant file setups up Virtualbox VMs that take on the roles of the Saturnring server, 2 iSCSI servers, and an iSCSI client. Vagrant brings up vanilla Ubuntu 14.04 images, and the shell provisioner scripts do the work of adapting the vanilla VMs into these different roles. These bash scripts are an easy segway to setting up Saturnring in any other virtual or bare-metal environment, or for creating custom images to be used in the cloud.
