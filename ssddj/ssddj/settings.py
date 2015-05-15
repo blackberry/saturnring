@@ -229,37 +229,50 @@ LOGGING = {
         },
     },
     'handlers': {
-        'file': {
+        'file': { #Avoid using filehandler - issue with multiple processes writing to log.
             'level': 'INFO',
 	    'class': 'logging.handlers.RotatingFileHandler',
 #            'filename':  os.path.join(BASE_DIR, 'saturn.log'),
 	    'filename': os.path.join(BASE_DIR,config.get('saturnring','logpath'),'saturn.log'),
 	    'formatter': 'verbose',
-	    'maxBytes' : 1000*1000*100,
-	    'backupCount': 100,
+	    'maxBytes' : 0,
+	    'backupCount':0,
 	},
+        'socket': {
+            'level': 'INFO',
+            'class': 'logging.handlers.SocketHandler',
+            'host': 'localhost',
+            'port': 9020,
+        }
+
     },
     'loggers': {
         'django': {
-            'handlers':['file'],
+            'handlers':['socket'],
             'propagate': True,
             'level':'INFO',
         },
         'ssdfrontend': {
-            'handlers': ['file'],
+            'handlers': ['socket'],
             'propagate': True,
             'level': 'INFO',
         },
         'globalstatemanager': {
-            'handlers': ['file'],
+            'handlers': ['socket'],
             'propagate': True,
             'level': 'INFO',
         },
         'api': {
-            'handlers': ['file'],
+            'handlers': ['socket'],
             'propagate': True,
             'level': 'INFO',
         },
+        'rq.worker': {
+            'handlers': ['socket'],
+            'propagate': True,
+            'level': 'INFO',
+        },
+
     }
 }
 

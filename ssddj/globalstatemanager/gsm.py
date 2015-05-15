@@ -388,8 +388,8 @@ class PollServer():
             self.GitSave("Trying to delete target "+iqntar)
             success1 = False
             success2 = False
+            logger.info(exStr)
             for eachLine in exStr:
-                logger.info(eachLine)
                 if "Removing virtual target '"+iqntar+"' from driver 'iscsi': done" in eachLine:
                     success1=True
                 if "successfully removed" in eachLine:

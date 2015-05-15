@@ -43,7 +43,6 @@ import os
 import ConfigParser
 from django import db
 
-logger = logging.getLogger(__name__)
 #admin.site.disable_action('delete_selected')
 
 admin.site.disable_action('delete_selected')
@@ -66,6 +65,7 @@ def config_snapshots(StatsAdmin,request,queryset):
 #    return redirect('snapconfig')
 
 def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
+    logger = logging.getLogger(__name__)
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -75,7 +75,7 @@ def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = django_rq.get_queue(queuename)
         jobs = []
-        jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
+        jobs.append( (queue.enqueue(DeleteTargetObject,args=(obj.iqntar,),timeout=45), obj.iqntar) )
         logger.info("Using queue %s for deletion" %(queuename,))
     rtnStatus= {}
     rtnFlag=0
@@ -157,6 +157,13 @@ class TargetAdmin(StatsAdmin):
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
 #    else:
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
 
     list_display = ['iqntar','iqnini','created_at','sizeinGB','isencrypted','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
     actions = [delete_selected_iscsi_targets]
@@ -322,7 +329,8 @@ class StorageHostForm(forms.ModelForm):
 #        featuredCount = Country.objects.filter(featured=True).count()
  #       if featuredCount >= 5 and self.cleaned_data['featured'] is True:
  #           raise forms.ValidationError("5 Countries can be featured at most!")
- #       return self.cleaned_data['featured']a
+ #       return self.cleaned_data['featured']
+        logger = getLogger(__name__)
     	saturnserver = self.cleaned_data['dnsname']
         try:
             p = PollServer(saturnserver)
@@ -359,6 +367,7 @@ class ProfileForm(forms.ModelForm):
         model = Profile
     
     def clean_max_alloc_sizeGB(self):
+        logger = getLogger(__name__)
         oldalloc = 0
         usedsize = 0
         #Test 1:  if the user has already used more than the new quota
@@ -369,7 +378,7 @@ class ProfileForm(forms.ModelForm):
                 usedsize = 0
             if (usedsize > requestedGB):
                 raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
-	except:
+        except:
             logger.error(format_exc())
             raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
             logger.error("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))

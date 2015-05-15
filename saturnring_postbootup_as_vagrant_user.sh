@@ -51,6 +51,14 @@ django_secret_key=$DJANGOSECRETKEY
 
 #Logging path
 logpath=$SATURNWKDIR/saturnringlog
+logfile=saturn.log
+#Server that accepts pickled sockethandler log messages and puts them in the log gui+saves them
+logserverhost=localhost
+logserverport=9020
+logwebmonitorport=9021
+logfilerotatesize=50000000
+logfilerotatecount=10
+
 
 #Number of queues. A higher number will create more worker processes;
 #Useful for clusters with many iSCSI servers. Note that each iSCSI server
@@ -165,11 +173,3 @@ echo "$CRYPTOKEY" > "$CONFIGDIR"/cryptokey
 git add *
 git commit -a -m "Created Saturn keys"
 
-mkdir -p $INSTALLLOCATION/redisqconf
-cat <<EOF > $INSTALLLOCATION/redisqconf/rqworker.sh
-#!/bin/bash
-source $INSTALLLOCATION/saturnenv/bin/activate
-python $INSTALLLOCATION/ssddj/manage.py rqworker \$1
-
-EOF
-chmod +x $INSTALLLOCATION/redisqconf/rqworker.sh

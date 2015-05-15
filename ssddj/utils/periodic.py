@@ -28,7 +28,6 @@ from django.db import connection
 #        p.UpdateLVs(eachvg)
 
 
-logger = getLogger(__name__)
 #def UpdateState():
 #    allhosts=StorageHost.objects.filter(enabled=True)
 #    for eachhost in allhosts:
@@ -42,6 +41,7 @@ logger = getLogger(__name__)
 #        p.GetInterfaces()
 
 def UpdateOneState(host):
+    logger = getLogger(__name__)
     try:
         p = PollServer(host)
         vguuidList = p.GetVG()
@@ -60,5 +60,5 @@ def UpdateOneState(host):
         logger.error("UpdateOneState failed for %s " %(str(host),))
     finally:
         connection.close()
-    
+
 
