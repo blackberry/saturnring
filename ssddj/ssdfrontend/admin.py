@@ -43,7 +43,6 @@ import os
 import ConfigParser
 from django import db
 from logging import getLogger
-
 #admin.site.disable_action('delete_selected')
 
 admin.site.disable_action('delete_selected')
@@ -337,6 +336,7 @@ class StorageHostForm(forms.ModelForm):
             p = PollServer(saturnserver)
             p.InstallScripts()
         except:
+            logger.error(format_exc())
             logger.error("Error with Saturn server specified on the form, will try to disable server "+saturnserver)
             try:
                 obj = StorageHost.objects.get(dnsname=saturnserver)

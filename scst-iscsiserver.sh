@@ -63,11 +63,11 @@ service scst start
 
 #Setup a loop device to emulate the block device that needs to be shared
 #In any real setup the device will instead be the block device that needs to be shared
-mkdir -p /loopdatadev$HOSTNAME
-if [ ! -f /loopdatadev$HOSTNAME/file-thin.img ]; then
-  dd if=/dev/zero of=/loopdatadev$HOSTNAME/file-thin.img bs=1MiB count=10000 && sync
+mkdir -p /loopdatadev
+if [ ! -f /loopdatadev/file-thin.img ]; then
+  dd if=/dev/zero of=/loopdatadev/file-thin.img bs=1MiB count=10000 && sync
 fi
-DEV=`losetup --find --show /loopdatadev$HOSTNAME/file-thin.img`
+DEV=`losetup --find --show /loopdatadev/file-thin.img`
 
 sleep 5
 #VG setup
@@ -80,11 +80,11 @@ vgs
 #, then its best to max out the metadatasize (16GiB)
 lvcreate -L9600MiB --type thin-pool --thinpool storevg-thin/thinpool
 
-if [ ! -f /loopdatadev$HOSTNAME/file-nothin.img ]; then
-  dd if=/dev/zero of=/loopdatadev$HOSTNAME/file-nothin.img bs=1MiB count=10000 && sync
+if [ ! -f /loopdatadev/file-nothin.img ]; then
+  dd if=/dev/zero of=/loopdatadev/file-nothin.img bs=1MiB count=10000 && sync
 fi
 
-DEV=`losetup --find --show /loopdatadev$HOSTNAME/file-nothin.img`
+DEV=`losetup --find --show /loopdatadev/file-nothin.img`
 sleep 5
 #VG setup
 vgs

@@ -167,10 +167,10 @@ class PollServer():
                             continue
                         if '/' in valueDict[anItem]:
                             valueDict[anItem] = valueDict[anItem].split('/')[0]
-                        if 'GiB' in valueDict[anItem]:
+                        if (('GiB' in valueDict[anItem]) and ('Size' in aLine)):
                             valueDict[anItem] = float(valueDict[anItem].split('GiB')[0])*1
                             continue
-                        if 'MiB' in valueDict[anItem]:
+                        if (('MiB' in valueDict[anItem]) and ('Size' in aLine)):
                             valueDict[anItem] = float(valueDict[anItem].split('MiB')[0])*0.001
                             continue
                         continue
@@ -471,5 +471,15 @@ class PollServer():
         cmdStr = " ".join(['sudo sed -i','/'+lvStr+'/d','/etc/crypttab'])
         logger.info("DeleteCrypttab: "+cmdStr)
         self.Exec(cmdStr)
+
+
+
+
+
+#Commented out because there are formal unit tests.
+#if __name__=="__main__":
+#    pollserver = PollServer('saturnserver0.store.altus.bblabs')
+#    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
+#    print cmdStr
 
 
