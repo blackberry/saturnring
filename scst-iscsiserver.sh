@@ -16,8 +16,6 @@
 
 # For ideal performance SCST should be installed on a patched kernel. For how to patch the Ubuntu kernel for SCST see link:
 # http://scst.sourceforge.net/iscsi-scst-howto.txt
-export https_proxy="https://proxy.bblabs:80"
-export http_proxy="http://proxy.bblabs:80"
 
 apt-get update
 apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2 unzip cryptsetup cryptsetup-bin

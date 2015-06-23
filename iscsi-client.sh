@@ -13,8 +13,6 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-export https_proxy="https://proxy.bblabs:80"
-export http_proxy="http://proxy.bblabs:80"
 apt-get update
 apt-get install open-iscsi curl -y
 DEBIAN_FRONTEND=noninteractive apt-get install postfix -y

@@ -1,14 +1,14 @@
 #!/bin/bash
 rm /etc/apt/sources.list
 cat <<EOF > /etc/apt/sources.list.d/localrepo.list
-deb http://repo.bblabs/ubuntu trusty universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
 
-deb http://repo.bblabs/ubuntu trusty-updates universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty-updates universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
 
-deb http://repo.bblabs/ubuntu trusty-security universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty-security universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
 
 EOF
 

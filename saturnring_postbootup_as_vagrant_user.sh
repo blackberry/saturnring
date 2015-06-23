@@ -27,7 +27,7 @@ fi
 cd $INSTALLLOCATION/ssddj
 source $INSTALLLOCATION/saturnenv/bin/activate
 
-pip install --proxy http://proxy.bblabs:80 -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+pip install  -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
 cat <<EOF > $INSTALLLOCATION/ssddj/saturn.ini
 [saturnring]

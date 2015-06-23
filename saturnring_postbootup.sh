@@ -14,20 +14,18 @@
 #limitations under the License.
 
 source /vagrant/envvars.sh
-export https_proxy="https://proxy.bblabs:80"
-export http_proxy="http://proxy.bblabs:80"
 
 mv /etc/apt/sources.list /etc/apt/sources
 
 cat <<EOF > /etc/apt/sources.list.d/localrepo.list
-deb http://repo.bblabs/ubuntu trusty universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
 
-deb http://repo.bblabs/ubuntu trusty-updates universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty-updates universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
 
-deb http://repo.bblabs/ubuntu trusty-security universe multiverse main restricted
-deb-src http://repo.bblabs/ubuntu trusty-security universe multiverse main restricted
+deb http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
 
 EOF
 
