@@ -27,6 +27,7 @@ import ConfigParser
 import ldap
 from django_auth_ldap.config import LDAPSearch,_LDAPConfig,ActiveDirectoryGroupType
 import logging
+import logging.handlers
 import traceback
 import django_auth_ldap
 import sys
@@ -242,7 +243,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.SocketHandler',
             'host': 'localhost',
-            'port': 9020,
+            'port': logging.handlers.DEFAULT_TCP_LOGGING_PORT,
         }
 
     },

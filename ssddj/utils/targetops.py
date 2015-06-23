@@ -29,6 +29,7 @@ import django_rq
 import ConfigParser
 import os
 import logging
+import logging.handlers
 from globalstatemanager.gsm import PollServer
 from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
@@ -37,6 +38,10 @@ from django.db import connection
 
 def CheckUserQuotas(storageSize,owner):
     logger = logging.getLogger(__name__)
+    socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+    logger.addHandler(socketHandler)
+
     user = User.objects.get(username=owner)
     if (storageSize > user.profile.max_target_sizeGB):
         rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
@@ -52,6 +57,9 @@ def CheckUserQuotas(storageSize,owner):
 def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
         serviceName,storageSize,aagroup,clumpgroup,subnet,ownername,isencrypted):
     logger = logging.getLogger(__name__)
+    socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+    logger.addHandler(socketHandler)
     owner = User.objects.get(username=ownername)
     chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
@@ -138,7 +146,7 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
                     chosenVG.maxavlGB=max(0,chosenVG.maxavlGB-float(storageSize))
                     chosenVG.save()
             else:
-                logger.error('Error - could not use ParseSCSTConf while working with target creation of %s, check if git and %s are in sync' % (iqnTarget, targethost+'.scst.conf'))
+                logger.error('Error - could not use ParseSCSTConf while working with target creation of %s, check if git and %s are in sync' % (iqnTarget, targethost.dnsname+'.scst.conf'))
                 return (-1,"CreateTarget returned error 2, contact admin")
 
             tar = Target.objects.get(iqntar=iqnTarget)
@@ -164,6 +172,9 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
 def DeleteTargetObject(iqntar):
     obj = Target.objects.get(iqntar=iqntar)
     logger = logging.getLogger(__name__)
+    socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+    logger.addHandler(socketHandler)
     p = PollServer(obj.targethost)
     lv = LV.objects.get(target=obj)
     p.DeleteCrypttab(lv.lvname)

@@ -16,6 +16,8 @@
 
 # For ideal performance SCST should be installed on a patched kernel. For how to patch the Ubuntu kernel for SCST see link:
 # http://scst.sourceforge.net/iscsi-scst-howto.txt
+export https_proxy="https://proxy.bblabs:80"
+export http_proxy="http://proxy.bblabs:80"
 
 apt-get update
 apt-get -y install subversion openssh-server screen make gcc sysstat thin-provisioning-tools lvm2 unzip cryptsetup cryptsetup-bin
@@ -65,7 +67,7 @@ service scst start
 #In any real setup the device will instead be the block device that needs to be shared
 mkdir -p /loopdatadev
 if [ ! -f /loopdatadev/file-thin.img ]; then
-  dd if=/dev/zero of=/loopdatadev/file-thin.img bs=1MiB count=10000 && sync
+  dd if=/dev/zero of=/loopdatadev/file-thin.img bs=1MiB count=3000 && sync
 fi
 DEV=`losetup --find --show /loopdatadev/file-thin.img`
 
@@ -78,19 +80,19 @@ vgs
 #the logical volumes here are all thin provisioned.
 #Overkill on metadatasize - although running out of metadata is a very bad thing; if the shared block device is big (e.g several 100s of GB
 #, then its best to max out the metadatasize (16GiB)
-lvcreate -L9600MiB --type thin-pool --thinpool storevg-thin/thinpool
+#lvcreate -L9600MiB --type thin-pool --thinpool storevg-thin/thinpool
 
-if [ ! -f /loopdatadev/file-nothin.img ]; then
-  dd if=/dev/zero of=/loopdatadev/file-nothin.img bs=1MiB count=10000 && sync
-fi
+#if [ ! -f /loopdatadev/file-nothin.img ]; then
+#  dd if=/dev/zero of=/loopdatadev/file-nothin.img bs=1MiB count=10000 && sync
+#fi
 
-DEV=`losetup --find --show /loopdatadev/file-nothin.img`
-sleep 5
+#DEV=`losetup --find --show /loopdatadev/file-nothin.img`
+#sleep 5
 #VG setup
-vgs
-pvcreate $DEV
-vgcreate storevg-nothin $DEV
-vgs
+#vgs
+#pvcreate $DEV
+#vgcreate storevg-nothin $DEV
+#vgs
 #the logical volumes are not thin provisioned.
 
 

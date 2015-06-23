@@ -11,8 +11,8 @@
 #WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #See the License for the specific language governing permissions and
 #limitations under the License.
-
-from logging import getLogger
+import logging
+import logging.handlers
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import StorageHost
@@ -20,31 +20,22 @@ from globalstatemanager.gsm import PollServer
 from traceback import format_exc
 from django.db import connection
 
-#def UpdateState():
-#    allvgs=VG.objects.all()
-#    for eachvg in allvgs:
-#        p = PollServer(eachvg.vghost)
-#        p.GetVG()
-#        p.UpdateLVs(eachvg)
-
-
-#def UpdateState():
-#    allhosts=StorageHost.objects.filter(enabled=True)
-#    for eachhost in allhosts:
-#        p = PollServer(eachhost)
-#        vguuidList = p.GetVG()
-#        logger.info("getvg returns "+str(vguuidList))
-#        if type(vguuidList) is str:
-#            for vguuid in vguuidList.split(','):
-#                p.UpdateLVs(VG.objects.get(vguuid=vguuid))
-#        p.GetTargetsState()
-#        p.GetInterfaces()
-
 def UpdateOneState(host):
-    logger = getLogger(__name__)
+    logger = logging.getLogger(__name__)
+    socketHandler = logging.handlers.SocketHandler('localhost',
+                    logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+    logger.addHandler(socketHandler)
+    rtnVal = 0
     try:
         p = PollServer(host)
+        checkServer = p.CheckServer()
+        if checkServer != 0:
+            rtnVal= -1
+            raise Exception(str(host),checkServer)
         vguuidList = p.GetVG()
+        if vguuidList == -1:
+            rtnVal = -1
+            raise Exception(str(host),"GetVG failed with -1 return value")
         logger.info("getvg returns "+str(vguuidList))
         if type(vguuidList) is str:
             for vguuid in vguuidList.split(','):
@@ -52,13 +43,32 @@ def UpdateOneState(host):
                     vg = VG.objects.get(vguuid=vguuid)
                     p.UpdateLVs(vg)
                 except:
-                    logger.error("Cannot work with VG %s on %s" %(vguuid,host))
+                    rtnVal = -1
                     logger.error(format_exc())
-        p.GetTargetsState()
-        p.GetInterfaces()
+                    logger.error("Cannot work with VG %s on %s" %(vguuid,str(host)))
+                    logger.error(format_exc())
+        tarState = p.GetTargetsState()
+        if tarState == -1:
+            rtnVal = -1
+            raise Exception(str(host),"Target state read error")
+        interfaceRtn = p.GetInterfaces()
+        if interfaceRtn == -1:
+            rtnVal = -1
+            raise Exception(str(host),"Interface scan error")
     except:
+        logger.error(format_exc())
         logger.error("UpdateOneState failed for %s " %(str(host),))
-    finally:
-        connection.close()
 
+    finally:
+        try:
+            sh = StorageHost.objects.get(dnsname=str(host))
+            if (rtnVal == -1) and (sh.enabled == True):
+                sh.enabled = False
+                sh.save()
+                logger.critical("Disabled saturn server %s due to errors" %(str(host),))
+        except:
+            logger.error("Error getting storage host %s from DB in UpdateOneState" %(str(host),))
+            logger.error(format_exc())
+    connection.close()
+    return rtnVal
 

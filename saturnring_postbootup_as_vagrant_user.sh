@@ -27,7 +27,7 @@ fi
 cd $INSTALLLOCATION/ssddj
 source $INSTALLLOCATION/saturnenv/bin/activate
 
-pip install -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
+pip install --proxy http://proxy.bblabs:80 -r $INSTALLLOCATION/python-virtualenv-requirements.txt --allow-external django-admin-changelist-stats  --allow-unverified django-admin-changelist-stats
 
 cat <<EOF > $INSTALLLOCATION/ssddj/saturn.ini
 [saturnring]
@@ -54,7 +54,6 @@ logpath=$SATURNWKDIR/saturnringlog
 logfile=saturn.log
 #Server that accepts pickled sockethandler log messages and puts them in the log gui+saves them
 logserverhost=localhost
-logserverport=9020
 logwebmonitorport=9021
 logfilerotatesize=50000000
 logfilerotatecount=10

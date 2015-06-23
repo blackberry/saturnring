@@ -51,39 +51,68 @@ class PollServer():
         """
         The init script for the class
         """
-        self.serverDNS = str(serverDNS)
-        BASE_DIR = dirname(dirname(__file__))
-        config = ConfigReader()
-        self.userName = config.get('saturnnode','user')
-        self.keyFile = join(BASE_DIR,config.get('saturnring','privatekeyfile'))
-        self.rembashpath = config.get('saturnnode','bashpath')
-        self.rempypath = config.get('saturnnode','pythonpath')
-        self.iscsiconfdir = join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
-        self.remoteinstallLoc = config.get('saturnnode','install_location')
-        self.localbashscripts = join(BASE_DIR,config.get('saturnring','bashscripts'))
+        try:
+            self.serverDNS = str(serverDNS)
+            BASE_DIR = dirname(dirname(__file__))
+            config = ConfigReader()
+            self.userName = config.get('saturnnode','user')
+            self.keyFile = join(BASE_DIR,config.get('saturnring','privatekeyfile'))
+            self.rembashpath = config.get('saturnnode','bashpath')
+            self.rempypath = config.get('saturnnode','pythonpath')
+            self.iscsiconfdir = join(BASE_DIR,config.get('saturnring','iscsiconfigdir'))
+            self.remoteinstallLoc = config.get('saturnnode','install_location')
+            self.localbashscripts = join(BASE_DIR,config.get('saturnring','bashscripts'))
+        except:
+            logger.critical("Error setting up configuration for server "+self.serverDNS)
+            logger.critical(format_exc())
         try:
             self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         except:
             logger.critical("Failed SSH-exec connection on Saturn server %s; possible cause: %s" % (self.serverDNS,format_exc()) )
+            self.srv="inError"
     
+    def CheckServer(self):
+        if self.srv == 'inError':
+            return -1
+        remotePath = join(self.remoteinstallLoc,'saturn-bashscripts')
+        cmdStr = " ".join([join(remotePath,'checkserver.sh'), '2> checkservererror.log'])
+        logger.info("Executing %s on %s" %(cmdStr,self.serverDNS))
+        rtnStrList = self.Exec(cmdStr)
+        if (rtnStrList == -1):
+            return -2
+        else:
+            for aLine in rtnStrList:
+                if "FAILURE" in aLine:
+                    return -3
+        return 0
 
     def InstallScripts(self):
         """
         Copy bash scripts from the saturnringserver into the saturn server via sftp
         """
-        #srv = Connection(self.serverDNS,self.userName,self.keyFile)
-        self.srv.execute ('mkdir -p '+self.remoteinstallLoc+'saturn-bashscripts/')
-        self.srv.chdir(self.remoteinstallLoc+'saturn-bashscripts/')
-        locallist=listdir(self.localbashscripts)
-        for localfile in locallist:
-            self.srv.put(self.localbashscripts+localfile)
-            self.srv.execute("chmod 777 "+join(self.remoteinstallLoc,'saturn-bashscripts',localfile))
-        #srv.close()
-        #Update rc.local for luks reboot functionality
-        luksopenscriptpath = join(self.remoteinstallLoc,'saturn-bashscripts','luksonreboot.sh');
-        self.srv.execute("sudo sed -i '/luksonreboot.sh/d' /etc/rc.local") #delete pre-existing line if any
-        self.srv.execute("sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
-        logger.info("Installed scripts")
+        rtnVal = -1
+        try:
+            if self.srv == "inError":
+                raise Exception('Server SSH connection object inError')
+            remotePath = join(self.remoteinstallLoc,'saturn-bashscripts')
+            self.srv.execute (" ".join(['mkdir', '-p', remotePath]))
+            self.srv.chdir(remotePath)
+            locallist=listdir(self.localbashscripts)
+            for localfile in locallist:
+                self.srv.put(join(self.localbashscripts,localfile))
+                self.srv.execute(" ".join(["chmod", "777",join(remotePath,localfile)]))
+            #Update rc.local for luks reboot functionality
+            luksopenscriptpath = join(remotePath,'luksonreboot.sh');
+            self.srv.execute("sudo sed -i '/luksonreboot.sh/d' /etc/rc.local") #delete pre-existing line if any
+            self.srv.execute("sudo sed -i '/^exit 0/i " + '/bin/bash ' + luksopenscriptpath +"' /etc/rc.local")
+            logger.info("Installed scripts on "+ self.serverDNS)
+            rtnVal = 1
+        except:
+            logger.error('Could not install scripts on '+self.serverDNS)
+            logger.error(format_exc())
+        finally:
+            return rtnVal
+
 
 
     def Exec(self,command):
@@ -91,6 +120,9 @@ class PollServer():
         Helper function for executing a remote command over an SSH tunnel
         """
         rtncmd = -1
+        if self.srv=="inError":
+            logger.error("There is no ssh connection object for server: %s" %(self.serverDNS,))
+            return -1
         try:
             #srv = Connection(self.serverDNS,self.userName,self.keyFile)
             rtncmd=self.srv.execute(command)
@@ -101,18 +133,19 @@ class PollServer():
         return rtncmd
 
 
-    def GetFile(self,localPath,remotePath):
+    def GetFile(self,remotePath,localPath):
         """
         Get a file from the remote server.
         return 1 on success, -1 on error
         """
         try:
-            self.srv.get(localPath,remotePath)
+            self.srv.get(remotePath,localPath)
+            logger.info("Copying file %s from remote server %s to local path %s succeeded" %(remotePath,self.serverDNS,localPath))
             return 1
         except:
             logger.error("Error copying file %s from remote server %s to local path %s" %(remotePath,self.serverDNS,localPath))
             logger.error(format_exc())
-        return -1
+            return -1
 
     def PutKeyFile(self,keyfileName):
         """
@@ -120,7 +153,7 @@ class PollServer():
         """
         remoteKeyfileDir = join(self.remoteinstallLoc,'keys')
         try:
-            self.Exec ('mkdir -p ' + remoteKeyfileDir)
+            self.Exec (" ".join(['mkdir','-p',remoteKeyfileDir]))
             self.srv.chdir(remoteKeyfileDir)
             self.srv.put(join(self.iscsiconfdir,keyfileName))
             self.remoteKeyfilePath = join(remoteKeyfileDir,keyfileName)
@@ -139,7 +172,7 @@ class PollServer():
         """
         Delete key file from saturn server
         """
-        remoteKeyfileDir = self.remoteinstallLoc+'/keys'
+        remoteKeyfileDir = join(self.remoteinstallLoc,'keys')
         self.srv.execute('rm '+ join(remoteKeyfileDir,keyfileName))
         rtnString = self.Exec ('test ! -f ' + join(self.iscsiconfdir,keyfileName)+ ' &&  echo "OK Deleted keyfile"')
         return rtnString
@@ -233,15 +266,15 @@ class PollServer():
         execCmd = " ".join(['sudo','vgdisplay','--units g'])
         vgStrList = self.Exec(execCmd)
         if vgStrList == -1:
+            logger.error("Error in GetVG while executing %s on server %s " %(execCmd,self.serverDNS))
             return -1
         vgs = self.ParseLVM(vgStrList,delimitStr,paraList)
         #logger.info("VGStating on %s returns %s " % (self.serverDNS, str(vgs)) )
         rtnvguuidList = ""
         for vgname in vgs:
             try:
-                execCmd = " ".join(['sudo',self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])
+                execCmd = " ".join(['sudo',join(self.remoteinstallLoc,'saturn-bashscripts/vgstats.sh'),vgname,' 2> error.log'])
                 cmdStr = self.Exec(execCmd)
-                logger.info(self.serverDNS+": "+" ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/vgstats.sh',vgname])+': returned '+str(cmdStr))
                 maxavl = float(cmdStr[0].rstrip())
                 totalGB = float(cmdStr[1].rstrip())
                 isThin = bool(int(cmdStr[2].rstrip()))
@@ -287,9 +320,11 @@ class PollServer():
             filelist = [ f for f in listdir(self.iscsiconfdir) if isfile(join(self.iscsiconfdir,f)) ]
             repo.stage(filelist)
             repo.do_commit(commentStr)
+            return 1
         except:
             var = format_exc()
             logger.error("During GitSave %s: Git save error: %s" % (commentStr,var))
+            return -1
 
     def CreateTarget(self,iqnTarget,iqnInit,sizeinGB,storageip1,storageip2,vguuid,isencrypted):
         """
@@ -298,13 +333,13 @@ class PollServer():
         """
         #self.srv = Connection(self.serverDNS,self.userName,self.keyFile)
         if str(isencrypted) != '1':
-            cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createtarget.sh',
-            str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid])
+            cmdStr = " ".join(['sudo',self.rembashpath,join(self.remoteinstallLoc,'saturn-bashscripts','createtarget.sh'),
+            str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid, '2> createtarget.sh-error.log'])
         else:
             try:
                 self.remotekeyfilelocation = self.PutKeyFile("cryptokey")
-                cmdStr = " ".join(['sudo',self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/createencryptedtarget.sh',
-                str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,self.remotekeyfilelocation])
+                cmdStr = " ".join(['sudo',self.rembashpath,join(self.remoteinstallLoc,'saturn-bashscripts','createencryptedtarget.sh'),
+                str(sizeinGB),iqnTarget,storageip1,storageip2,iqnInit,vguuid,self.remotekeyfilelocation,'2> createencryptedtarget.sh-error.log'])
                 if self.remotekeyfilelocation == -1:
                     raise ValueError("Putkey failed")
 
@@ -320,47 +355,61 @@ class PollServer():
             return -1
 
         commentStr = "Trying to create target %s " %( iqnTarget, )
+        try:
+            if self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')==-1:
+                raise Exception('Error getting scst.conf')
+            if self.GetFile(join('/temp',vguuid),join(self.iscsiconfdir,self.serverDNS+'.'+vguuid+'.lvm'))==-1:
+                raise Exception('Error getting LVM configuration file %s' %(vguuid+'.lvm',))
+            if self.GitSave(commentStr) == -1:
+                raise Exception('Error in GitSave')
+        except:
+            logger.warning('Unable to save updated config files on ring server')
+            logger.warning(format_exc())
 
-        self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-        self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-        self.GitSave(commentStr)
         logger.info("Execution report for %s:  %s" %(cmdStr,"\t".join(exStr)))
         if "SUCCESS" in str(exStr):
             logger.info("Returning successful createtarget run")
             return 1
         else:
-            logger.error("Returning failed createtarget run")
+            logger.error("Returning failed createtarget run:" + str(exStr))
             return 0
 
     def GetTargetsState(self):
         """
         Read targets to determine their latest state via the parsetarget script
         """
-        cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py'])
+        cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py',' 2>parsetarget.py-error.txt'])
         exStr = self.Exec(cmdStr)
         if exStr == -1:
             return -1
-        for eachLine in exStr:
-            iqntar = eachLine.split()[0]
-            tar = Target.objects.filter(iqntar=iqntar)
-            if len(tar)==1:
-                tar = tar[0]
-                if "no session" in eachLine:
-                    tar.sessionup=False
-                    tar.rkbpm = 0
-                    tar.wkbpm = 0
+        try:
+            for eachLine in exStr:
+                iqntar = eachLine.split()[0]
+                tar = Target.objects.filter(iqntar=iqntar)
+                if len(tar)==1:
+                    tar = tar[0]
+                    if "no session" in eachLine:
+                        tar.sessionup=False
+                        tar.rkbpm = 0
+                        tar.wkbpm = 0
+                    else:
+                        tar.sessionup=True
+                        rkb = long(eachLine.split()[1])
+                        tar.rkbpm = long(rkb-tar.rkb)
+                        tar.rkb=rkb
+                        wkb = long(eachLine.split()[2])
+                        wpm = long(wkb-tar.wkb)
+                        tar.wkbpm = wpm
+                        tar.wkb=wkb
+                    tar.save()
                 else:
-                    tar.sessionup=True
-                    rkb = long(eachLine.split()[1])
-                    tar.rkbpm = long(rkb-tar.rkb)
-                    tar.rkb=rkb
-                    wkb = long(eachLine.split()[2])
-                    wpm = long(wkb-tar.wkb)
-                    tar.wkbpm = wpm
-                    tar.wkb=wkb
-                tar.save()
-            else:
-                logger.warn("Found target %s on %s that does not exist in the DB" % (iqntar,self.serverDNS) )
+                    logger.warn("Found target %s on %s that does not exist in the DB" % (iqntar,self.serverDNS) )
+        except:
+            logger.error("Error reading iSCSI target state for %s on server %s" %(iqntar,self.serverDNS))
+            logger.error(format_exc())
+            return -1
+        return 0
+
 
     def DeleteTarget(self,iqntar,vguuid):
         """
@@ -376,16 +425,20 @@ class PollServer():
             logger.warn("Could not find deletion target in DB, exiting. "+iqntar)
             return -1
         if not tar.sessionup:
-            cmdStr = " ".join(["sudo",self.rembashpath,self.remoteinstallLoc+'saturn-bashscripts/removetarget.sh',iqntar,vguuid])
+            cmdStr = " ".join(["sudo",self.rembashpath,join(self.remoteinstallLoc,'saturn-bashscripts','removetarget.sh'),iqntar,vguuid])
             exStr = self.Exec(cmdStr)
             if exStr == -1:
                 return -1
-            #self.srv.get('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            #self.srv.get('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-            self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf')
-            self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm')
-           
-            self.GitSave("Trying to delete target "+iqntar)
+            try:
+                if self.GetFile('/temp/scst.conf',self.iscsiconfdir+self.serverDNS+'.scst.conf') == -1:
+                    raise Exception('Error getting scst configuration file to store locally')
+                if self.GetFile('/temp/'+vguuid,self.iscsiconfdir+self.serverDNS+'.'+vguuid+'.lvm') == -1:
+                    raise Exception('Error getting LVM configuration to store locally')
+                if self.GitSave("Trying to delete target "+iqntar) == -1:
+                    raise Exception('Error with gitsave in delete target')
+            except:
+                logger.error("Error getting configuration files after deletion of target")
+                logger.error(format_exc())
             success1 = False
             success2 = False
             logger.info(exStr)
@@ -398,7 +451,7 @@ class PollServer():
                 logger.info("Successful deletion of target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
                 return 1
             else:
-                logger.error("Error deleting target %s from VG %s on host %s" %(iqntar,vguuid,self.serverDNS))
+                logger.error("Error deleting target %s from VG %s on host %s; command execution returned %s" %(iqntar,vguuid,self.serverDNS,str(exStr)))
                 return -1
         else:
             logger.error("Target state of %s is set to session up, will not try to delete it." %(iqntar,))
@@ -410,11 +463,11 @@ class PollServer():
         Scan and get network interfaces into saturnring DB
         """
         #cmdStr = 'ifconfig | grep -oE "inet addr:[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d: -f2'
-        cmdStr = 'ip addr | grep -oE "inet [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d" "  -f2'
+        cmdStr = 'ip addr | grep -oE "inet [0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" | cut -d" "  -f2 2> ipaddrerror.txt'
         ipadds=self.Exec(cmdStr)
         if ipadds == -1:
             return -1
-
+        rtnVal = 0
         sh = StorageHost.objects.get(dnsname=self.serverDNS)
         superuser=User.objects.filter(is_superuser=True).order_by('username')[0]
         for addr in ipadds:
@@ -441,6 +494,7 @@ class PollServer():
                         logger.warn("Error saving newly discovered Interface %s  of host %s" % (addr, self.serverDNS))
                         var = format_exc()
                         logger.warn(var)
+                        rtnVal = -1
                 else:
                     if interfaces[0].storagehost.dnsname != self.serverDNS:
                         Interface.objects.filter(ip=addr).delete()
@@ -449,6 +503,8 @@ class PollServer():
                 logger.warn("Invalid IP address %s retuned in GetInterfaces call on Saturn server %s " % (addr, self.serverDNS ))
                 var = format_exc()
                 logger.warn(var)
+                rtnVal = -1
+        return rtnVal
 
     def InsertCrypttab(self,base_LV,enc_LV,keyfilePath):
         """
@@ -456,21 +512,42 @@ class PollServer():
         """
         #Needed for the crypttab 
         baselvpath = self.Exec(" ".join(["sudo sh -c 'lvs -o lv_path | grep ",base_LV," | tr -d \" \"'"]))[0].strip()
+        if baselvpath == -1:
+            return -1
         logger.info("BaseLVPATH = " + baselvpath)
-        cmdStr = " ".join(["sudo sh -c 'echo \"" + enc_LV, baselvpath, keyfilePath, "luks\" >> /etc/crypttab'"])
+        cmdStr = " ".join(["sudo sh -c 'echo \"" + enc_LV, baselvpath, keyfilePath, "luks\" >> /etc/crypttab; mkdir -p /temp; cp /etc/crypttab /temp/crypttab; chmod 666 /temp/crypttab'"])
         logger.info("InsertCrypttab: "+cmdStr)
-        self.Exec(cmdStr)
-        self.GetFile('/etc/crypttab',self.iscsiconfdir+self.serverDNS+'.crypttab')
-        self.GitSave("Trying the insert crypttab entry " + cmdStr)
+        rtnVal = self.Exec(cmdStr)
+        if rtnVal == -1:
+           logger.error("Error in InsertCrypttab while executing %s" %(cmdStr,))
+        try:
+            if self.GetFile('/temp/crypttab',self.iscsiconfdir+self.serverDNS+'.crypttab') == -1:
+                raise Exception('Could not get crypttab file')
+            if self.GitSave("Trying the insert crypttab entry " + cmdStr) == -1:
+                raise Exception('Could not get gitsave to work for crypttab')
+        except:
+            logger.error('Error with getfile/gitsave during crypttab insert operations on %s' %(self.serverDNS,))
+            logger.error(format_exc())
 
     def DeleteCrypttab(self,lvStr):
         """
         Delete entry from /etc/crypttab
         LVStr can be either the encrypted LV name or the base LV name
         """
-        cmdStr = " ".join(['sudo sed -i','/'+lvStr+'/d','/etc/crypttab'])
+        cmdStr = " ".join(['sudo sed -i','/'+lvStr+'/d','/etc/crypttab']) + "; sudo mkdir -p /temp; sudo cp /etc/crypttab /temp/crypttab; sudo chmod 666 /temp/crypttab"
         logger.info("DeleteCrypttab: "+cmdStr)
-        self.Exec(cmdStr)
+        rtnVal = self.Exec(cmdStr)
+        if rtnVal == -1:
+            return rtnVal
+            logger.error("Error in DeleteCrypttab while executing %s" %(cmdStr,))
+        try:
+            if self.GetFile('/temp/crypttab',self.iscsiconfdir+self.serverDNS+'.crypttab') == -1:
+                raise Exception('Could not get crypttab file')
+            if self.GitSave("Trying the insert crypttab entry " + cmdStr) == -1:
+                raise Exception('Could not get gitsave to work for crypttab')
+        except:
+            logger.error('Error with getfile/gitsave during crypttab delete operations on %s' %(self.serverDNS,))
+            logger.error(format_exc())
 
 
 

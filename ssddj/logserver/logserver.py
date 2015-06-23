@@ -397,7 +397,7 @@ def main():
     rotSize = int(config.get('saturnring','logfilerotatesize'))
     rotCount = int(config.get('saturnring','logfilerotatecount'))
     loghost = config.get('saturnring','logserverhost')
-    logport = int(config.get('saturnring','logserverport'))
+    logport = None
     weblogport = int(config.get('saturnring','logwebmonitorport'))
     rotFH = logging.handlers.RotatingFileHandler(logfile,maxBytes=rotSize,backupCount=rotCount)
     rotFH.setFormatter(formatter)

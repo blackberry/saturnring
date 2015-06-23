@@ -37,7 +37,7 @@ class APITestCase (TestCase):
     def test_UpdateStateData(self):
         print "TESTING UpdateStateData"
         outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/stateupdate/"])
-        self.assertIn('Ok, enqueued state update request', outStr)
+        self.assertIn('|||', outStr)
         print outStr
     
     def test_ProvisionerPlain(self):
