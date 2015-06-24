@@ -24,9 +24,9 @@ class Migration(SchemaMigration):
             ('lvname', self.gf('django.db.models.fields.CharField')(default='Not found', max_length=200)),
             ('lvsize', self.gf('django.db.models.fields.FloatField')()),
             ('lvuuid', self.gf('django.db.models.fields.CharField')(max_length=200, primary_key=True)),
-            ('lvthinmapped', self.gf('django.db.models.fields.FloatField')(default=-1)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
+            ('isencrypted', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
         db.send_create_signal(u'ssdfrontend', ['LV'])
 
@@ -45,17 +45,16 @@ class Migration(SchemaMigration):
             ('vgpesize', self.gf('django.db.models.fields.FloatField')()),
             ('vgtotalpe', self.gf('django.db.models.fields.FloatField')()),
             ('vgfreepe', self.gf('django.db.models.fields.FloatField')(default=-1)),
-            ('thinusedpercent', self.gf('django.db.models.fields.FloatField')(default=-1)),
-            ('thintotalGB', self.gf('django.db.models.fields.FloatField')(default=-1)),
-            ('maxthinavlGB', self.gf('django.db.models.fields.FloatField')(default=-1)),
-            ('opf', self.gf('django.db.models.fields.FloatField')(default=0.99)),
-            ('thinusedmaxpercent', self.gf('django.db.models.fields.FloatField')(default=99)),
+            ('totalGB', self.gf('django.db.models.fields.FloatField')(default=-1)),
+            ('maxavlGB', self.gf('django.db.models.fields.FloatField')(default=-1)),
             ('enabled', self.gf('django.db.models.fields.BooleanField')(default=True)),
             ('CurrentAllocGB', self.gf('django.db.models.fields.FloatField')(default=-100.0, null=True)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
             ('is_locked', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('in_error', self.gf('django.db.models.fields.BooleanField')(default=False)),
+            ('storemedia', self.gf('django.db.models.fields.CharField')(default='unassigned', max_length=200)),
+            ('is_thin', self.gf('django.db.models.fields.BooleanField')(default=True)),
         ))
         db.send_create_signal(u'ssdfrontend', ['VG'])
 
@@ -66,6 +65,7 @@ class Migration(SchemaMigration):
             ('storageip1', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
             ('storageip2', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
             ('enabled', self.gf('django.db.models.fields.BooleanField')(default=True)),
+            ('snaplock', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('created_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
         ))
@@ -87,6 +87,7 @@ class Migration(SchemaMigration):
             ('updated_at', self.gf('django.db.models.fields.DateTimeField')(auto_now=True, null=True, blank=True)),
             ('storageip1', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
             ('storageip2', self.gf('django.db.models.fields.GenericIPAddressField')(default='127.0.0.1', max_length=39)),
+            ('isencrypted', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
         db.send_create_signal(u'ssdfrontend', ['Target'])
 
@@ -155,6 +156,21 @@ class Migration(SchemaMigration):
         ))
         db.create_unique(m2m_table_name, ['iprange_id', 'storagehost_id'])
 
+        # Adding model 'SnapJob'
+        db.create_table(u'ssdfrontend_snapjob', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('numsnaps', self.gf('django.db.models.fields.IntegerField')(default=1)),
+            ('iqntar', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['ssdfrontend.Target'])),
+            ('cronstring', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('lastrun', self.gf('django.db.models.fields.DateTimeField')(blank=True)),
+            ('nextrun', self.gf('django.db.models.fields.DateTimeField')(blank=True)),
+            ('created_at', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
+            ('deleted_at', self.gf('django.db.models.fields.DateTimeField')(auto_now_add=True, null=True, blank=True)),
+            ('enqueued', self.gf('django.db.models.fields.BooleanField')(default=False)),
+            ('run_now', self.gf('django.db.models.fields.BooleanField')(default=False)),
+        ))
+        db.send_create_signal(u'ssdfrontend', ['SnapJob'])
+
         # Adding model 'Interface'
         db.create_table(u'ssdfrontend_interface', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
@@ -175,10 +191,9 @@ class Migration(SchemaMigration):
 
         # Adding model 'Profile'
         db.create_table(u'ssdfrontend_profile', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True)),
-            ('max_target_sizeGB', self.gf('django.db.models.fields.FloatField')(default=5)),
-            ('max_alloc_sizeGB', self.gf('django.db.models.fields.FloatField')(default=10)),
+            ('user', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['auth.User'], unique=True, primary_key=True)),
+            ('max_target_sizeGB', self.gf('django.db.models.fields.FloatField')(default=0)),
+            ('max_alloc_sizeGB', self.gf('django.db.models.fields.FloatField')(default=0)),
         ))
         db.send_create_signal(u'ssdfrontend', ['Profile'])
 
@@ -222,6 +237,9 @@ class Migration(SchemaMigration):
 
         # Removing M2M table for field hosts on 'IPRange'
         db.delete_table(db.shorten_name(u'ssdfrontend_iprange_hosts'))
+
+        # Deleting model 'SnapJob'
+        db.delete_table(u'ssdfrontend_snapjob')
 
         # Deleting model 'Interface'
         db.delete_table(u'ssdfrontend_interface')
@@ -307,9 +325,9 @@ class Migration(SchemaMigration):
         u'ssdfrontend.lv': {
             'Meta': {'object_name': 'LV'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
+            'isencrypted': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'lvname': ('django.db.models.fields.CharField', [], {'default': "'Not found'", 'max_length': '200'}),
             'lvsize': ('django.db.models.fields.FloatField', [], {}),
-            'lvthinmapped': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
             'lvuuid': ('django.db.models.fields.CharField', [], {'max_length': '200', 'primary_key': 'True'}),
             'target': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.Target']"}),
             'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'}),
@@ -317,10 +335,9 @@ class Migration(SchemaMigration):
         },
         u'ssdfrontend.profile': {
             'Meta': {'object_name': 'Profile'},
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'max_alloc_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '10'}),
-            'max_target_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '5'}),
-            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True'})
+            'max_alloc_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
+            'max_target_sizeGB': ('django.db.models.fields.FloatField', [], {'default': '0'}),
+            'user': ('django.db.models.fields.related.OneToOneField', [], {'to': u"orm['auth.User']", 'unique': 'True', 'primary_key': 'True'})
         },
         u'ssdfrontend.provisioner': {
             'Meta': {'object_name': 'Provisioner'},
@@ -329,12 +346,26 @@ class Migration(SchemaMigration):
             'serviceName': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'sizeinGB': ('django.db.models.fields.FloatField', [], {})
         },
+        u'ssdfrontend.snapjob': {
+            'Meta': {'object_name': 'SnapJob'},
+            'created_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
+            'cronstring': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
+            'deleted_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
+            'enqueued': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'iqntar': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.Target']"}),
+            'lastrun': ('django.db.models.fields.DateTimeField', [], {'blank': 'True'}),
+            'nextrun': ('django.db.models.fields.DateTimeField', [], {'blank': 'True'}),
+            'numsnaps': ('django.db.models.fields.IntegerField', [], {'default': '1'}),
+            'run_now': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
+        },
         u'ssdfrontend.storagehost': {
             'Meta': {'object_name': 'StorageHost'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'dnsname': ('django.db.models.fields.CharField', [], {'max_length': '200', 'primary_key': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'ipaddress': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'}),
+            'snaplock': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'storageip1': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'}),
             'storageip2': ('django.db.models.fields.GenericIPAddressField', [], {'default': "'127.0.0.1'", 'max_length': '39'}),
             'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'})
@@ -344,6 +375,7 @@ class Migration(SchemaMigration):
             'created_at': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'null': 'True', 'blank': 'True'}),
             'iqnini': ('django.db.models.fields.CharField', [], {'max_length': '200'}),
             'iqntar': ('django.db.models.fields.CharField', [], {'max_length': '200', 'primary_key': 'True'}),
+            'isencrypted': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'owner': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['auth.User']"}),
             'rkb': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
             'rkbpm': ('django.db.models.fields.BigIntegerField', [], {'default': '0'}),
@@ -375,11 +407,10 @@ class Migration(SchemaMigration):
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
             'in_error': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'is_locked': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'maxthinavlGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
-            'opf': ('django.db.models.fields.FloatField', [], {'default': '0.99'}),
-            'thintotalGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
-            'thinusedmaxpercent': ('django.db.models.fields.FloatField', [], {'default': '99'}),
-            'thinusedpercent': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
+            'is_thin': ('django.db.models.fields.BooleanField', [], {'default': 'True'}),
+            'maxavlGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
+            'storemedia': ('django.db.models.fields.CharField', [], {'default': "'unassigned'", 'max_length': '200'}),
+            'totalGB': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
             'updated_at': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'null': 'True', 'blank': 'True'}),
             'vgfreepe': ('django.db.models.fields.FloatField', [], {'default': '-1'}),
             'vghost': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['ssdfrontend.StorageHost']"}),

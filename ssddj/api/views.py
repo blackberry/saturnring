@@ -13,7 +13,7 @@
 #limitations under the License.
 
 #api/views.py
-
+from time import sleep,strftime,gmtime
 from django.contrib.auth.models import User
 from serializers import TargetSerializer
 from serializers import ProvisionerSerializer
@@ -50,7 +50,6 @@ from .viewhelper import DeleteTarget
 from .viewhelper import VGFilter
 from .viewhelper import MakeTarget
 from utils.configreader import ConfigReader
-logger = getLogger(__name__)
 
 def ValuesQuerySetToDict(vqs):
     """
@@ -65,6 +64,7 @@ class ReturnStats(APIView):
     Does not require authenticated user
     """
     def get(self, request):
+        logger = getLogger(__name__)
         try:
             error = StatMaker()
             if error != 0:
@@ -90,15 +90,35 @@ class UpdateStateData(APIView):
     Does not require authenticated user
     /api/stateupdate
     """
+    #Inserted get and set state for pickle issues of the logger object
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+
     def get(self, request):
+        timeoutValue = 30
+        logger = getLogger(__name__)
         config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
-        allhosts=StorageHost.objects.filter(enabled=True)
+        allhosts=StorageHost.objects.all()
+        jobs = {}
+        rtnStr = strftime("%Y-%m-%d %H:%M:%S", gmtime())
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
             queue = get_queue(queuename)
-            queue.enqueue(UpdateOneState,eachhost)
-        return Response("Ok, enqueued state update request")
+            jobs[str(eachhost)]=queue.enqueue(UpdateOneState,args=(eachhost.dnsname,), timeout=timeoutValue)
+        for eachhost in allhosts:
+            while( jobs[str(eachhost)].is_queued or jobs[str(eachhost)].is_started):
+                sleep(0.5)
+        rtnStr = rtnStr + " ||| <hostname> : Host enabled boolean : Update returns (0 is good) : Job failed (False is good) "
+        for eachhost in allhosts:
+            rtnStr = rtnStr + "|||" + " : ".join([str(eachhost),str(eachhost.enabled),str(jobs[str(eachhost)].result),str(jobs[str(eachhost)].is_failed)])
+        logger.info("Updatestate status: %s " %(rtnStr,))
+        return Response(config.get('saturnring','clustername')+" state at "+rtnStr)
 
 class Delete(APIView):
     """
@@ -106,9 +126,17 @@ class Delete(APIView):
     a specific initiator
     /api/delete
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
+        logger = getLogger(__name__)
         logger.info("Raw request data is "+str(request.DATA))
         (flag,statusStr) = DeleteTarget(request.DATA,request.user)
         logger.info("Deletion via API result" + str(statusStr))
@@ -129,11 +157,20 @@ class Provision(APIView):
     Provision API call
     /api/provisioner
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
+        logger = getLogger(__name__)
         logger.info("Raw request data is "+str(request.DATA))
         serializer = ProvisionerSerializer(data=request.DATA)
+        rtnDict = {}
         if serializer.is_valid():
             (flag,statusStr) = MakeTarget(request.DATA,request.user)
             if flag==-1:
@@ -143,7 +180,21 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
             if (flag==0 or flag==1):
                 tar = Target.objects.filter(iqntar=statusStr)
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup')
+                #Check and update state on the Saturn node
+                config = ConfigReader()
+                numqueues = config.get('saturnring','numqueues')
+                queuename = 'queue'+str(hash(tar[0].targethost)%int(numqueues))
+                queue = get_queue(queuename)
+                job = queue.enqueue(UpdateOneState,args=(tar[0].targethost.dnsname,), timeout=45)
+                while not ( (job.result == 0) or (job.result == 1) or job.is_failed):
+                    sleep(0.5)
+                if (job.result == 1) or (job.is_failed):
+                    rtnDict['error'] = 1
+                    rtnDict['detail'] = "Saturn server %s on which the target %s is provisioned is not healthy/responding, contact admin" %(tar[0].targethost,tar[0].iqntar)
+                    logger.error("Error while provisioning/returning target %s" %(tar[0].iqntar,))
+                    return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup','isencrypted')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['targethost__storageip1']=rtnDict.pop('storageip1') #in order to not change the user interface
                 if rtnDict['targethost__storageip1']=='127.0.0.1':
@@ -171,7 +222,15 @@ class VGScanner(APIView):
     Create or update models for all VGs on a Saturn server
     /api/vgscanner
     """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
     def get(self, request):
+        logger = getLogger(__name__)
         logger.info("VG scan request received: %s " %(request.DATA,))
         saturnserver=request.DATA[u'saturnserver']
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):

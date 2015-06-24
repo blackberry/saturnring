@@ -19,9 +19,9 @@ import string
 from django.core.exceptions import ValidationError
 
 def validate_nospecialcharacters(value):
-    invalidcharacters = set(string.punctuation.replace("_", ""))
+    invalidcharacters = set(string.punctuation.replace("_", "").replace("-",""))
     if len(invalidcharacters.intersection(value)):
-        raise ValidationError(u'%s contains a special character' % value)
+        raise ValidationError(u'%s contains a special character, retry after removing it' % value)
 
 
 class Provisioner(models.Model):
@@ -40,6 +40,8 @@ class LV(models.Model):
     lvuuid = models.CharField(max_length=200,primary_key=True)
     created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
+    isencrypted = models.BooleanField(default=False)
+
     def __unicode__(self):              # __unicode__ on Python 2
         return self.lvname
 
@@ -65,7 +67,7 @@ class VG (models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     is_locked = models.BooleanField(default=False)
     in_error = models.BooleanField(default=False)
-    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIE card 1','pcie1'),('PCIE card 2','pcie2'),('PCIE card 3','pcie3')])
+    storemedia = models.CharField(max_length=200,default='unassigned',choices=[('unassigned','unassigned'),('PCIEcard1','PCIEcard1',),('PCIEcard2','PCIEcard2',),('PCIEcard3','PCIEcard3',)])
     is_thin = models.BooleanField(default=True)
     def __unicode__(self):              # __unicode__ on Python 2
         return 'SERVER:'+str(self.vghost)+':VG:'+str(self.vguuid)
@@ -99,6 +101,7 @@ class Target(models.Model):
     updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
     storageip1 = models.GenericIPAddressField(default='127.0.0.1')
     storageip2 = models.GenericIPAddressField(default='127.0.0.1')
+    isencrypted = models.BooleanField(default=False)
 
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
@@ -165,14 +168,14 @@ from django.contrib.auth.models import User
 
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
-    user = models.OneToOneField(User,unique=True)
+    user = models.OneToOneField(User,unique=True,primary_key=True)
     max_target_sizeGB = models.FloatField(default=0)
     max_alloc_sizeGB = models.FloatField(default=0)
 
 
-def create_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.create(user=instance)
+def create_user_profile(sender, **kwargs):
+    if kwargs["created"]:
+        Profile.objects.get_or_create(user=kwargs["instance"])
 
 from django.db.models import signals
 signals.post_save.connect(create_user_profile, sender=User,dispatch_uid='autocreate_nuser')

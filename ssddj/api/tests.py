@@ -16,6 +16,7 @@ from django.test import TestCase
 from subprocess import check_output
 import traceback
 from utils.configreader import ConfigReader
+from xlrd import open_workbook, XLRDError
 
 # Create your tests here.
 class APITestCase (TestCase):
@@ -36,7 +37,7 @@ class APITestCase (TestCase):
     def test_UpdateStateData(self):
         print "TESTING UpdateStateData"
         outStr = check_output(["curl","-X","GET","http://"+self.saturnringip+":"+self.saturnringport+"/api/stateupdate/"])
-        self.assertIn('Ok, enqueued state update request', outStr)
+        self.assertIn('|||', outStr)
         print outStr
     
     def test_ProvisionerPlain(self):
@@ -49,7 +50,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovision&aagroup=testgroup',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -64,7 +65,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisionpciessd&aagroup=testgroup&storemedia=pcie1',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testi-serviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -79,7 +80,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=101.0&serviceName=testserviceprovisiondiskssd3&aagroup=testgroup&storemedia=pcie2',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -91,20 +92,35 @@ class APITestCase (TestCase):
 
             Note: needs a account to be setup in the portal
             testuser/password
-            Needs 2 media types - diskssd and pciessd (basically 2 VGs in the iscsiserver, 
-            and then assigned to the media types)
         """
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=diskssd',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testserviceprovisiondsamebackend&aagroup=testgroup&storemedia=pciessd',
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
+
+
+    def test_Provisioner_UnEncrypted(self):
+        """
+            Test the provisioning call for encrypted targets
+
+            Note: needs a account to be setup in the portal
+            testuser/password
+        """
+        print "TESTING Provisioner for encrypted ta rgets"
+        outStr = check_output(["curl","-X","GET",
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
+            "-u","testuser:password",])
+        print outStr
+
+
 
     def test_DeletionTargetPlain(self):
         """
@@ -116,7 +132,7 @@ class APITestCase (TestCase):
         print "TESTING DeletionTarget"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":testserviceprovision:aa59eb0a",
+            "-d","iqntar=iqn.2014.01."+self.iscsiserver+":test-serviceprovision:aa59eb0a",
             "-u","testuser:password"])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -139,13 +155,28 @@ class APITestCase (TestCase):
         print outStr
         self.assertIn('vguuid',outStr)
 
+    def test_Stats(self):
+        print "TESTING API stats excel return"
+        outStr = check_output(["curl","-X","GET",
+        "http://"+self.saturnringip+":"+self.saturnringport+"/api/stats/"
+        ])
+        with open('test.xls','wb') as f:
+            f.write(outStr)
+        xls = 'Returned XLS file not ok'
+	try:
+            book = open_workbook('test.xls')
+            xls = 'ok'
+        except XLRDError as e:
+            print e
+        self.assertEqual('ok',xls)
 
     def tearDown(self):
-        print "Attempting to clean up"
-        #print "Deleting"
+        print "Attempting to clean up -  this will delete all iSCSI targets that belong to user testuser on the test iscsiserver"
         #outStr = check_output(["curl","-X","GET",
-        #    "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
-        #    "-d","iqntar=iqn.2014.01.self.iscsiserver:testserviceprovision:aa59eb0a",
-        #    "-u","testuser:password"])
+        #"http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+        #"-d","targethost="+self.iscsiserver,
+        #"-u","testuser:password"])
+
+
 
 

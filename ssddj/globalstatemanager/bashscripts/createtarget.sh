@@ -22,6 +22,9 @@ function VGisThin () {
         fi
 }
 
+service scst status
+[ $? -ne 0 ] && echo "FAILURE, SCST not loaded on $HOSTNAME" && exit
+
 TARGETMD5=`echo $2 | md5sum | cut -f1 -d" "`
 lvolName=lvol-${TARGETMD5:0:8}
 VG=`vgdisplay -c | grep $6 | cut -d: -f1 | tr -d ' ' | tr -cd '[[:alnum:]]._-'`

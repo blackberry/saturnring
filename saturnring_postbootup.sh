@@ -15,6 +15,20 @@
 
 source /vagrant/envvars.sh
 
+mv /etc/apt/sources.list /etc/apt/sources
+
+cat <<EOF > /etc/apt/sources.list.d/localrepo.list
+deb http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty universe multiverse main restricted
+
+deb http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-updates universe multiverse main restricted
+
+deb http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
+deb-src http://us.archive.ubuntu.com/ubuntu trusty-security universe multiverse main restricted
+
+EOF
+
 apt-get update
 apt-get install -y apache2 python-dev python-pip redis-server git python-virtualenv sqlite3 libsqlite3-dev supervisor libapache2-mod-wsgi curl libsasl2-dev libldap2-dev libpq-dev
 
@@ -43,15 +57,27 @@ for ii in `seq 0 $COUNTMAX`;
 do
   cat <<EOF >> /etc/supervisor/conf.d/saturnworker.conf
 [program:django-rqworker-$ii]
-command=$INSTALLLOCATION/redisqconf/rqworker.sh queue$ii
+command=$INSTALLLOCATION/saturnenv/bin/python $INSTALLLOCATION/ssddj/manage.py rqworker queue$ii
 user=$INSTALLUSER
 stdout_logfile=$SATURNWKDIR/saturnringlog/rqworker-$ii.log
 redirect_stderr=true
-  
+stopasgroup=true
+numprocs=1
+stopsignal=TERM
+autostart=true
+autorestart=true
+
 EOF
 done
+cat <<EOF > /etc/supervisor/conf.d/logserver.conf
+[program:logserver]
+command=python $INSTALLLOCATION/ssddj/logserver/logserver.py
+user=$INSTALLUSER
+stopasgroup=true
+EOF
 
 
+rm /etc/apache2/sites-enabled/000-default.conf
 cat <<EOF > /etc/apache2/sites-available/saturnring.conf
 <VirtualHost *:$SATURNRINGAPACHEPORT>
   LogLevel warn

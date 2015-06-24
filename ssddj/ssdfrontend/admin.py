@@ -42,22 +42,19 @@ import django_rq
 import os
 import ConfigParser
 from django import db
-
-logger = logging.getLogger(__name__)
+from logging import getLogger
 #admin.site.disable_action('delete_selected')
 
+admin.site.disable_action('delete_selected')
+
 class VGAdmin(StatsAdmin):	
+    actions = ['delete_selected']
     readonly_fields = ('vguuid','vghost','totalGB','maxavlGB','CurrentAllocGB')
     list_display = ['vguuid','vghost','storemedia','totalGB','maxavlGB','CurrentAllocGB','is_locked','in_error','is_thin']
     exclude = ('vgsize','vguuid','vgpesize','vgtotalpe','vgfreepe',)
     def has_add_permission(self, request):
         return False
 admin.site.register(VG,VGAdmin)
-
-
-class InterfaceAdmin(StatsAdmin):	
-    list_display = ['ip','storagehost']
-admin.site.register(Interface,InterfaceAdmin)
 
 
 def config_snapshots(StatsAdmin,request,queryset):
@@ -68,6 +65,7 @@ def config_snapshots(StatsAdmin,request,queryset):
 #    return redirect('snapconfig')
 
 def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
+    logger = logging.getLogger(__name__)
     BASE_DIR = os.path.dirname(os.path.dirname(__file__))
     config = ConfigParser.RawConfigParser()
     config.read(os.path.join(BASE_DIR,'saturn.ini'))
@@ -77,7 +75,7 @@ def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = django_rq.get_queue(queuename)
         jobs = []
-        jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
+        jobs.append( (queue.enqueue(DeleteTargetObject,args=(obj.iqntar,),timeout=45), obj.iqntar) )
         logger.info("Using queue %s for deletion" %(queuename,))
     rtnStatus= {}
     rtnFlag=0
@@ -112,10 +110,19 @@ def delete_selected_iscsi_targets(StatsAdmin,request,queryset):
         logger.error("Gave up trying to delete after 1 minute")
     return (rtnFlag,str(rtnStatus))
 
+class InterfaceAdmin(StatsAdmin):
+    readonly_fields = ('storagehost','ip')
+    list_display = ('storagehost','ip','owner')
+    def has_add_permission(self, request):
+        return False
+
+admin.site.register(Interface,InterfaceAdmin)
+
+
 class TargetHistoryAdmin(StatsAdmin):
     readonly_fields = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
     list_display = ('iqntar','iqnini','sizeinGB','owner','created_at','deleted_at','rkb','wkb')
-    search_fields = ['iqntar,owner']
+    search_fields = ['iqntar','owner__username']
     stats=(Sum('sizeinGB'),Sum('rkb'),Sum('wkb'))
     actions=[]
 
@@ -150,18 +157,25 @@ class TargetAdmin(StatsAdmin):
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
 #    else:
 #        readonly_fields = ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
 
-    list_display = ['iqntar','iqnini','created_at','sizeinGB','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
-    actions = [delete_selected_iscsi_targets,config_snapshots]
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+
+    list_display = ['iqntar','iqnini','created_at','sizeinGB','isencrypted','aagroup','clumpgroup','rkbpm','wkbpm','sessionup','Physical_Location','owner']
+    actions = [delete_selected_iscsi_targets]
     #actions = [delete_selected_iscsi_targets]
     search_fields = ['iqntar','iqnini','lv__lvname','lv__vg__vguuid','targethost__dnsname']
     stats = (Sum('sizeinGB'),)
 
     def get_readonly_fields(self,request,obj=None):
         if request.user.is_superuser:
-            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2','isencrypted')
         else:
-            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2')
+            return ('targethost','iqnini','iqntar','sizeinGB','owner','sessionup','rkb','wkb','rkbpm','wkbpm','storageip1','storageip2','isencrypted')
 
     def has_add_permission(self, request):
         return False
@@ -213,19 +227,19 @@ class TargetAdmin(StatsAdmin):
             obj.owner = request.user
         obj.save()
 
-    def get_actions(self, request):
+#    def get_actions(self, request):
     #Disable delete
-        actions = super(TargetAdmin, self).get_actions(request)
-        del actions['delete_selected']
-        return actions
+#        actions = super(TargetAdmin, self).get_actions(request)
+#        del actions['delete_selected']
+#        return actions
 
 
 
 class LVAdmin(StatsAdmin):
-    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at')
+    readonly_fields = ('target','vg','lvname','lvsize','lvuuid','created_at','isencrypted')
     list_display = ['lvname','vg','target', 'lvsize','lvuuid']
     stats = (Sum('lvsize'),)
-    search_fields = ['target__iqntar','target__owner__username']
+    search_fields = ['target__iqntar','target__owner__username','lvname','lvuuid']
     def owner_name(self, instance):
                 return instance.target.owner
     owner_name.admin_order_field  = 'target__owner'
@@ -259,13 +273,52 @@ class LockAdmin(StatsAdmin):
     readonly_fields = ('lockname',)
     list_display = ['lockname','locked']
 
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None): # note the obj=None
+        return False
+
+admin.site.register(Lock,LockAdmin)
+
+class AAGroupAdmin(StatsAdmin):
+    readonly_fields = ('name','hosts','target')
+    list_display = ['name','target','storage_host','target_owner']
+
+    def has_add_permission(self, request):
+        return False
+    
+    def target_owner (self,obj):
+        return obj.target.owner
+
+    def storage_host (self,obj):
+        return obj.target.targethost
+
+
+
+admin.site.register(AAGroup,AAGroupAdmin)
+
+class ClumpGroupAdmin(StatsAdmin):
+    readonly_fields = ('name','hosts','target')
+    list_display = ['name','target','storage_host','target_owner']
+
+    def has_add_permission(self, request):
+        return False
+    
+    def target_owner (self,obj):
+        return obj.target.owner
+
+    def storage_host (self,obj):
+        return obj.target.targethost
+
+
+
+admin.site.register(ClumpGroup,ClumpGroupAdmin)
+
 #admin.site.register(Provisioner)
 admin.site.register(Target, TargetAdmin)
 admin.site.register(LV,LVAdmin)
-admin.site.register(AAGroup)
-admin.site.register(ClumpGroup)
 admin.site.register(IPRange)
-admin.site.register(Lock,LockAdmin)
 #admin.site.register(HostGroup)
 
 class StorageHostForm(forms.ModelForm):
@@ -273,15 +326,14 @@ class StorageHostForm(forms.ModelForm):
         model = StorageHost
 	
     def clean_dnsname(self):
-#        featuredCount = Country.objects.filter(featured=True).count()
- #       if featuredCount >= 5 and self.cleaned_data['featured'] is True:
- #           raise forms.ValidationError("5 Countries can be featured at most!")
- #       return self.cleaned_data['featured']a
+        logger = getLogger(__name__)
     	saturnserver = self.cleaned_data['dnsname']
         try:
             p = PollServer(saturnserver)
-            p.InstallScripts()
+            if (p.InstallScripts() == -1):
+                raise Exception("Error creating SSH connection/installing saturn scripts")
         except:
+            logger.error(format_exc())
             logger.error("Error with Saturn server specified on the form, will try to disable server "+saturnserver)
             try:
                 obj = StorageHost.objects.get(dnsname=saturnserver)
@@ -289,12 +341,14 @@ class StorageHostForm(forms.ModelForm):
                 obj.save()
                 raise forms.ValidationError("Error with Saturn Server, therefore disabled "+saturnserver)
             except:
-                logger.error("Could not install scripts on the new server, new server not in DB, check its DNS entry")
-                raise forms.ValidationError("Error with Saturn Server, check its DNS entry perhaps? "+saturnserver)
+                logger.error("Could not install scripts on the new server, new server not in DB, check its DNS entry, ssh keys")
+                logger.error(format_exc())
+                raise forms.ValidationError("Error with Saturn Server, check its DNS entry/SSH key file perhaps? "+saturnserver)
 	return self.cleaned_data['dnsname']
 
 class StorageHostAdmin(admin.ModelAdmin):
     form = StorageHostForm
+    actions = ['delete_selected']
     list_display=['dnsname','ipaddress','storageip1','storageip2','created_at','updated_at','enabled']
 admin.site.register(StorageHost, StorageHostAdmin)
 
@@ -312,6 +366,7 @@ class ProfileForm(forms.ModelForm):
         model = Profile
     
     def clean_max_alloc_sizeGB(self):
+        logger = getLogger(__name__)
         oldalloc = 0
         usedsize = 0
         #Test 1:  if the user has already used more than the new quota
@@ -322,7 +377,7 @@ class ProfileForm(forms.ModelForm):
                 usedsize = 0
             if (usedsize > requestedGB):
                 raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
-	except:
+        except:
             logger.error(format_exc())
             raise forms.ValidationError("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
             logger.error("Sorry, user targets already using %d GB > new requested quota %d GB, perhaps the user should delete some iSCSI targets before asking for a lower quota." %(usedsize,requestedGB))
@@ -339,7 +394,10 @@ class ProfileForm(forms.ModelForm):
             if allocGB == None:
                 allocGB = 0
             thisuser = self.cleaned_data['user']
-            oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            try:
+                oldalloc = Profile.objects.get(user=thisuser).max_alloc_sizeGB
+            except:
+                oldalloc = None
             if oldalloc == None:
                 oldalloc = 0
             #logger.info("totalGB = %d, Allocated to all users = %d, This users old allocation = %d" %(totalGB,allocGB,oldalloc)) 
@@ -357,7 +415,7 @@ class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
     list_display=[]
-    verbose_name_plural = 'Profile'
+    verbose_name_plural = 'Quota Information'
 
 
 class UserChangeList(ChangeList):
@@ -367,7 +425,13 @@ class UserChangeList(ChangeList):
         self.total_alloc_GB = q['total_alloc_GB']
 
 
+admin.site.unregister(User)
 class UserAdmin(UserAdmin):
+    def save_model(self, request, obj, form, change):
+        if request.user.is_superuser:
+            obj.is_staff = True
+            obj.save()
+
     inlines = (ProfileInline,)
     list_display = ('username','email', 'max_alloc_GB','used_GB','max_target_GB')
 
@@ -400,5 +464,4 @@ class UserAdmin(UserAdmin):
          return ""
     max_alloc_GB.short_description = 'Assigned quota GB'
 
-admin.site.unregister(User)
 admin.site.register(User, UserAdmin)

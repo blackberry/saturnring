@@ -163,7 +163,12 @@ def MakeTarget(requestDic,owner):
     else:
         provisiontype = 'any'
 
-    logger.info("Provisioner - request received: ClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s " %(clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype))
+    if 'isencrypted' in requestDic:
+        isencrypted = requestDic['isencrypted']
+    else:
+        isencrypted = '1' #1 means encryption is opt-out - should be explicity specified as 0 to prevent
+
+    logger.info("Provisioner - request received from user %s: \nClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s, isEncrypted: %s " %(str(owner.username),clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype, isencrypted))
     try:
         while 1:
             globallock = Lock.objects.get(lockname='allvglock')
@@ -199,7 +204,7 @@ def MakeTarget(requestDic,owner):
         queue = get_queue(queuename)
         logger.info("Launching create target job into queue %s" %(queuename,) )
         storemedia = chosenVG.storemedia
-        job = queue.enqueue(ExecMakeTarget,storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner)
+        job = queue.enqueue(ExecMakeTarget,args=(storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner.username,isencrypted,),timeout=45)
         while 1:
             if job.result or job.is_failed:
                 chosenVG.is_locked = False
@@ -264,7 +269,7 @@ def DeleteTarget(requestDic,owner):
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = get_queue(queuename)
         jobs = []
-        jobs.append( (queue.enqueue(DeleteTargetObject,obj), obj.iqntar) )
+        jobs.append( (queue.enqueue(DeleteTargetObject,args=(obj.iqntar,),timeout=45), obj.iqntar) )
         logger.info("Using queue %s for deletion" %(queuename,))
     rtnStatus= {}
     rtnFlag=0

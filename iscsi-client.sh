@@ -13,8 +13,10 @@
 #See the License for the specific language governing permissions and
 #limitations under the License.
 
-
+apt-get update
 apt-get install open-iscsi curl -y
+DEBIAN_FRONTEND=noninteractive apt-get install postfix -y
+apt-get install mdadm
 cp /vagrant/clientscripts/storage-provisioner.sh /home/vagrant/storage-provisioner.sh
 chown vagrant:vagrant /home/vagrant/storage-provisioner.sh
 cp /vagrant/clientscripts/README-client /home/vagrant/
