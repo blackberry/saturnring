@@ -378,8 +378,9 @@ class PollServer():
         """
         Read targets to determine their latest state via the parsetarget script
         """
-        cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py',' 2>parsetarget.py-error.txt'])
+        cmdStr = " ".join(["sudo",self.rempypath, join(self.remoteinstallLoc,'saturn-bashscripts','parsetarget.py'), '2> parsetargeterror.txt'])
         exStr = self.Exec(cmdStr)
+        #logger.info("Parse target returns " +str(exStr))
         if exStr == -1:
             return -1
         try:
@@ -548,4 +549,15 @@ class PollServer():
         except:
             logger.error('Error with getfile/gitsave during crypttab delete operations on %s' %(self.serverDNS,))
             logger.error(format_exc())
+
+
+
+
+
+#Commented out because there are formal unit tests.
+#if __name__=="__main__":
+#    pollserver = PollServer('saturnserver0.store.altus.bblabs')
+#    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
+#    print cmdStr
+
 

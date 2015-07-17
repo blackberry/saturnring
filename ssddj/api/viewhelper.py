@@ -14,6 +14,7 @@
 
 #api/viewhelper.py
 
+import hashlib
 from os.path import dirname,join
 from ConfigParser import RawConfigParser
 from time import sleep 
@@ -170,6 +171,19 @@ def MakeTarget(requestDic,owner):
 
     logger.info("Provisioner - request received from user %s: \nClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s, isEncrypted: %s " %(str(owner.username),clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype, isencrypted))
     try:
+        clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
+        targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
+        if len(targets) != 0:
+            for t in targets:
+                iqnComponents = t.iqntar.split(':')
+                if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
+                    logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
+                    return (1,t.iqntar)
+    except:
+        logger.error("Something went wrong while checking for pre-existing target")
+        logger.error(format_exc())
+        return (-1,"Pre-existing target check error, contact admin")
+    try:
         while 1:
             globallock = Lock.objects.get(lockname='allvglock')
             if globallock.locked==False:
@@ -217,17 +231,6 @@ def MakeTarget(requestDic,owner):
     else:
         globallock.locked=False
         globallock.save()
-        try:
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-            targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-            if len(targets) != 0:
-                for t in targets:
-                    iqnComponents = t.iqntar.split(':')
-                    if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
-                        logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                        return (1,t.iqntar)
-        except:
-            logger.warn("Something went wrong while checking for pre-existing target")
 
         logger.warn('VG filtering did not return a choice')
         return (-1, "Are Saturnservers online and adequate, contact admin")
