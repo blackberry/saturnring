@@ -60,7 +60,12 @@ fi
 #echo "add_target_attribute $2 write_through 1" >/sys/kernel/scst_tgt/targets/iscsi/mgmt
 echo "create allowed_ini" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/mgmt
 echo "add disk-${lvu:0:8} 0" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/luns/mgmt
-echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
+if [[ $5 == *"iscsihypervisor"* ]]
+then
+  echo "add iqn.iscsihypervisor*" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
+else
+  echo "add $5" >/sys/kernel/scst_tgt/targets/iscsi/$2/ini_groups/allowed_ini/initiators/mgmt
+fi
 echo 1 >/sys/kernel/scst_tgt/targets/iscsi/$2/enabled
 
 scstadmin -write_config /etc/scst.conf

@@ -35,6 +35,7 @@ from django.db.models import F
 from utils.targetops import DeleteTargetObject
 from utils.scstconf import ParseSCSTConf
 from utils.targetops import ExecMakeTarget
+from utils.targetops import ExecChangeInitiator
 from hashlib import sha1
 from traceback import format_exc
 from utils.configreader import ConfigReader
@@ -235,6 +236,61 @@ def MakeTarget(requestDic,owner):
         logger.warn('VG filtering did not return a choice')
         return (-1, "Are Saturnservers online and adequate, contact admin")
 
+def UserStats(user):
+    '''
+    Return user statistics
+    '''
+    logger = getLogger(__name__)
+    try:
+        user = User.objects.get(username=user)
+        totalAlloc = Target.objects.filter(owner=user).aggregate(Sum('sizeinGB'))
+        if not totalAlloc['sizeinGB__sum']:
+            totalAlloc['sizeinGB__sum'] = 0.0
+        return (user.profile.max_alloc_sizeGB,totalAlloc['sizeinGB__sum'])
+    except:
+        logger.error(format_exc())
+        return -1
+
+def ChangeInitiatorHelper(requestDic,owner):
+    '''
+    Change the initiator for SCST (do not change it in the saturnring DB though)
+    '''
+    logger = getLogger(__name__)
+    try:
+        user = User.objects.get(username=owner);
+        iqntar = requestDic['iqntar']
+        newini = requestDic['newini']
+        target = Target.objects.get(owner=user,iqntar=iqntar);
+    except:
+        logger.error(format_exc());
+        return -1
+
+    config = ConfigReader()
+    numqueues = config.get('saturnring','numqueues')
+    queuename = 'queue'+str(hash(target.targethost)%int(numqueues))
+    queue = get_queue(queuename)
+    job = queue.enqueue(ExecChangeInitiator,args=(iqntar,newini),timeout=45)
+    while (job.result != 0)  and (job.result != -1) :
+        sleep(1)
+        logger.info("...Working on changing target %s initiator name to %s" %(iqntar,newini))
+        logger.info(str(job))
+    return job.result
+
+
+def TargetPortal(requestDic):
+    '''
+    Return user statistics
+    '''
+    logger = getLogger(__name__)
+    try:
+        if 'iqntar' not in requestDic:
+            raise Exception("Target IQN needs to be specified")
+
+        targetobject = Target.objects.get(iqntar=requestDic['iqntar'])
+        return str(targetobject.storageip1)
+    except:
+        logger.error(format_exc())
+        return -1
 
 def DeleteTarget(requestDic,owner):
     '''

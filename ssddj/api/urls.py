@@ -22,6 +22,9 @@ urlpatterns = patterns('',
             url(r'^vgscan/$', views.VGScanner.as_view()),
             url(r'^stateupdate/$',views.UpdateStateData.as_view()),
             url(r'^stats/$',views.ReturnStats.as_view()),
+            url(r'^userstats/$',views.ReturnUserStats.as_view()),
+            url(r'^targetportal/$',views.ReturnTargetPortal.as_view()),
+            url(r'^changeinitiator/$',views.ChangeInitiator.as_view()),
                 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)

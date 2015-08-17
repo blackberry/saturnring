@@ -145,6 +145,7 @@ python manage.py collectstatic --noinput
 
 
 #This little bit uses cron to keep updating stats within the application
+rm mycron
 if [ ! -f mycron ];then
         crontab -l > mycron
         #echo new cron into cron file
