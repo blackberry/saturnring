@@ -77,6 +77,11 @@ TM_MAD_CONF = [
     shared      = "yes"
 ]
 ```
+Restart the `one` service as oneadmin user.
+```bash
+sudo su - oneadmin
+one restart
+```
 4. Obtain credentials for the Saturn storage account from the saturn admin. All the saturn storage quota assigned to the account will become part of the saturn datastore. The datastore size can be changed at any time by changing this saturn quota value on the saturnring server. Populate the `saturniscsi.conf` configuration file in the datastore/saturniscsi directory with the credentials.
 ```bash
 cat <<EOF > /var/lib/one/remotes/datastore/saturniscsi/saturniscsi.conf
@@ -121,11 +126,15 @@ AAGROUP = testgroup
 DESCRIPTION = ThisIsATestImage
 PERSISTENT = Yes
 EOF
+oneimage create saturnimage.tpl -d <saturn-datastore-id reported by
+onedatastore list>
 ```
 
 The image template is not unlike other OpenNebula image templates. The only unique parameter (which is optional) is the "AAGroup" - the anti-affinity group setting. The saturnring provisioner will make a best-effort to separate images with the identical AAGroup parameter into different physical iSCSI servers if capacity permits. This parameter is useful for example, while creating 2 images that are attached to a VM and a software RAID-1 setup is attempted. Note the best-effort nature of the algorithm. It will provision storage even if the anti-affinity condition is violated if sufficient capacity is not available. This is clearly documented in the Saturn documentation.
 
-Likewise, Saturn images can be deleted via the `oneimage delete <image_id>` command or via Sunstone.
+Verify that an iSCSI LUN corresponding to the image was created on the Saturnring portal. The datastore-ID and the image-id will be appended to the iscsi targetname and the iqnini fields.
+
+Likewise, Saturn images can be deleted via the `oneimage delete <image_id>` command or via Sunstone. The target should also disappear from the Saturnring portal.
 
 
 ## Debugging
