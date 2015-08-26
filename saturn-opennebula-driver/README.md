@@ -140,40 +140,28 @@ Other notable features include
 1. Support for __hotplugging__ images (if the VM's OS supports it).
 ```bash
 oneadmin@onefrontend:~$ onevm list m
-    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST
-TIME
-     1 oneadmin oneadmin ubuntuvm        runn    0    284M 192.168.50
-0d 00h01
+    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST TIME
+     1 oneadmin oneadmin ubuntuvm        runn    0    284M 192.168.50 0d 00h01
 oneadmin@onefrontend:~$ onevm disk-attach 1 --image 2
-oneadmin@onefrontend:~$ oneimage list 
-  ID USER       GROUP      NAME            DATASTORE     SIZE TYPE PER
-STAT RVMS
-   1 oneadmin   oneadmin   Centos 7        default        10G OS    No
-rdy     0
-   2 oneadmin   oneadmin   saturnblockimag saturniscs   1000M DB   Yes
-used    1
-   3 oneadmin   oneadmin   Ubuntu 1404, 64 default        10G OS    No
-used    1
-oneadmin@onefrontend:~$ 
+oneadmin@onefrontend:~$ oneimage list
+  ID USER       GROUP      NAME            DATASTORE     SIZE TYPE PER STAT RVMS
+   1 oneadmin   oneadmin   Centos 7        default        10G OS    No rdy     0
+   2 oneadmin   oneadmin   saturnblockimag saturniscs   1000M DB   Yes used    1
+   3 oneadmin   oneadmin   Ubuntu 1404, 64 default        10G OS    No used    1
+oneadmin@onefrontend:~$
 ```
+
 2. Support for __migration__ (live migration not tested (ymmv), only halt and resume migration tested)
  ```bash
 oneadmin@onefrontend:~$ onevm migrate 2 192.168.50.18
 oneadmin@onefrontend:~$ onevm list m
-    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST
-TIME
-     2 oneadmin oneadmin ubuntuvm        migr    0      0K 192.168.50
-0d 00h03
-    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST
-TIME
-     2 oneadmin oneadmin ubuntuvm        boot    0      0K 192.168.50
-0d 00h03
+    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST TIME
+     2 oneadmin oneadmin ubuntuvm        migr    0      0K 192.168.50 0d 00h03
+    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST TIME
+     2 oneadmin oneadmin ubuntuvm        boot    0      0K 192.168.50 0d 00h03
 oneadmin@onefrontend:~$ onevm list m
-    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST
-TIME
-     2 oneadmin oneadmin ubuntuvm        runn    0      0K 192.168.50
-0d 00h03
-
+    ID USER     GROUP    NAME            STAT UCPU    UMEM HOST TIME
+     2 oneadmin oneadmin ubuntuvm        runn    0      0K 192.168.50 0d 00h03
 ```
 
 
