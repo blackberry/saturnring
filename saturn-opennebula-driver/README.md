@@ -162,6 +162,8 @@ oneadmin@onefrontend:~$ onevm list m
 oneadmin@onefrontend:~$ onevm list m
     ID USER     GROUP    NAME            STAT UCPU    UMEM HOST TIME
      2 oneadmin oneadmin ubuntuvm        runn    0      0K 192.168.50 0d 00h03
+
+oneadmin@onefrontend:~$ onevm list m
 ```
 
 
