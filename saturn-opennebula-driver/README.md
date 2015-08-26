@@ -176,7 +176,7 @@ In addition, Saturnring provides exhaustive logging of creation, usage, and dele
 TBD - table of error cases and synptoms/logs/troubleshooting
 |Sl.no | Symptom | Cause | Troubleshooting |
 
-_Note: if a Saturn image goes into `err` state (seen in the `oneimage list` command), run `oneimage enable <imageid>` to get it back into `Rdy` state.
+_Note: if a Saturn image goes into `err` state (seen in the `oneimage list` command), run `oneimage enable <imageid>` to get it back into `Rdy` state_.
 
 ## Development
 
