@@ -91,7 +91,7 @@ apt-get install opennebula-node bridge-utils -y
 apt-get install open-iscsi openvswitch-switch -y
 RANDOM=`date +%s`$$
 cat <<EF > /etc/iscsi/initiatorname.iscsi
-iqn.iscsihypervisor${RANDOM}${RANDOM}.ini
+InitiatorName=iqn.iscsihypervisor${RANDOM}${RANDOM}.ini
 EF
 service open-iscsi restart
 
