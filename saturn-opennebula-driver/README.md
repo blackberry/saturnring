@@ -137,6 +137,7 @@ Verify that an iSCSI LUN corresponding to the image was created on the Saturnrin
 Likewise, Saturn images can be deleted via the `oneimage delete <image_id>` command or via Sunstone. The target should also disappear from the Saturnring portal.
 
 Other notable features include
+
 1. Support for __hotplugging__ images (if the VM's OS supports it).
 ```bash
 oneadmin@onefrontend:~$ onevm list m
