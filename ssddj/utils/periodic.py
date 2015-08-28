@@ -30,7 +30,7 @@ def UpdateOneState(host):
         p = PollServer(host)
         checkServer = p.CheckServer()
         if checkServer != 0:
-            rtnVal= -1
+            rtnVal= -2
             raise Exception(str(host),checkServer)
         vguuidList = p.GetVG()
         if vguuidList == -1:
@@ -61,11 +61,13 @@ def UpdateOneState(host):
 
     finally:
         try:
-            sh = StorageHost.objects.get(dnsname=str(host))
-            if (rtnVal == -1) and (sh.enabled == True):
+            if (rtnVal == -2) and (sh.enabled == True):
+                sh = StorageHost.objects.get(dnsname=str(host))
                 sh.enabled = False
                 sh.save()
                 logger.critical("Disabled saturn server %s due to errors" %(str(host),))
+            if (rtnVal == -1):
+                logger.error("Error in UpdateOneState: " + format_exc())
         except:
             logger.error("Error getting storage host %s from DB in UpdateOneState" %(str(host),))
             logger.error(format_exc())

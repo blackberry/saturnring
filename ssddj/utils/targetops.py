@@ -34,7 +34,10 @@ from globalstatemanager.gsm import PollServer
 from django.core.exceptions import ObjectDoesNotExist
 from utils.scstconf import ParseSCSTConf
 from django.db import connection
-
+from traceback import format_exc
+from os.path import join
+import random
+import string
 
 def CheckUserQuotas(storageSize,owner):
     logger = logging.getLogger(__name__)
@@ -60,6 +63,8 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
     socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
     logger.addHandler(socketHandler)
+    if 'iscsihypervisor' in serviceName:
+        clientiqn = 'iqn.iscsihypervisor-'+clientiqn#+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
     owner = User.objects.get(username=ownername)
     chosenVG=VG.objects.get(vguuid=targetvguuid)
     clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
@@ -168,6 +173,32 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
             logger.error('CreateTarget did not work')
             return (-1,"CreateTarget returned error 1, contact admin")
 
+def ExecChangeInitiator(iqntar,newini):
+    logger = logging.getLogger(__name__)
+    rtnVal = -1
+    try:
+        target = Target.objects.get(iqntar=iqntar);
+        socketHandler = logging.handlers.SocketHandler('localhost',
+                        logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        logger.addHandler(socketHandler)
+        p = PollServer(target.targethost)
+        remotePath = join(p.remoteinstallLoc,'saturn-bashscripts','changeinitiator.sh')
+        cmdStr = " ".join(['sudo', p.rembashpath, remotePath, iqntar, newini])
+        rtncmd = p.Exec(cmdStr)
+        if rtncmd == -1:
+            raise Exception("Error while executing %s on iSCSI server %s."(cmdStr, target.targethost))
+        if any("ALLOK"+iqntar in s for s in rtncmd):
+            rtnVal = 0
+            logger.info(str(rtncmd))
+        else:
+            raise Exception("Error while executing %s\n%s " %(cmdStr,rtncmd))
+
+    except:
+        logger.error('Change initiator error in process thread')
+        logger.error(format_exc())
+        rtnVal = -1
+    finally:
+        return rtnVal
 
 def DeleteTargetObject(iqntar):
     obj = Target.objects.get(iqntar=iqntar)

@@ -49,6 +49,9 @@ from globalstatemanager.gsm import PollServer
 from .viewhelper import DeleteTarget
 from .viewhelper import VGFilter
 from .viewhelper import MakeTarget
+from .viewhelper import UserStats
+from .viewhelper import TargetPortal
+from .viewhelper import ChangeInitiatorHelper
 from utils.configreader import ConfigReader
 
 def ValuesQuerySetToDict(vqs):
@@ -56,6 +59,78 @@ def ValuesQuerySetToDict(vqs):
     Helper to convert queryset to dictionary
     """
     return [item for item in vqs]
+
+class ReturnUserStats(APIView):
+    """
+    CBV for returning the user's assigned quota and the currently used quota in GB"
+    /api/userquota
+    Requires authenticated user
+    """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        logger = getLogger(__name__)
+        rtnVal= UserStats(request.user)
+        if rtnVal == -1:
+            logger.warn("Error checking quota")
+            return Response({'error':1}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            (total,used) = rtnVal;
+            return Response({'error':0,'total':total,'used':used})
+
+class ReturnTargetPortal(APIView):
+    """
+    CBV for returning the target's portal IP address"
+    /api/targetportal
+    """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+    def get(self, request):
+        logger = getLogger(__name__)
+        rtnVal= TargetPortal(request.DATA)
+        if rtnVal == -1:
+            logger.warn("Error returning portal IP")
+            return Response({'error':1, 'error_string':"Error returnring portal IP"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error':0,'portal':rtnVal})
+
+class ChangeInitiator(APIView):
+    """
+    CBV for changing the initiator of a target in SCST. Returns error if target has an active session
+    /api/changeinitiator
+    target
+    newinitiatorname
+    """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        logger = getLogger(__name__)
+        rtnVal = ChangeInitiatorHelper(request.DATA,request.user)
+        if rtnVal == -1:
+            logger.error("Could not change initiator name.")
+            return Response({'error':1, 'error_string':"Error reassigning initiator in request: " + str(request.DATA)}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'error':0})
+
 
 class ReturnStats(APIView):
     """

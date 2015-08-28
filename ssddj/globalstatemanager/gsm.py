@@ -76,13 +76,14 @@ class PollServer():
             return -1
         remotePath = join(self.remoteinstallLoc,'saturn-bashscripts')
         cmdStr = " ".join([join(remotePath,'checkserver.sh'), '2> checkservererror.log'])
-        logger.info("Executing %s on %s" %(cmdStr,self.serverDNS))
+        #logger.info("Executing %s on %s" %(cmdStr,self.serverDNS))
         rtnStrList = self.Exec(cmdStr)
         if (rtnStrList == -1):
             return -2
         else:
             for aLine in rtnStrList:
                 if "FAILURE" in aLine:
+                    logger.error(self.serverDNS + ": "+ str(rtnStrList))
                     return -3
         return 0
 
@@ -140,7 +141,7 @@ class PollServer():
         """
         try:
             self.srv.get(remotePath,localPath)
-            logger.info("Copying file %s from remote server %s to local path %s succeeded" %(remotePath,self.serverDNS,localPath))
+            #logger.info("Copying file %s from remote server %s to local path %s succeeded" %(remotePath,self.serverDNS,localPath))
             return 1
         except:
             logger.error("Error copying file %s from remote server %s to local path %s" %(remotePath,self.serverDNS,localPath))
@@ -210,7 +211,7 @@ class PollServer():
         if len(valueDict) == len(paraList):
              rtnDict[valueDict[paraList[0]]] = valueDict
 
-        logger.info(rtnDict)
+        #logger.info(rtnDict)
         return rtnDict
 
 
@@ -299,7 +300,7 @@ class PollServer():
                 existingvg.is_thin=isThin
                 existingvg.vgsize = vgs[vgname]['VG Size']
                 existingvg.save(update_fields=['totalGB','maxavlGB','vgsize','CurrentAllocGB','in_error','is_thin'])
-                logger.info( "Ran in existingVG loop")
+                #logger.info( "Ran in existingVG loop")
             else:
                 logger.info("Found new VG, adding\n" + str(vgs[vgname]))
                 myvg = VG(vghost=StorageHost.objects.get(dnsname=self.serverDNS),vgsize=vgs[vgname]['VG Size'],
@@ -378,8 +379,9 @@ class PollServer():
         """
         Read targets to determine their latest state via the parsetarget script
         """
-        cmdStr = " ".join(["sudo",self.rempypath,self.remoteinstallLoc+'saturn-bashscripts/parsetarget.py',' 2>parsetarget.py-error.txt'])
+        cmdStr = " ".join(["sudo",self.rempypath, join(self.remoteinstallLoc,'saturn-bashscripts','parsetarget.py'), '2> parsetargeterror.txt'])
         exStr = self.Exec(cmdStr)
+        #logger.info("Parse target returns " +str(exStr))
         if exStr == -1:
             return -1
         try:
@@ -548,4 +550,15 @@ class PollServer():
         except:
             logger.error('Error with getfile/gitsave during crypttab delete operations on %s' %(self.serverDNS,))
             logger.error(format_exc())
+
+
+
+
+
+#Commented out because there are formal unit tests.
+#if __name__=="__main__":
+#    pollserver = PollServer('saturnserver0.store.altus.bblabs')
+#    cmdStr=pollserver.Exec("sudo /home/local/saturn/saturn-bashscripts/thinlvstats.sh")
+#    print cmdStr
+
 

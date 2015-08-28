@@ -1,3 +1,14 @@
+## What is where?
+0. Detailed Documentation `saturnring/doc/Saturn Cloud Storage Developer and User
+   Guide.pdf`
+1. Saturnring software `saturnring/ssddj`
+2. Development environment setup using Vagrant for Saturnring `saturnring/devenv`
+3. OpenNebula driver to use Saturn storage as a data store backend
+`saturnring/saturn-opennebula-driver`
+4. OpenNebula development environment setup using Vagrant for further
+   driver development `saturnring/saturn-opennebula-driver\on-devenv`
+
+
 ## Synopsis
 
 Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring. The key design goal is to keep the multiple hosts independent of each other; i.e., each host can break independently and only affect the iSCSI targets on that host. So Saturnring is not a clustered file system; instead think of it as  manager for scaling up and orchestrating many iSCSI servers serving block storage to many clients. 

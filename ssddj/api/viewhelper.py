@@ -14,6 +14,7 @@
 
 #api/viewhelper.py
 
+import hashlib
 from os.path import dirname,join
 from ConfigParser import RawConfigParser
 from time import sleep 
@@ -34,6 +35,7 @@ from django.db.models import F
 from utils.targetops import DeleteTargetObject
 from utils.scstconf import ParseSCSTConf
 from utils.targetops import ExecMakeTarget
+from utils.targetops import ExecChangeInitiator
 from hashlib import sha1
 from traceback import format_exc
 from utils.configreader import ConfigReader
@@ -170,6 +172,19 @@ def MakeTarget(requestDic,owner):
 
     logger.info("Provisioner - request received from user %s: \nClientIQN: %s, Service: %s, Size(GB) %s, AAGroup: %s, Clumpgroup: %s, Subnet: %s, Storemedia: %s, ProvisionType: %s, isEncrypted: %s " %(str(owner.username),clientiqn, serviceName, str(storageSize), aagroup, clumpgroup, subnet, storemedia, provisiontype, isencrypted))
     try:
+        clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
+        targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
+        if len(targets) != 0:
+            for t in targets:
+                iqnComponents = t.iqntar.split(':')
+                if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
+                    logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
+                    return (1,t.iqntar)
+    except:
+        logger.error("Something went wrong while checking for pre-existing target")
+        logger.error(format_exc())
+        return (-1,"Pre-existing target check error, contact admin")
+    try:
         while 1:
             globallock = Lock.objects.get(lockname='allvglock')
             if globallock.locked==False:
@@ -217,21 +232,65 @@ def MakeTarget(requestDic,owner):
     else:
         globallock.locked=False
         globallock.save()
-        try:
-            clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-            targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
-            if len(targets) != 0:
-                for t in targets:
-                    iqnComponents = t.iqntar.split(':')
-                    if ((serviceName==iqnComponents[1]) and (clientiqnHash==iqnComponents[2])):
-                        logger.info('Target already exists for (serviceName=%s,clientiqn=%s) tuple' % (serviceName,clientiqn))
-                        return (1,t.iqntar)
-        except:
-            logger.warn("Something went wrong while checking for pre-existing target")
 
         logger.warn('VG filtering did not return a choice')
         return (-1, "Are Saturnservers online and adequate, contact admin")
 
+def UserStats(user):
+    '''
+    Return user statistics
+    '''
+    logger = getLogger(__name__)
+    try:
+        user = User.objects.get(username=user)
+        totalAlloc = Target.objects.filter(owner=user).aggregate(Sum('sizeinGB'))
+        if not totalAlloc['sizeinGB__sum']:
+            totalAlloc['sizeinGB__sum'] = 0.0
+        return (user.profile.max_alloc_sizeGB,totalAlloc['sizeinGB__sum'])
+    except:
+        logger.error(format_exc())
+        return -1
+
+def ChangeInitiatorHelper(requestDic,owner):
+    '''
+    Change the initiator for SCST (do not change it in the saturnring DB though)
+    '''
+    logger = getLogger(__name__)
+    try:
+        user = User.objects.get(username=owner);
+        iqntar = requestDic['iqntar']
+        newini = requestDic['newini']
+        target = Target.objects.get(owner=user,iqntar=iqntar);
+    except:
+        logger.error(format_exc());
+        return -1
+
+    config = ConfigReader()
+    numqueues = config.get('saturnring','numqueues')
+    queuename = 'queue'+str(hash(target.targethost)%int(numqueues))
+    queue = get_queue(queuename)
+    job = queue.enqueue(ExecChangeInitiator,args=(iqntar,newini),timeout=45)
+    while (job.result != 0)  and (job.result != -1) :
+        sleep(1)
+        logger.info("...Working on changing target %s initiator name to %s" %(iqntar,newini))
+        logger.info(str(job))
+    return job.result
+
+
+def TargetPortal(requestDic):
+    '''
+    Return user statistics
+    '''
+    logger = getLogger(__name__)
+    try:
+        if 'iqntar' not in requestDic:
+            raise Exception("Target IQN needs to be specified")
+
+        targetobject = Target.objects.get(iqntar=requestDic['iqntar'])
+        return str(targetobject.storageip1)
+    except:
+        logger.error(format_exc())
+        return -1
 
 def DeleteTarget(requestDic,owner):
     '''
