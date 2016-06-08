@@ -43,25 +43,61 @@ done < <($XPATH     /DS_DRIVER_ACTION_DATA/DATASTORE/ID \
                     /DS_DRIVER_ACTION_DATA/DATASTORE/NAME \
                     /DS_DRIVER_ACTION_DATA/IMAGE/TEMPLATE/AAGROUP \
                     /DS_DRIVER_ACTION_DATA/IMAGE/TEMPLATE/DESCRIPTION \
+                    /DS_DRIVER_ACTION_DATA/IMAGE/TEMPLATE/PORTALRANGE \
                     /DS_DRIVER_ACTION_DATA/IMAGE/ID \
-                    /DS_DRIVER_ACTION_DATA/IMAGE/SIZE )
+                    /DS_DRIVER_ACTION_DATA/IMAGE/SIZE \
+                    /DS_DRIVER_ACTION_DATA/IMAGE/TEMPLATE/MIGRATEFROM \
+                    /DS_DRIVER_ACTION_DATA/IMAGE/TEMPLATE/MIGRATEPIN )
+			
 DSID="${XPATH_ELEMENTS[j++]}"
 DSNAME="${XPATH_ELEMENTS[j++]}"
 AAGROUP="${XPATH_ELEMENTS[j++]}"
 DESCRIPTION="${XPATH_ELEMENTS[j++]}"
+PORTALRANGE="${XPATH_ELEMENTS[j++]}"
 IMAGEID="${XPATH_ELEMENTS[j++]}"
 SIZE="${XPATH_ELEMENTS[j++]}"
+MIGRATEFROM="${XPATH_ELEMENTS[j++]}"
+MIGRATEPIN="${XPATH_ELEMENTS[j++]}"
 SIZE_GB=$(MB_to_GB "${SIZE}")
 
 DST_HOST=`get_destination_host $ID`
 
 
+if [ -z "$MIGRATEFROM" ]; then 
+if [ -z "$PORTALRANGE" ]; then
 RTNSTR=$( . "$DRIVER_PATH/saturniscsi.conf"; curl -s -X GET "${SATURNRINGURL}/api/provisioner/" \
-  -d "sizeinGB=$SIZE_GB" \
   -d "clientiqn=iqn.iscsihypervisor.$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
   -d "serviceName=$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
   -d "aagroup=$AAGROUP" \
+  -d "sizeinGB=$SIZE_GB" \
   -u "$SATURNRINGUSER:$SATURNRINGPASSWORD" )
+else
+RTNSTR=$( . "$DRIVER_PATH/saturniscsi.conf"; curl -s -X GET "${SATURNRINGURL}/api/provisioner/" \
+  -d "clientiqn=iqn.iscsihypervisor.$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "serviceName=$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "aagroup=$AAGROUP" \
+  -d "sizeinGB=$SIZE_GB" \
+  -d "subnet=$PORTALRANGE" \
+  -u "$SATURNRINGUSER:$SATURNRINGPASSWORD" )
+fi
+else
+if [ -z "$PORTALRANGE" ]; then
+RTNSTR=$( . "$DRIVER_PATH/saturniscsi.conf"; curl -s -X GET "${SATURNRINGURL}/api/changetarget/" \
+  -d "newini=iqn.iscsihypervisor.$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "iqntar=$MIGRATEFROM" \
+  -d "newserviceName=$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "pin=$MIGRATEPIN" \
+  -u "$SATURNRINGUSER:$SATURNRINGPASSWORD" )
+else
+RTNSTR=$( . "$DRIVER_PATH/saturniscsi.conf"; curl -s -X GET "${SATURNRINGURL}/api/changetarget/" \
+  -d "newini=iqn.iscsihypervisor.$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "newserviceName=$SATURNRINGUSER-$DSNAME-$DSID-$IMAGEID" \
+  -d "iqntar=$MIGRATEFROM" \
+  -d "pin=$MIGRATEPIN" \
+  -d "portalrange=$PORTALRANGE" \
+  -u "$SATURNRINGUSER:$SATURNRINGPASSWORD" )
+fi
+fi
 
 ERROR=$(GetKey "${RTNSTR}" "error")
 
@@ -77,14 +113,17 @@ Description: $DESCRIPTION
 ImageID: $IMAGEID
 Size: $SIZE
 Rtnstr: $RTNSTR
+Migratefrom : $MIGRATEFROM
+Migratepin : $MIGRATEPIN
+Portal/subnet: $PORTALRANGE
 EOF
 
 if [ "$ERROR" != "0" ]
 then
 read -r -d '' DBGVAR << EOM
 Rtnstr: $RTNSTR
-Saturn Provisioning debugging information
-ERROR: $ERROR
+Saturn debugging information (error returned)
+nRROR: $ERROR
 DSID: $DSID
 DSName: $DSNAME
 SaturnringURL: $SATURNRINGURL
@@ -94,6 +133,9 @@ AAGroup: $AAGROUP
 Description: $DESCRIPTION
 ImageID: $IMAGEID
 Size: $SIZE
+Migratefrom : $MIGRATEFROM
+Migratepin : $MIGRATEPIN
+Portal/subnet: $PORTALRANGE
 EOM
 error_message "Saturn datastore image provisioning error: $DBGVAR"
 exit -1

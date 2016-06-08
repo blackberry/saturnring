@@ -23,12 +23,15 @@ from django_rq import get_queue
 from django.contrib.auth.models import User
 from operator import itemgetter
 from ssdfrontend.models import Target
+from ssdfrontend.models import TargetNameMap 
 from ssdfrontend.models import StorageHost
-from ssdfrontend.models import  VG
+from ssdfrontend.models import VG
 from ssdfrontend.models import LV
 from ssdfrontend.models import AAGroup
 from ssdfrontend.models import ClumpGroup
 from ssdfrontend.models import Lock
+from ssdfrontend.models import IPRange
+from ssdfrontend.models import Interface
 from django.db.models import Sum
 from django.db.models import Q
 from django.db.models import F
@@ -36,6 +39,8 @@ from utils.targetops import DeleteTargetObject
 from utils.scstconf import ParseSCSTConf
 from utils.targetops import ExecMakeTarget
 from utils.targetops import ExecChangeInitiator
+from utils.targetops import ExecChangeTarget
+from utils.targetops import GenerateTargetName
 from hashlib import sha1
 from traceback import format_exc
 from utils.configreader import ConfigReader
@@ -43,7 +48,7 @@ def LVAllocSumVG(vg):
     '''
     Simple function to return sum of LV sizes in a specified VG
     '''
-    lvs = LV.objects.filter(vg=vg)
+    lvs = list(LV.objects.filter(vg=vg))
     lvalloc=0.0
     for eachlv in lvs:
        lvalloc=lvalloc+eachlv.lvsize
@@ -67,18 +72,17 @@ def VGFilter(storageSize, aagroup,owner,clumpgroup="noclump",subnet="public",sto
             vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,is_thin=provisiontype).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
         else:
             vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True).order_by('-maxavlGB')#Ordering for randomaag going to least used VG
-        logger.info('vg-choices are: '+str(vgchoices))
     else:
         if provisiontype != 'any':
             vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia,is_thin=provisiontype).order_by('-maxavlGB')#randomaag goes to least used VG
         else:
             vgchoices = VG.objects.filter(in_error=False,is_locked=False,vghost__in=storagehosts,enabled=True,storemedia=storemedia).order_by('-maxavlGB')#randomaag goes to least used VG
-
-        logger.info('vg-choices are: '+str(vgchoices))
+    vgchoicelist = list(vgchoices.select_related('vghost'))
+#    logger.info('vg-choices are: '+str(vgchoices))
     if len(vgchoices) > 0:
         numDel=0
         chosenVG = -1
-        for eachvg in vgchoices:
+        for eachvg in vgchoicelist:
             if subnet != "public":
                 try:
                     eachvg.vghost.iprange_set.get(iprange=subnet,owner=owner)
@@ -193,7 +197,7 @@ def MakeTarget(requestDic,owner):
                 break
             else:
                 sleep(0.2)
-    except: #This is to create the lock the first time
+    except: #This is to create the lock the very first time
         globallock = Lock(lockname='allvglock',locked=True)
         globallock.save()
 
@@ -219,7 +223,7 @@ def MakeTarget(requestDic,owner):
         queue = get_queue(queuename)
         logger.info("Launching create target job into queue %s" %(queuename,) )
         storemedia = chosenVG.storemedia
-        job = queue.enqueue(ExecMakeTarget,args=(storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner.username,isencrypted,),timeout=45)
+        job = queue.enqueue(ExecMakeTarget,args=(storemedia,targetvguuid,targetHost,clientiqn,serviceName,storageSize,aagroup,clumpgroup,subnet,owner.username,isencrypted,),timeout=45,ttl=60)
         while 1:
             if job.result or job.is_failed:
                 chosenVG.is_locked = False
@@ -242,14 +246,15 @@ def UserStats(user):
     '''
     logger = getLogger(__name__)
     try:
-        user = User.objects.get(username=user)
+        user = User.objects.select_related('profile').get(username=user)
         totalAlloc = Target.objects.filter(owner=user).aggregate(Sum('sizeinGB'))
         if not totalAlloc['sizeinGB__sum']:
             totalAlloc['sizeinGB__sum'] = 0.0
-        return (user.profile.max_alloc_sizeGB,totalAlloc['sizeinGB__sum'])
+        return (0,(user.profile.max_alloc_sizeGB,totalAlloc['sizeinGB__sum']))
     except:
+        errorstring = format_exc()
         logger.error(format_exc())
-        return -1
+        return (-1,format_exc())
 
 def ChangeInitiatorHelper(requestDic,owner):
     '''
@@ -262,19 +267,85 @@ def ChangeInitiatorHelper(requestDic,owner):
         newini = requestDic['newini']
         target = Target.objects.get(owner=user,iqntar=iqntar);
     except:
-        logger.error(format_exc());
-        return -1
+        errorstring = format_exc()
+        logger.error(errorstring)
+        return (-1,errorstring)
 
     config = ConfigReader()
     numqueues = config.get('saturnring','numqueues')
     queuename = 'queue'+str(hash(target.targethost)%int(numqueues))
     queue = get_queue(queuename)
-    job = queue.enqueue(ExecChangeInitiator,args=(iqntar,newini),timeout=45)
+    job = queue.enqueue(ExecChangeInitiator,args=(iqntar,newini),timeout=45,ttl=60)
     while (job.result != 0)  and (job.result != -1) :
         sleep(1)
         logger.info("...Working on changing target %s initiator name to %s" %(iqntar,newini))
-        logger.info(str(job))
-    return job.result
+        #logger.info(str(job))
+    return (job.result,str(job))
+
+
+def ChangeTargetHelper(requestDic,owner):
+    '''
+    Helper function to change the targetname
+
+    '''
+    logger = getLogger(__name__)
+    try:
+        rtnVal = -1
+        user = User.objects.get(username=owner)
+        oldtar = requestDic['iqntar']
+        if 'newserviceName' not in requestDic:
+            newserviceName = 'useoldservicename'
+        else:
+            newserviceName = requestDic['newserviceName']
+        if 'newini' not in requestDic:
+            newini = Target.objects.get(iqntar=oldtar).iqnini
+        else:
+            newini = requestDic['newini']
+
+        target = Target.objects.get(iqntar=oldtar);
+
+        newtar = GenerateTargetName(newini,target.targethost,newserviceName)
+        if (Target.objects.filter(iqntar=newtar).count() != 0):
+            #New target name already exists
+            rtnVal = -2
+            raise Exception('The new target name %s already exists: %s' %(newtar,str(requestDic)))
+        challengepin = requestDic['pin']
+        if (challengepin != target.pin):
+            #Pin error
+            rtnVal = -3
+            raise Exception('Incorrect pin %s specified for target %s in request %s' %(challengepin,oldtar,str(requestDic)))
+        if 'portalrange' in requestDic:
+            iprange = requestDic['portalrange']
+            ipr = IPRange.objects.get(iprange=iprange)
+            if ((ipr.owner != user) and (ipr.owner != User.objects.get(username='admin'))):
+                rtnVal = -4
+                raise Exception("IPrange error, user %s specified ip range: %s belonging to %s" %(user.username,iprange,ipr.owner.username))
+            portal = str(Interface.objects.get(storagehost=target.targethost,iprange=ipr))
+        else:
+            portal = str(target.storageip1) #Default - if not specified, do not change
+    except:
+        errorstring = format_exc()
+        logger.error(errorstring)
+        return (rtnVal,errorstring)
+    try:
+        config = ConfigReader()
+        numqueues = config.get('saturnring','numqueues')
+        queuename = 'queue'+str(hash(target.targethost)%int(numqueues))
+        queue = get_queue(queuename)
+        job = queue.enqueue(ExecChangeTarget,args=(oldtar,newtar,newini,portal,owner.username),timeout=45,ttl=60)
+        while ((job.result != 0)  and  (job.result != -1)):
+            sleep(1)
+            logger.info("...Working on changing target %s to %s " %(oldtar,newtar))
+        if job.result == 0:
+            return (0,newtar)
+        else:
+            raise Exception("ExecChangeTarget could not complete, contact admin: %s" %str(job))
+    except:
+        errorString = format_exc()
+        logger.error(errorString)
+        return (-1, "ExecChangeTarget job may have timed out or thrown an error, contact admin: %s" % errorString)
+
+
 
 
 def TargetPortal(requestDic):
@@ -286,11 +357,16 @@ def TargetPortal(requestDic):
         if 'iqntar' not in requestDic:
             raise Exception("Target IQN needs to be specified")
 
-        targetobject = Target.objects.get(iqntar=requestDic['iqntar'])
-        return str(targetobject.storageip1)
+        try:
+            targetobject = Target.objects.get(iqntar=requestDic['iqntar'])
+        except:
+            raise Exception("Target IQN %s not found in Saturning database" % requestDic['iqntar'])
+        
+        return (0, str(targetobject.storageip1))
     except:
-        logger.error(format_exc())
-        return -1
+        errorstring = format_exc()
+        logger.error(errorstring)
+        return (-1,errorstring)
 
 def DeleteTarget(requestDic,owner):
     '''
@@ -328,7 +404,7 @@ def DeleteTarget(requestDic,owner):
         queuename = 'queue'+str(hash(obj.targethost)%int(numqueues))
         queue = get_queue(queuename)
         jobs = []
-        jobs.append( (queue.enqueue(DeleteTargetObject,args=(obj.iqntar,),timeout=45), obj.iqntar) )
+        jobs.append( (queue.enqueue(DeleteTargetObject,args=(obj.iqntar,),timeout=45,ttl=60), obj.iqntar) )
         logger.info("Using queue %s for deletion" %(queuename,))
     rtnStatus= {}
     rtnFlag=0

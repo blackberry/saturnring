@@ -61,15 +61,15 @@ def UpdateOneState(host):
 
     finally:
         try:
+            sh = StorageHost.objects.get(dnsname=str(host))
             if (rtnVal == -2) and (sh.enabled == True):
-                sh = StorageHost.objects.get(dnsname=str(host))
-                sh.enabled = False
-                sh.save()
-                logger.critical("Disabled saturn server %s due to errors" %(str(host),))
+                #sh.enabled = False
+                #sh.save()
+                logger.critical("Saturn server %s is in error (checkserver script run failed), please fix it or disable it." %(str(host),))
             if (rtnVal == -1):
-                logger.error("Error in UpdateOneState: " + format_exc())
+                logger.error("Error in UpdateOneState (check outputs of vgs,lvs on %s: specifics: %s " %(str(host), format_exc()))
         except:
-            logger.error("Error getting storage host %s from DB in UpdateOneState" %(str(host),))
+            logger.error("Error reading storage host %s information from DB in UpdateOneState" %(str(host),))
             logger.error(format_exc())
     connection.close()
     return rtnVal

@@ -15,6 +15,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import string
+from uuid import uuid4
 # Create your models here.
 from django.core.exceptions import ValidationError
 
@@ -23,10 +24,22 @@ def validate_nospecialcharacters(value):
     if len(invalidcharacters.intersection(value)):
         raise ValidationError(u'%s contains a special character, retry after removing it' % value)
 
+def validate_sizeinGB(sizeinGB):
+    if sizeinGB < 1.0:
+        raise ValidationError("Require sizeinGB >= 1.0")
+
+def validate_clientiqn(clientiqn):
+    if not (clientiqn.startswith('iqn.')):# and clientiqn.endswith('.ini')):
+        raise ValidationError("clientiqn should be of the form iqn.*.ini")
+
+def GenerateRandomPin():
+    d = uuid4()
+    str = d.hex
+    return str[0:8]
 
 class Provisioner(models.Model):
-    clientiqn = models.CharField(max_length=100)
-    sizeinGB = models.FloatField()
+    clientiqn = models.CharField(max_length=100,validators=[validate_clientiqn])
+    sizeinGB = models.FloatField(validators=[validate_sizeinGB])
     serviceName = models.CharField(max_length=100,validators=[validate_nospecialcharacters])
     def __unicode__(self):              # __unicode__ on Python 2
         return self.clientiqn
@@ -102,9 +115,17 @@ class Target(models.Model):
     storageip1 = models.GenericIPAddressField(default='127.0.0.1')
     storageip2 = models.GenericIPAddressField(default='127.0.0.1')
     isencrypted = models.BooleanField(default=False)
+    pin = models.CharField(max_length=32,default=GenerateRandomPin)
 
     def __unicode__(self):              # __unicode__ on Python 2
         return self.iqntar
+
+class TargetNameMap(models.Model):
+    owner = models.ForeignKey(User)
+    oldtarname = models.CharField(max_length=200)
+    newtarname = models.CharField(max_length=200)
+    created_at = models.DateTimeField(auto_now_add=True,blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True, null=True)
 
 
 class TargetHistory(models.Model):
@@ -168,7 +189,7 @@ from django.contrib.auth.models import User
 
 #http://www.igorsobreira.com/2010/12/11/extending-user-model-in-django.html
 class Profile(models.Model):
-    user = models.OneToOneField(User,unique=True,primary_key=True)
+    user = models.OneToOneField(User,unique=True,primary_key=True,on_delete=models.CASCADE)
     max_target_sizeGB = models.FloatField(default=0)
     max_alloc_sizeGB = models.FloatField(default=0)
 

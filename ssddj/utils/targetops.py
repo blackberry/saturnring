@@ -15,6 +15,7 @@
 
 import hashlib
 from ssdfrontend.models import Target
+from ssdfrontend.models import TargetNameMap
 from ssdfrontend.models import LV
 from ssdfrontend.models import VG
 from ssdfrontend.models import AAGroup
@@ -39,13 +40,18 @@ from os.path import join
 import random
 import string
 
+def GenerateTargetName(clientiqn,targetHost,serviceName):
+    clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
+    iqnTarget = "".join(["iqn.2014.01.",str(targetHost),":",serviceName,":",clientiqnHash])
+    return iqnTarget
+
 def CheckUserQuotas(storageSize,owner):
     logger = logging.getLogger(__name__)
     socketHandler = logging.handlers.SocketHandler('localhost',
                     logging.handlers.DEFAULT_TCP_LOGGING_PORT)
     logger.addHandler(socketHandler)
 
-    user = User.objects.get(username=owner)
+    user = User.objects.select_related('profile').get(username=owner)
     if (storageSize > user.profile.max_target_sizeGB):
         rtnStr = "User not authorized to create targets of %dGb, maximum size can be %dGb" %(storageSize,user.profile.max_target_sizeGB)
         return(-1,rtnStr)
@@ -67,9 +73,9 @@ def ExecMakeTarget(storemedia,targetvguuid,targetHost,clientiqn,
         clientiqn = 'iqn.iscsihypervisor-'+clientiqn#+''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(8))
     owner = User.objects.get(username=ownername)
     chosenVG=VG.objects.get(vguuid=targetvguuid)
-    clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
-    iqnTarget = "".join(["iqn.2014.01.",targetHost,":",serviceName,":",clientiqnHash])
+    iqnTarget = GenerateTargetName(clientiqn,targetHost,serviceName)
     try:
+        clientiqnHash = hashlib.sha1(clientiqn).hexdigest()[:8]
         targets = Target.objects.filter(iqntar__contains="".join([serviceName,":",clientiqnHash]))
         if len(targets) == 0:
             raise ObjectDoesNotExist
@@ -177,10 +183,10 @@ def ExecChangeInitiator(iqntar,newini):
     logger = logging.getLogger(__name__)
     rtnVal = -1
     try:
-        target = Target.objects.get(iqntar=iqntar);
         socketHandler = logging.handlers.SocketHandler('localhost',
                         logging.handlers.DEFAULT_TCP_LOGGING_PORT)
         logger.addHandler(socketHandler)
+        target = Target.objects.get(iqntar=iqntar);
         p = PollServer(target.targethost)
         remotePath = join(p.remoteinstallLoc,'saturn-bashscripts','changeinitiator.sh')
         cmdStr = " ".join(['sudo', p.rembashpath, remotePath, iqntar, newini])
@@ -191,7 +197,7 @@ def ExecChangeInitiator(iqntar,newini):
             rtnVal = 0
             logger.info(str(rtncmd))
         else:
-            raise Exception("Error while executing %s\n%s " %(cmdStr,rtncmd))
+            raise Exception("Error while executing %s\n%s " %(cmdStr,str(rtncmd)))
 
     except:
         logger.error('Change initiator error in process thread')
@@ -199,6 +205,79 @@ def ExecChangeInitiator(iqntar,newini):
         rtnVal = -1
     finally:
         return rtnVal
+
+def ExecChangeTarget(oldtar,newtar,newini,allowedportal,ownername):
+    logger = logging.getLogger(__name__)
+    rtnVal = -1
+    try:
+        socketHandler = logging.handlers.SocketHandler('localhost',
+                        logging.handlers.DEFAULT_TCP_LOGGING_PORT)
+        logger.addHandler(socketHandler)
+
+        owner = User.objects.get(username=ownername)
+        oldtarget = Target.objects.get(iqntar = oldtar)
+        lv = LV.objects.get(target=oldtarget)
+        vg = lv.vg
+        p = PollServer(oldtarget.targethost)
+        remotePath = join(p.remoteinstallLoc,'saturn-bashscripts','renametarget.sh')
+        cmdStr = " ".join(['sudo', p.rembashpath, remotePath, oldtar, str(newtar),vg.vguuid,str(lv),allowedportal,newini])
+        rtncmd = p.Exec(cmdStr)
+        if rtncmd == -1:
+            raise Exception("Error while executing %s on iSCSI server %s."(cmdStr, target.targethost))
+        if any("SUCCESS" in s for s in rtncmd):
+            rtnVal = 0
+            logger.info(str(rtncmd))
+        else:
+            raise Exception("Error while executing %s\n%s " %(cmdStr,str(rtncmd)))
+    except:
+        rtnStr = format_exc()
+        logger.error(format_exc())
+        return -1
+
+    #Re-wire the database elements
+    try:
+        newtarget = Target(owner = owner,
+                targethost = oldtarget.targethost,
+                iqnini = newini,
+                iqntar = newtar,
+                sizeinGB = oldtarget.sizeinGB,
+                rkb = oldtarget.rkb,
+                rkbpm = oldtarget.rkbpm,
+                wkb = oldtarget.wkb,
+                wkbpm = oldtarget.wkbpm,
+                created_at = oldtarget.created_at,
+                storageip1 = allowedportal,
+                isencrypted = oldtarget.isencrypted,
+                pin = oldtarget.pin)
+        newtarget.save()
+        lv.target = newtarget
+        lv.save()
+        try:
+            aag = AAGroup.objects.get(target=oldtarget)
+            aag.target = newtarget
+            aag.save()
+        except:
+            logger.warn(format_exc())
+        try:
+            cg = ClumpGroup.objects.get(target=oldtarget)
+            cg.target = newtarget
+            cg.save()
+        except:
+            logger.warn(format_exc())
+
+        #Remember what was changed via this table
+        newTargetNameMap = TargetNameMap(owner = owner,
+                oldtarname = oldtar,
+                newtarname = newtar)
+        newTargetNameMap.save()
+
+        #Delete old
+        Target.objects.filter(iqntar=oldtarget.iqntar).delete()
+        return 0
+    except:
+        logger.error("DB rewiring error: %s " %(str(format_exc(),)))
+        return -1
+
 
 def DeleteTargetObject(iqntar):
     obj = Target.objects.get(iqntar=iqntar)
@@ -209,7 +288,7 @@ def DeleteTargetObject(iqntar):
     p = PollServer(obj.targethost)
     lv = LV.objects.get(target=obj)
     p.DeleteCrypttab(lv.lvname)
-    if p.DeleteTarget(obj.iqntar,lv.vg.vguuid)==1:
+    if p.DeleteTarget(obj.iqntar,lv.vg.vguuid,lv.lvname)==1:
         newth=TargetHistory(owner=obj.owner,iqntar=obj.iqntar,iqnini=obj.iqnini,created_at=obj.created_at,sizeinGB=obj.sizeinGB,rkb=obj.rkb,wkb=obj.wkb)
         newth.save()
         tarVG = lv.vg

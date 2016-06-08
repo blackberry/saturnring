@@ -40,7 +40,7 @@ from time import strftime
 from traceback import format_exc
 from utils.reportmaker import StatMaker
 from mimetypes import guess_type
-from django.core.servers.basehttp import FileWrapper
+#from django.core.servers.basehttp import FileWrapper
 from django.http import HttpResponse
 from ssdfrontend.models import Target
 from ssdfrontend.models import StorageHost
@@ -52,6 +52,7 @@ from .viewhelper import MakeTarget
 from .viewhelper import UserStats
 from .viewhelper import TargetPortal
 from .viewhelper import ChangeInitiatorHelper
+from .viewhelper import ChangeTargetHelper
 from utils.configreader import ConfigReader
 
 def ValuesQuerySetToDict(vqs):
@@ -62,9 +63,17 @@ def ValuesQuerySetToDict(vqs):
 
 class ReturnUserStats(APIView):
     """
-    CBV for returning the user's assigned quota and the currently used quota in GB"
-    /api/userquota
-    Requires authenticated user
+    /api/userstats/
+
+    Returns the user's assigned quota and the currently used quota in GB.
+
+    Requires authenticated user.
+    
+    Example usage:
+    
+    curl -X GET http://saturnring.example.com/api/userstats/ --user "userid:password"
+
+    {"total": 4.0, "used": 1.0, "error": 0}
     """
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -77,18 +86,28 @@ class ReturnUserStats(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self, request):
         logger = getLogger(__name__)
-        rtnVal= UserStats(request.user)
+        (rtnVal,output)= UserStats(request.user)
         if rtnVal == -1:
             logger.warn("Error checking quota")
-            return Response({'error':1}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error':1, 'errorstring':output}, status=status.HTTP_400_BAD_REQUEST)
         else:
-            (total,used) = rtnVal;
+            (total,used) = output;
             return Response({'error':0,'total':total,'used':used})
 
 class ReturnTargetPortal(APIView):
     """
-    CBV for returning the target's portal IP address"
-    /api/targetportal
+    /api/targetportal/
+
+    Return the specified target's portal IP address (this is the storageip_1 field)
+
+    Requires a valid iSCSI target FQDN on the Saturnring server.
+
+    Example usage:
+
+    curl  -X GET http://saturnring.example.com/api/targetportal/  --data "iqntar=<target_IQN>"
+
+    {"portal": "192.168.50.51", "error": 0}
+
     """
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -99,19 +118,31 @@ class ReturnTargetPortal(APIView):
         self.__dict__.update(d)
     def get(self, request):
         logger = getLogger(__name__)
-        rtnVal= TargetPortal(request.DATA)
+        (rtnVal,outstr) = TargetPortal(request.data)
         if rtnVal == -1:
             logger.warn("Error returning portal IP")
-            return Response({'error':1, 'error_string':"Error returnring portal IP"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error':1, 'error_string':outstr }, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response({'error':0,'portal':rtnVal})
+            return Response({'error':0,'portal':outstr})
 
 class ChangeInitiator(APIView):
     """
-    CBV for changing the initiator of a target in SCST. Returns error if target has an active session
-    /api/changeinitiator
+    NOTE: disabled in the urls.py as of 10.19.2015. 
+    /api/changeinitiator/
+
+    Change the initiator (clientiqn or iqnini) of a target in SCST. Returns error if target has an active session
     target
-    newinitiatorname
+
+    Requires a valid current target name "iqntar" and new initiatorname "newini" of the form "iqn.*.ini"
+
+    Example usage:
+
+    curl -X GET http://saturnring.example.com/api/changeinitiator/ 
+    
+    --data "newini=iqn.unique_string_initiator.ini"
+
+    --data "iqntar=iqn.existing_target.ini"
+
     """
     def __getstate__(self):
         d = dict(self.__dict__)
@@ -124,12 +155,54 @@ class ChangeInitiator(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self, request):
         logger = getLogger(__name__)
-        rtnVal = ChangeInitiatorHelper(request.DATA,request.user)
+        (rtnVal,errorstring) = ChangeInitiatorHelper(request.data,request.user)
         if rtnVal == -1:
             logger.error("Could not change initiator name.")
-            return Response({'error':1, 'error_string':"Error reassigning initiator in request: " + str(request.DATA)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error':1, 'error_string':"Error reassigning initiator: " + errorstring}, status=status.HTTP_400_BAD_REQUEST)
         else:
             return Response({'error':0})
+
+
+class ChangeTarget(APIView):
+    """ 
+    /api/changetarget/
+
+
+
+    Changing the Target name.This means a new initiatorname and new service name are supplied, and 
+    saturnring creates a new target name and completes all backend changes (SaturnringDB, SCST configuration)
+    
+    The process of changing the target name is as follows:
+    1. Verify that the "old target" actually exists
+    2. Verify change pin is correct.
+    3. Use the new service name and new initiator name to create the new target name
+    4. Rename the target on the SCST config file
+    5. Create a new Target record in the DB, populating most of it from the old target record
+    6. Point the LV, AAgroup, and Clumpgroup (which have Target as a foreign key) to the new Target record
+    7. Make an entry in TargetNameMap table about the change
+    8. Delete old target DB record
+    """
+    def __getstate__(self):
+        d = dict(self.__dict__)
+        del d['logger']
+        return d
+
+    def __setstate__(self, d):
+        self.__dict__.update(d)
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+    def get(self, request):
+        try:
+            logger = getLogger(__name__)
+            (rtnVal,rtnString) = ChangeTargetHelper(request.data,request.user)
+            if rtnVal < 0:
+                logger.error("Could not change target name.")
+                return Response({'error':1, 'error_string':"Error reassigning target name, details: %s" %(rtnString,)}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                storeip1 = str(Target.objects.get(iqntar=rtnString).storageip1)
+                return Response({'error':0,'iqntar':rtnString,'targethost__storageip1':storeip1})
+        except:
+            logger.error(format_exc)
 
 
 class ReturnStats(APIView):
@@ -149,7 +222,7 @@ class ReturnStats(APIView):
             config = ConfigReader()
             thefile = join(config.get('saturnring','iscsiconfigdir'),config.get('saturnring','clustername')+'.xls')
             filename = basename(thefile)
-            response = HttpResponse(FileWrapper(open(thefile)),content_type=guess_type(thefile)[0])
+            response = HttpResponse(open(thefile),content_type=guess_type(thefile)[0]) #removed filewrapper around thefile
             response['Content-Length'] = getsize(thefile)
             response['Content-Disposition'] = "attachment; filename=%s" % filename
             return response
@@ -157,7 +230,6 @@ class ReturnStats(APIView):
             var = format_exc()
             logger.warn("Stat error: %s" % (var,))
             return Response(strftime('%c')+": Stat creation error: contact administrator")
-
 
 class UpdateStateData(APIView):
     """
@@ -175,7 +247,8 @@ class UpdateStateData(APIView):
         self.__dict__.update(d)
 
     def get(self, request):
-        timeoutValue = 30
+        timeoutValue = 30 #Maximum runtime for a job
+        ttlValue = 60 #Maximum time a job can be enqueued
         logger = getLogger(__name__)
         config = ConfigReader()
         numqueues = config.get('saturnring','numqueues')
@@ -185,7 +258,7 @@ class UpdateStateData(APIView):
         for eachhost in allhosts:
             queuename = 'queue'+str(hash(eachhost)%int(numqueues))
             queue = get_queue(queuename)
-            jobs[str(eachhost)]=queue.enqueue(UpdateOneState,args=(eachhost.dnsname,), timeout=timeoutValue)
+            jobs[str(eachhost)]=queue.enqueue(UpdateOneState,args=(eachhost.dnsname,), timeout=timeoutValue,ttl=ttlValue)
         for eachhost in allhosts:
             while( jobs[str(eachhost)].is_queued or jobs[str(eachhost)].is_started):
                 sleep(0.5)
@@ -212,8 +285,8 @@ class Delete(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
         logger = getLogger(__name__)
-        logger.info("Raw request data is "+str(request.DATA))
-        (flag,statusStr) = DeleteTarget(request.DATA,request.user)
+        logger.info("Raw request data is "+str(request.data))
+        (flag,statusStr) = DeleteTarget(request.data,request.user)
         logger.info("Deletion via API result" + str(statusStr))
         if flag!=0:
             rtnDict={}
@@ -243,11 +316,11 @@ class Provision(APIView):
     permission_classes = (IsAuthenticated,)
     def get(self, request ):
         logger = getLogger(__name__)
-        logger.info("Raw request data is "+str(request.DATA))
-        serializer = ProvisionerSerializer(data=request.DATA)
+        logger.info("Raw request data is "+str(request.data))
+        serializer = ProvisionerSerializer(data=request.data)
         rtnDict = {}
         if serializer.is_valid():
-            (flag,statusStr) = MakeTarget(request.DATA,request.user)
+            (flag,statusStr) = MakeTarget(request.data,request.user)
             if flag==-1:
                 rtnDict = {}
                 rtnDict['error']=1
@@ -255,12 +328,16 @@ class Provision(APIView):
                 return Response(rtnDict, status=status.HTTP_400_BAD_REQUEST)
             if (flag==0 or flag==1):
                 tar = Target.objects.filter(iqntar=statusStr)
-                #Check and update state on the Saturn node
+                if (tar[0].owner != request.user):
+                    return Response({'error':1,'detail':'Not authorized'},status=status.HTTP_401_UNAUTHORIZED)
+                
+                #if (flag != 1): #Dont run this code if this is a pre-existing LUN
+                    #Check and update state on the Saturn node
                 config = ConfigReader()
                 numqueues = config.get('saturnring','numqueues')
                 queuename = 'queue'+str(hash(tar[0].targethost)%int(numqueues))
                 queue = get_queue(queuename)
-                job = queue.enqueue(UpdateOneState,args=(tar[0].targethost.dnsname,), timeout=45)
+                job = queue.enqueue(UpdateOneState,args=(tar[0].targethost.dnsname,), timeout=45,ttl=60)
                 while not ( (job.result == 0) or (job.result == 1) or job.is_failed):
                     sleep(0.5)
                 if (job.result == 1) or (job.is_failed):
@@ -269,7 +346,7 @@ class Provision(APIView):
                     logger.error("Error while provisioning/returning target %s" %(tar[0].iqntar,))
                     return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup','isencrypted')
+                data = tar.values('iqnini','iqntar','sizeinGB','targethost','storageip1','storageip2','aagroup__name','clumpgroup__name','sessionup','isencrypted','pin')
                 rtnDict = ValuesQuerySetToDict(data)[0]
                 rtnDict['targethost__storageip1']=rtnDict.pop('storageip1') #in order to not change the user interface
                 if rtnDict['targethost__storageip1']=='127.0.0.1':
@@ -285,7 +362,7 @@ class Provision(APIView):
                 rtnDict['detail'] = 'Problem provisioning, contact admin'
                 return Response(rtnDict, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         else:
-            logger.warn("Invalid provisioner serializer data: "+str(request.DATA))
+            logger.warn("Invalid provisioner serializer data: "+str(request.data))
             rtnDict={}
             rtnDict['error']=1
             rtnDict['detail']=serializer.errors
@@ -306,8 +383,8 @@ class VGScanner(APIView):
         self.__dict__.update(d)
     def get(self, request):
         logger = getLogger(__name__)
-        logger.info("VG scan request received: %s " %(request.DATA,))
-        saturnserver=request.DATA[u'saturnserver']
+        logger.info("VG scan request received: %s " %(request.data,))
+        saturnserver=request.data[u'saturnserver']
         if (StorageHost.objects.filter(Q(dnsname__contains=saturnserver) | Q(ipaddress__contains=saturnserver))):
             p = PollServer(saturnserver)
             savedvguuidStr = p.GetVG()
@@ -320,6 +397,6 @@ class VGScanner(APIView):
             logger.info("RETURNING THIS "+str(readVG))
             #return savedvguuidStr
         else:
-            logger.warn("Unknown saturn server "+str(request.DATA))
-            return Response("Unregistered or uknown Saturn server "+str(request.DATA), status=status.HTTP_400_BAD_REQUEST)
+            logger.warn("Unknown saturn server "+str(request.data))
+            return Response("Unregistered or uknown Saturn server "+str(request.data), status=status.HTTP_400_BAD_REQUEST)
 

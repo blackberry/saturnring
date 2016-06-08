@@ -17,7 +17,8 @@ from subprocess import check_output
 import traceback
 from utils.configreader import ConfigReader
 from xlrd import open_workbook, XLRDError
-
+from uuid import uuid4
+import json
 # Create your tests here.
 class APITestCase (TestCase):
     """ Test cases for API
@@ -25,6 +26,7 @@ class APITestCase (TestCase):
             Test provision
             Test delete
             Test stats
+            Test changetarget
     """
 
     def setUp(self):
@@ -50,7 +52,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovision&aagroup=testgroup',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=test-serviceprovision&aagroup=testgroup',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -65,7 +67,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=testi-serviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=testi-serviceprovisionpciessd&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -80,7 +82,7 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=test-serviceprovisiondiskssd3&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('"error": 0',outStr)
         print outStr
@@ -96,11 +98,11 @@ class APITestCase (TestCase):
         print "TESTING Provisioner"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard1',
             "-u","testuser:password",])
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=test-serviceprovisiondsamebackend&aagroup=testgroup&storemedia=PCIEcard2',
             "-u","testuser:password",])
         self.assertIn('DIFFERENT storemedia',outStr)
         print outStr
@@ -116,10 +118,9 @@ class APITestCase (TestCase):
         print "TESTING Provisioner for encrypted ta rgets"
         outStr = check_output(["curl","-X","GET",
             "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
-            "-d",'clientiqn=testclient&sizeinGB=1.0&serviceName=test-serviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
+            "-d",'clientiqn=iqn.testclient.ini&sizeinGB=1.0&serviceName=test-serviceprovisionnoenc&aagroup=testgroup&isencrypted=0',
             "-u","testuser:password",])
         print outStr
-
 
 
     def test_DeletionTargetPlain(self):
@@ -169,6 +170,42 @@ class APITestCase (TestCase):
         except XLRDError as e:
             print e
         self.assertEqual('ok',xls)
+
+    def test_ChangeTarget(self):
+        print "TESTING ChangeTarget"
+        print "Setting up test target:"
+
+        outStr = check_output(["curl","-X","GET", 
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/provisioner/",
+            "-d","clientiqn=iqn.originalclient.ini",
+            "-d","sizeinGB=1.0",
+            "-d","serviceName=originalservice"+str(uuid4())[:6],
+            "-d","aagroup=testgroup",
+            "-u","testuser:password"])
+        self.assertIn('"error": 0',outStr)
+        print "Changing test target IQN:"
+        j = json.loads(outStr)
+        iqntar = j["iqntar"]
+        pin = j["pin"]
+        outStr = check_output(["curl","-X","GET", 
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/changetarget/",
+            "-d","iqntar="+iqntar,
+            "-d","pin="+pin,
+            "-d","newserviceName=newservice"+str(uuid4())[:6],
+            "-d","newini=iqn.newclient.ini",
+            "-u","testuser:password"])
+        self.assertIn('"error": 0',outStr)
+        self.assertIn('newservice',outStr)
+        
+        print "Deleting test target: "
+        newtar = json.loads(outStr)["iqntar"]
+        outStr = check_output(["curl","-X","GET", 
+            "http://"+self.saturnringip+":"+self.saturnringport+"/api/delete/",
+            "-d","iqntar="+newtar,
+            "-u","testuser:password"])
+        print outStr
+        self.assertIn('"error": 0',outStr)
+
 
     def tearDown(self):
         print "Attempting to clean up -  this will delete all iSCSI targets that belong to user testuser on the test iscsiserver"

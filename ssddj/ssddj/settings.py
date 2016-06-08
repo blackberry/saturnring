@@ -31,6 +31,7 @@ import logging.handlers
 import traceback
 import django_auth_ldap
 import sys
+from django.contrib import messages
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -51,6 +52,7 @@ DBUSER = config.get('database','dbuser')
 DBTYPE = config.get('database','dbtype')
 DBPASSWORD = config.get('database','dbpassword')
 DBDIR = config.get('database','dbdir')
+DBMAXAGE = config.get('database','conn_maxage') #applicable to Postgres
 
 if (config.get('activedirectory','enabled')=='1'):
     print "Configuring AD"
@@ -115,7 +117,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'ssdfrontend',
-    'south',
     'rest_framework',
     'api',
     'globalstatemanager',
@@ -161,9 +162,10 @@ else:
 
 
 numqueues = config.get('saturnring','numqueues')
+redisserver = config.get('saturnring','redisserver')
 RQ_QUEUES = {
     'default': {
-        'HOST': 'localhost',
+        'HOST': redisserver,
         'PORT': 6379,
         'DB': 0,
     },
@@ -171,7 +173,7 @@ RQ_QUEUES = {
 
 for ii in range(0,int(numqueues)):
     RQ_QUEUES['queue'+str(ii)]={
-            'HOST': '127.0.0.1',
+            'HOST': redisserver,
             'PORT' : 6379,
             'DB': 0,
             'DEFAULT_TIMEOUT': 100,
@@ -276,9 +278,15 @@ LOGGING = {
 
     }
 }
+MESSAGE_TAGS = {
+            messages.SUCCESS: 'alert-success success',
+            messages.WARNING: 'alert-warning warning',
+            messages.ERROR: 'alert-danger error'
+}
 
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 TEMPLATE_CONTEXT_PROCESSORS += (
          'django.core.context_processors.request',
+         'django.contrib.messages.context_processors.messages'
     )

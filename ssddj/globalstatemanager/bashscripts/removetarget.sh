@@ -20,8 +20,7 @@ service scst status
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if  python $DIR/parsetarget.py | grep $1 | grep "no sessions"
 then
-        TARGETMD5=`echo $1 | md5sum | cut -f1 -d" "`
-        lvolName=lvol-${TARGETMD5:0:8}
+        lvolName=$3
         VG=`vgdisplay -c | grep $2 | cut -d: -f1 | tr -d ' '`
         lvu=`lvdisplay $VG/$lvolName | grep "LV UUID" | sed  's/LV UUID\s\{0,\}//g' | tr -d '-' | tr -d ' '`
         

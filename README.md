@@ -14,13 +14,14 @@
 Saturnring enables sharing multiple block storage devices on multiple hosts via iSCSI. For example, SSD or QoS-guaranteed block storage like AWS provisioned IOPs can be shared by multiple VMs using Saturnring. The key design goal is to keep the multiple hosts independent of each other; i.e., each host can break independently and only affect the iSCSI targets on that host. So Saturnring is not a clustered file system; instead think of it as  manager for scaling up and orchestrating many iSCSI servers serving block storage to many clients. 
 
 ## Documentation
-Updated Documentation for the code and basic usage is available in the /doc folder's [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf)
+Updated Documentation for the code and basic usage is available in the /doc folder's [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf). (Note link may not work in Gitlab, just browse to the doc subdirectory and open the pdf file)
 
 
 
 ## Architecture
 
-*Detailed and up-to-date documentation is provided in the file [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf)
+*Detailed and up-to-date documentation is provided in the file [Saturn Cloud Storage Developer and User Guide](doc/Saturn Cloud Storage Developer and User Guide.pdf) (Note link may not work in Gitlab, just browse to the doc subdirectory and open the pdf file)
+
 
 Saturnring provides the following components:
 
